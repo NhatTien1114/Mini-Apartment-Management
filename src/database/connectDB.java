@@ -1,4 +1,4 @@
-package ConnectDB;
+package database;
 
 public class connectDB {
 

@@ -1,5 +1,5 @@
 package entity;
 
-public class QuanLy {
+public class HoaDon {
 
 }
