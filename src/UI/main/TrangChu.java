@@ -1,12 +1,13 @@
-package ui;
+package ui.main;
 
 import java.awt.*;
+import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import ui.util.FontUtils;
+import ui.util.PhongInfo;
 import ui.util.RoundedButton;
 
-public class TrangChu extends JFrame {
+public class TrangChu extends JFrame{
 
     // ===== MÀU HỆ THỐNG =====
     private final Color MAU_XANH = Color.decode("#28AF60");
@@ -15,21 +16,27 @@ public class TrangChu extends JFrame {
     private final Color MAU_VANG = Color.decode("#E7B008");
     private final Color MAU_MENU = Color.decode("#121721");
     private final Color MAU_NEN = new Color(229, 231, 235);
+    private final Color MAU_MENU_HOVER = Color.decode("#1F2937");
+    
+    // ===== LAYOUT COMPONENTS =====
+    private CardLayout cardLayout;
+    private JPanel pnlContent;
+    private JButton[] menuButtons;
+    private int selectedMenuIndex = 0;
 
     // ===== THÔNG TIN USER =====
-    private String tenTaiKhoan;
-    private String role;
+    private final String tenTaiKhoan;
+    private final String role;
 
     public TrangChu(String tenTaiKhoan, String role) {
         this.tenTaiKhoan = tenTaiKhoan;
         this.role = role;
-
         initUI();
     }
 
     private void initUI() {
-        setTitle("Mini Apartment - Trang Chu");
-        setFont(FontUtils.getFont(14f));
+        setTitle("Mini Apartment - Trang Chủ");
+        setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
         setSize(1200, 750);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -37,6 +44,7 @@ public class TrangChu extends JFrame {
 
         add(createMenuPanel(), BorderLayout.WEST);
         add(createMainPanel(), BorderLayout.CENTER);
+        setVisible(true);
     }
 
     // ================= MENU BÊN TRÁI =================
@@ -47,60 +55,44 @@ public class TrangChu extends JFrame {
         pnlMenu.setLayout(new BorderLayout());
 
         String duongDanLogo = "img/logo/logo2.png";
-
-        // Load ảnh gốc
         ImageIcon iconLogo = new ImageIcon(duongDanLogo);
-
-        // Scale về 240x164
         Image img = iconLogo.getImage();
         Image imgScale = img.getScaledInstance(240, 164, Image.SCALE_SMOOTH);
         ImageIcon iconMoi = new ImageIcon(imgScale);
 
-        // Tạo label chứa logo
         JLabel lblLogo = new JLabel(iconMoi);
-        lblLogo.setPreferredSize(new Dimension(240, 164));
         lblLogo.setHorizontalAlignment(SwingConstants.LEFT);
 
-        // Panel logo
         JPanel pnlLogo = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         pnlLogo.setBackground(MAU_MENU);
-        pnlLogo.setPreferredSize(new Dimension(240, 164));
         pnlLogo.add(lblLogo);
 
         pnlMenu.add(pnlLogo, BorderLayout.NORTH);
 
-        // Menu Items
         JPanel pnlDanhSach = new JPanel();
         pnlDanhSach.setBackground(MAU_MENU);
         pnlDanhSach.setLayout(new GridLayout(10, 1, 0, 10));
         pnlDanhSach.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         String[] danhSachMenu = {
-                "Trang chủ",
-                "Hợp đồng",
-                "Quản lý",
-                "Khách thuê",
-                "Phương tiện",
-                "Doanh thu",
-                "Dịch vụ",
-                "Hóa đơn"
+                "Trang chủ", "Hợp đồng", "Quản lý", "Khách thuê",
+                "Phương tiện", "Doanh thu", "Dịch vụ", "Hóa đơn"
         };
 
         String[] danhSachIcon = {
-                "img/icons/home.png",
-                "img/icons/google-docs.png",
-                "img/icons/settings.png",
-                "img/icons/user.png",
-                "img/icons/bike.png",
-                "img/icons/bar-chart.png",
-                "img/icons/support.png",
-                "img/icons/bill.png"
+                "img/icons/home.png", "img/icons/google-docs.png",
+                "img/icons/settings.png", "img/icons/user.png",
+                "img/icons/bike.png", "img/icons/bar-chart.png",
+                "img/icons/support.png", "img/icons/bill.png"
         };
 
+        menuButtons = new JButton[danhSachMenu.length];
+
         for (int i = 0; i < danhSachMenu.length; i++) {
+            int index = i;
             JButton btn = new JButton(danhSachMenu[i]);
+            menuButtons[i] = btn;
             
-            // Load icon
             ImageIcon iconGoc = new ImageIcon(danhSachIcon[i]);
             Image imgIcon = iconGoc.getImage();
             Image imgIconScale = imgIcon.getScaledInstance(20, 20, Image.SCALE_SMOOTH);
@@ -110,15 +102,39 @@ public class TrangChu extends JFrame {
             btn.setForeground(Color.WHITE);
             btn.setBackground(MAU_MENU);
             btn.setBorderPainted(false);
-            btn.setFont(FontUtils.getFont(16f));
+            btn.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
             btn.setHorizontalAlignment(SwingConstants.LEFT);
             btn.setIconTextGap(12);
+            
+            if (i == 0) btn.setBackground(MAU_MENU_HOVER);
+            
+            btn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    if (selectedMenuIndex != index) btn.setBackground(MAU_MENU_HOVER);
+                }
+                
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    if (selectedMenuIndex != index) btn.setBackground(MAU_MENU);
+                }
+            });
+            
+            btn.addActionListener(e -> selectMenuTab(index));
+            
             pnlDanhSach.add(btn);
         }
 
         pnlMenu.add(pnlDanhSach, BorderLayout.CENTER);
-
         return pnlMenu;
+    }
+    
+    // ================= MENU SELECTION HANDLER =================
+    private void selectMenuTab(int index) {
+        menuButtons[selectedMenuIndex].setBackground(MAU_MENU);
+        selectedMenuIndex = index;
+        menuButtons[selectedMenuIndex].setBackground(MAU_MENU_HOVER);
+        cardLayout.show(pnlContent, String.valueOf(index));
     }
 
     // ================= PANEL CHÍNH =================
@@ -127,8 +143,21 @@ public class TrangChu extends JFrame {
         pnlMain.setBackground(MAU_NEN);
 
         pnlMain.add(createHeaderPanel(), BorderLayout.NORTH);
-        pnlMain.add(createContentPanel(), BorderLayout.CENTER);
-
+        
+        cardLayout = new CardLayout();
+        pnlContent = new JPanel(cardLayout);
+        pnlContent.setBackground(MAU_NEN);
+        
+        pnlContent.add(createTrangChuContent(), "0");
+        pnlContent.add(new HopDongUI().getPanel(), "1");
+        pnlContent.add(new QuanLyUI().getPanel(), "2");
+        pnlContent.add(new KhachThueUI().getPanel(), "3");
+        pnlContent.add(new PhuongTienUI().getPanel(), "4");
+        pnlContent.add(new DoanhThuUI().getPanel(), "5");
+        pnlContent.add(new DichVuUI().getPanel(), "6");
+        pnlContent.add(new HoaDonUI().getPanel(), "7");
+        
+        pnlMain.add(pnlContent, BorderLayout.CENTER);
         return pnlMain;
     }
 
@@ -139,16 +168,19 @@ public class TrangChu extends JFrame {
         pnlHeader.setPreferredSize(new Dimension(0, 70));
         pnlHeader.setBorder(new EmptyBorder(10, 20, 10, 20));
 
-        // User info
         JPanel pnlUser = new JPanel(new FlowLayout(FlowLayout.LEFT));
         pnlUser.setBackground(Color.WHITE);
 
-        JLabel lblAvatar = new JLabel("👤");
+        ImageIcon iconAvatar = new ImageIcon("img/icons/avatar.png");
+        Image imgAvatar = iconAvatar.getImage();
+        Image imgAvatarScale = imgAvatar.getScaledInstance(30, 30, Image.SCALE_SMOOTH);
+        ImageIcon iconAvatarMoi = new ImageIcon(imgAvatarScale);
+        JLabel lblAvatar = new JLabel(iconAvatarMoi);
         JLabel lblRole = new JLabel(role);
-        lblRole.setFont(FontUtils.getFont(16f));
+        lblRole.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
 
         JLabel lblTen = new JLabel(tenTaiKhoan);
-        lblTen.setFont(FontUtils.getFont(14f));
+        lblTen.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
 
         JPanel pnlThongTin = new JPanel();
         pnlThongTin.setLayout(new BoxLayout(pnlThongTin, BoxLayout.Y_AXIS));
@@ -163,24 +195,24 @@ public class TrangChu extends JFrame {
         pnlHeader.add(pnlUser, BorderLayout.WEST);
 
         JButton btnDangXuat = new JButton("Đăng xuất");
-        btnDangXuat.setFont(FontUtils.getFont(16f));
+        btnDangXuat.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
         btnDangXuat.setBackground(Color.WHITE);
         pnlHeader.add(btnDangXuat, BorderLayout.EAST);
 
         return pnlHeader;
     }
 
-    // ================= CONTENT =================
-    private JPanel createContentPanel() {
-        JPanel pnlContent = new JPanel();
-        pnlContent.setLayout(new BorderLayout(20, 20));
-        pnlContent.setBorder(new EmptyBorder(20, 20, 20, 20));
-        pnlContent.setBackground(MAU_NEN);
+    // ================= TRANG CHỦ CONTENT =================
+    private JPanel createTrangChuContent() {
+        JPanel pnlTrangChu = new JPanel();
+        pnlTrangChu.setLayout(new BorderLayout(20, 20));
+        pnlTrangChu.setBorder(new EmptyBorder(20, 20, 20, 20));
+        pnlTrangChu.setBackground(MAU_NEN);
 
-        pnlContent.add(createThongKePanel(), BorderLayout.NORTH);
-        pnlContent.add(createSoDoPhongPanel(), BorderLayout.CENTER);
+        pnlTrangChu.add(createThongKePanel(), BorderLayout.NORTH);
+        pnlTrangChu.add(createSoDoPhongPanel(), BorderLayout.CENTER);
 
-        return pnlContent;
+        return pnlTrangChu;
     }
 
     // ================= THỐNG KÊ =================
@@ -206,12 +238,12 @@ public class TrangChu extends JFrame {
         lblSo.setOpaque(true);
         lblSo.setBackground(mau);
         lblSo.setForeground(Color.WHITE);
-        lblSo.setFont(FontUtils.getFont(16f));
+        lblSo.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
         lblSo.setHorizontalAlignment(SwingConstants.CENTER);
         lblSo.setPreferredSize(new Dimension(40, 30));
 
         JLabel lblTieuDe = new JLabel(tieuDe);
-        lblTieuDe.setFont(FontUtils.getFont(16f));
+        lblTieuDe.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
 
         pnlCard.add(lblSo);
         pnlCard.add(lblTieuDe);
@@ -241,7 +273,7 @@ public class TrangChu extends JFrame {
         pnlTang.setBackground(Color.WHITE);
 
         JLabel lblTang = new JLabel(tenTang);
-        lblTang.setFont(FontUtils.getFont(16f));
+        lblTang.setFont(new Font("Be Vietnam Pro", Font.BOLD, 16));
         lblTang.setPreferredSize(new Dimension(80, 30));
         pnlTang.add(lblTang);
 
@@ -249,8 +281,11 @@ public class TrangChu extends JFrame {
             RoundedButton btnPhong = new RoundedButton(p, 12);
             btnPhong.setForeground(Color.WHITE);
             btnPhong.setBackground(macDinh != null ? macDinh : MAU_XANH);
-            btnPhong.setFont(FontUtils.getFont(16f));
-            btnPhong.setPreferredSize(new Dimension(96, 56));
+            btnPhong.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
+            btnPhong.setPreferredSize(new Dimension(106, 60));
+            
+            btnPhong.addActionListener(e -> new PhongInfo(p).showDialog());
+            
             pnlTang.add(btnPhong);
         }
 
@@ -259,8 +294,6 @@ public class TrangChu extends JFrame {
 
     // ================= MAIN =================
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new TrangChu("TT", "Admin").setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new TrangChu("TT", "Admin"));
     }
 }
