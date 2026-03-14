@@ -45,7 +45,8 @@ public class KhachThueUI {
             {"Nguyễn Văn An", "0901234567", "0123456789", "TP.HCM", "T1.02", "2025-01-15", "2026-01-15"},
             {"Nguyễn Văn An", "0901234567", "0123456789", "TP.HCM", "T1.02", "2025-01-15", "2026-01-15"}
         };
-        
+        //Updated
+
         JTable table = new JTable(data, columnNames);
         JScrollPane scrollPane = new JScrollPane(table);
         table.getTableHeader().setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
