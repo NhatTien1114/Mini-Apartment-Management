@@ -1,9 +1,10 @@
-package ui.main;
+package UI.main;
 
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import ui.util.RoundedButton;
+import UI.util.PhongInfo;
+import UI.util.RoundedButton;
 
 public class QuanLyUI {
     private final Color MAU_NEN = new Color(229, 231, 235);

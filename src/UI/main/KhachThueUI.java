@@ -1,15 +1,16 @@
-package ui.main;
+package UI.main;
 
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import ui.util.RoundedButton;
+
+import UI.util.RoundedButton;
 
 public class KhachThueUI {
     private final Color MAU_NEN = new Color(229, 231, 235);
     
     public JPanel getPanel() {
-     JPanel pnl = new JPanel();
+    	JPanel pnl = new JPanel();
         pnl.setLayout(new BorderLayout(20, 20));
         pnl.setBorder(new EmptyBorder(20, 20, 20, 20));
         pnl.setBackground(MAU_NEN);
@@ -44,7 +45,8 @@ public class KhachThueUI {
             {"Nguyễn Văn An", "0901234567", "0123456789", "TP.HCM", "T1.02", "2025-01-15", "2026-01-15"},
             {"Nguyễn Văn An", "0901234567", "0123456789", "TP.HCM", "T1.02", "2025-01-15", "2026-01-15"}
         };
-        
+        //Updated
+
         JTable table = new JTable(data, columnNames);
         JScrollPane scrollPane = new JScrollPane(table);
         table.getTableHeader().setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));

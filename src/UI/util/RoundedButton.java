@@ -1,4 +1,4 @@
-package ui.util;
+package UI.util;
 import java.awt.BasicStroke;
 import java.awt.Graphics;
 import java.awt.Graphics2D;

@@ -1,11 +1,11 @@
-package ui.main;
+package UI.main;
 
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import ui.util.PhongInfo;
-import ui.util.RoundedButton;
+import UI.util.PhongInfo;
+import UI.util.RoundedButton;
 
 public class TrangChu extends JFrame{
 
