@@ -49,7 +49,8 @@ public class QuanLyUI {
         JScrollPane scrollPane = new JScrollPane(table);
         table.getTableHeader().setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
         
-        
+        //Updated
+
         pnl.add(scrollPane, BorderLayout.CENTER);
         return pnl;
     }
