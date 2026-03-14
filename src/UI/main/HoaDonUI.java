@@ -21,8 +21,6 @@ public class HoaDonUI {
     private final Color MAU_AMBER_FG = new Color(161, 98, 7);
     private final Color MAU_GREEN_BG = new Color(220, 252, 231);
     private final Color MAU_GREEN_FG = new Color(22, 163, 74);
-    private final Color MAU_RESULT_BG = new Color(239, 246, 255);
-    private final Color MAU_RESULT_BD = new Color(147, 197, 253);
 
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 22);
     private final Font FONT_BOLD  = new Font("Be Vietnam Pro", Font.BOLD, 13);
@@ -42,7 +40,7 @@ public class HoaDonUI {
     };
     private final String[] MONTHS = {"T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12"};
 
-    private java.util.List<Object[]> invoiceRows = new ArrayList<>();
+    private final java.util.List<Object[]> invoiceRows = new ArrayList<>();
     private DefaultTableModel tableModel;
     private CardLayout bodyCard;
     private JPanel bodyPanel;
@@ -221,8 +219,8 @@ public class HoaDonUI {
     // ── Dialog Tạo hóa đơn ──────────────────────────────────────────────────
     private void showCreateDialog() {
         Window owner = null;
-        if (bodyPanel.getTopLevelAncestor() instanceof Window)
-            owner = (Window) bodyPanel.getTopLevelAncestor();
+        if (bodyPanel.getTopLevelAncestor() instanceof Window window)
+            owner = window;
 
         JDialog dlg = (owner instanceof Frame)
                 ? new JDialog((Frame) owner, "Tạo hóa đơn tháng", true)
@@ -303,9 +301,6 @@ public class HoaDonUI {
         JPanel botPanel = new JPanel(new BorderLayout());
         botPanel.setBackground(MAU_CARD);
         botPanel.setBorder(new EmptyBorder(0, 22, 20, 22));
-
-        // Nút khởi đầu hơi mờ (chưa chọn phòng)
-        final boolean[] calculated = {false};
 
         JButton calcBtn = new JButton("Tính tổng tiền") {
             @Override protected void paintComponent(Graphics g2) {
@@ -475,11 +470,13 @@ public class HoaDonUI {
                 new EmptyBorder(7, 11, 7, 11)));
         f.setPreferredSize(new Dimension(0, 38));
         f.addFocusListener(new FocusAdapter() {
+            @Override
             public void focusGained(FocusEvent e) {
                 f.setBorder(BorderFactory.createCompoundBorder(
                         new LineBorder(MAU_PRIMARY, 2, true),
                         new EmptyBorder(6, 10, 6, 10)));
             }
+            @Override
             public void focusLost(FocusEvent e) {
                 f.setBorder(BorderFactory.createCompoundBorder(
                         new LineBorder(MAU_BORDER, 1, true),
@@ -510,19 +507,6 @@ public class HoaDonUI {
         p.add(lbl, BorderLayout.NORTH);
         p.add(field, BorderLayout.CENTER);
         return p;
-    }
-
-    private DefaultTableCellRenderer paddedRenderer() {
-        return new DefaultTableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(
-                    JTable t, Object v, boolean sel, boolean foc, int r, int c) {
-                super.getTableCellRendererComponent(t, v, sel, foc, r, c);
-                setFont(FONT_PLAIN);
-                setForeground(MAU_TEXT);
-                setBorder(new EmptyBorder(0, 16, 0, 8));
-                return this;
-            }
-        };
     }
 
     // ── Dialog Xem trước hóa đơn ────────────────────────────────────────────

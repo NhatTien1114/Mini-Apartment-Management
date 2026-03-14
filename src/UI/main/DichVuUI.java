@@ -1,4 +1,4 @@
-package UI.main;
+package ui.main;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -90,12 +90,14 @@ public class DichVuUI {
             // Hover effect per row
             int hoverRow = -1;
             { addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
                 public void mouseMoved(MouseEvent e) {
                     int r = rowAtPoint(e.getPoint());
                     if (r != hoverRow) { hoverRow = r; repaint(); }
                 }
             });
                 addMouseListener(new MouseAdapter() {
+                    @Override
                     public void mouseExited(MouseEvent e) { hoverRow = -1; repaint(); }
                 });
             }
@@ -413,11 +415,13 @@ public class DichVuUI {
         f.setPreferredSize(new Dimension(0, 38));
         // Blue focus border
         f.addFocusListener(new FocusAdapter() {
+            @Override
             public void focusGained(FocusEvent e) {
                 f.setBorder(BorderFactory.createCompoundBorder(
                         new LineBorder(MAU_PRIMARY, 2, true),
                         new EmptyBorder(6, 10, 6, 10)));
             }
+            @Override
             public void focusLost(FocusEvent e) {
                 f.setBorder(BorderFactory.createCompoundBorder(
                         new LineBorder(MAU_BORDER, 1, true),

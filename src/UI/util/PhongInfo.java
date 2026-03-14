@@ -135,20 +135,28 @@ public class PhongInfo {
         label.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        if (field instanceof JTextField) {
-            ((JTextField) field).setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
+        if (field instanceof JTextField jTextField) {
+            jTextField.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
         } else if (field instanceof JComboBox) {
             ((JComboBox<?>) field).setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
         }
         
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        extracted(field);
+        extracted2(field);
         
         pnl.add(label);
         pnl.add(Box.createVerticalStrut(5));
         pnl.add(field);
         
         return pnl;
+    }
+
+    private void extracted2(JComponent field) {
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+    }
+
+    private void extracted(JComponent field) {
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 
     // ================= BOTTOM PANEL =================
