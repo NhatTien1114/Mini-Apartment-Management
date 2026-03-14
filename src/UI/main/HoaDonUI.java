@@ -21,8 +21,8 @@ public class HoaDonUI {
     private final Color MAU_AMBER_FG = new Color(161, 98, 7);
     private final Color MAU_GREEN_BG = new Color(220, 252, 231);
     private final Color MAU_GREEN_FG = new Color(22, 163, 74);
-    private final Color MAU_RESULT_BG= new Color(239, 246, 255);
-    private final Color MAU_RESULT_BD= new Color(147, 197, 253);
+    private final Color MAU_RESULT_BG = new Color(239, 246, 255);
+    private final Color MAU_RESULT_BD = new Color(147, 197, 253);
 
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 22);
     private final Font FONT_BOLD  = new Font("Be Vietnam Pro", Font.BOLD, 13);
