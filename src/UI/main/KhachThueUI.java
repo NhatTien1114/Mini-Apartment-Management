@@ -1,10 +1,9 @@
-package UI.main;
+package ui.main;
 
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-
-import UI.util.RoundedButton;
+import ui.util.RoundedButton;
 
 public class KhachThueUI {
     private final Color MAU_NEN = new Color(229, 231, 235);
