@@ -1,4 +1,4 @@
-package UI.main;
+package ui.main;
 
 import java.awt.*;
 import javax.swing.*;
@@ -105,9 +105,11 @@ public class DoanhThuUI {
 
         // Thêm hiệu ứng hover để chắc chắn Tooltip hiện nhanh
         MouseAdapter hoverEffect = new MouseAdapter() {
+            @Override
             public void mouseEntered(MouseEvent e) {
                 ((JPanel)e.getSource()).setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
             }
+            @Override
             public void mouseExited(MouseEvent e) {
                 ((JPanel)e.getSource()).setBorder(null);
             }
