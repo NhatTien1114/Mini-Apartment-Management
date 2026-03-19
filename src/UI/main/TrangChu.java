@@ -197,6 +197,10 @@ public class TrangChu extends JFrame{
         JButton btnDangXuat = new JButton("Đăng xuất");
         btnDangXuat.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
         btnDangXuat.setBackground(Color.WHITE);
+        btnDangXuat.addActionListener(e -> {
+            new LoginUI().setVisible(true);
+            this.dispose();
+        });
         pnlHeader.add(btnDangXuat, BorderLayout.EAST);
 
         return pnlHeader;
@@ -294,6 +298,6 @@ public class TrangChu extends JFrame{
 
     // ================= MAIN =================
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new TrangChu("TT", "Admin"));
+        SwingUtilities.invokeLater(() -> new LoginUI().setVisible(true));
     }
 }
