@@ -6,8 +6,8 @@ import java.awt.geom.*;
 
 public class LogoIconPanel extends JPanel {
     private final int boxSize = 80;
-    private final Color bgColor = new Color(37, 99, 235, 25); // bg-primary/10 (10% độ mờ)
-    private final Color iconColor = new Color(37, 99, 235); // text-primary màu xanh
+    private final Color bgColor = AppColors.PRIMARY_OVERLAY;
+    private final Color iconColor = AppColors.PRIMARY;
 
     public LogoIconPanel() {
         setOpaque(false);

@@ -5,13 +5,14 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import ui.util.AppColors;
 
 public class DoanhThuUI {
-    private final Color MAU_NEN = new Color(229, 231, 235);
-    private final Color MAU_DOANH_THU = new Color(30, 80, 180);
-    private final Color MAU_CHI_PHI = new Color(249, 115, 22);
-    private final Color MAU_LOI_NHUAN = new Color(168, 85, 247);
-    private final Color MAU_LAP_DAY = new Color(236, 72, 153);
+    private final Color MAU_NEN = AppColors.APP_BACKGROUND;
+    private final Color MAU_DOANH_THU = AppColors.REVENUE;
+    private final Color MAU_CHI_PHI = AppColors.ORANGE_500;
+    private final Color MAU_LOI_NHUAN = AppColors.VIOLET_500;
+    private final Color MAU_LAP_DAY = AppColors.PINK_500;
     
     public JPanel getPanel() {
         JPanel pnl = new JPanel();

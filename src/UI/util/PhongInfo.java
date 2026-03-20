@@ -7,7 +7,7 @@ import javax.swing.border.EmptyBorder;
 public class PhongInfo {
 
     private final String tenPhong;
-    private final Color MAU_XANH_DUONG = Color.decode("#308CE8");
+    private final Color MAU_XANH_DUONG = AppColors.PRIMARY_SOFT;
 
     public PhongInfo(String tenPhong) {
         this.tenPhong = tenPhong;
@@ -23,7 +23,7 @@ public class PhongInfo {
 
         JPanel pnlMain = new JPanel(new BorderLayout(10, 10));
         pnlMain.setBorder(new EmptyBorder(20, 20, 20, 20));
-        pnlMain.setBackground(Color.WHITE);
+        pnlMain.setBackground(AppColors.WHITE);
 
         JPanel pnlTop = createTopPanel();
         pnlMain.add(pnlTop, BorderLayout.NORTH);

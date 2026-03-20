@@ -22,9 +22,9 @@ public class ValidationPopup {
         currentPopup = new JWindow(parent);
         
         JPanel pnl = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
-        pnl.setBackground(Color.WHITE);
+        pnl.setBackground(AppColors.WHITE);
         pnl.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(203, 213, 225), 1), // slate-300
+            BorderFactory.createLineBorder(AppColors.SLATE_300, 1),
             new EmptyBorder(2, 4, 2, 8)
         ));
         
@@ -34,9 +34,9 @@ public class ValidationPopup {
             @Override public void paintIcon(Component c, Graphics g, int x, int y) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(249, 115, 22)); // orange-500
+                g2.setColor(AppColors.ORANGE_500);
                 g2.fillRoundRect(x, y, 18, 18, 4, 4);
-                g2.setColor(Color.WHITE);
+                g2.setColor(AppColors.WHITE);
                 g2.setFont(new Font("Inter", Font.BOLD, 14));
                 g2.drawString("!", x + 7, y + 14);
                 g2.dispose();
@@ -45,7 +45,7 @@ public class ValidationPopup {
         
         JLabel lbl = new JLabel(message);
         lbl.setFont(new Font("Inter", Font.PLAIN, 13));
-        lbl.setForeground(new Color(15, 23, 42)); // slate-900
+        lbl.setForeground(AppColors.SLATE_900);
         lbl.setIcon(warnIcon);
         lbl.setIconTextGap(8);
         

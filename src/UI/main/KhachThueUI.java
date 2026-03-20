@@ -4,10 +4,11 @@ import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import ui.util.RoundedButton;
+import ui.util.AppColors;
 
 
 public class KhachThueUI {
-    private final Color MAU_NEN = new Color(229, 231, 235);
+    private final Color MAU_NEN = AppColors.APP_BACKGROUND;
     
     public JPanel getPanel() {
     	JPanel pnl = new JPanel();
@@ -23,15 +24,15 @@ public class KhachThueUI {
         pnlTop.add(lblTitle, BorderLayout.WEST);
         pnlTop.add(btnThemPhong, BorderLayout.EAST);
         btnThemPhong.setFont(new Font("Be Vietnam Pro", Font.BOLD, 17));
-        btnThemPhong.setBackground(new Color(65, 113, 201));
-        btnThemPhong.setForeground(Color.WHITE);
+        btnThemPhong.setBackground(AppColors.ACTION_BLUE);
+        btnThemPhong.setForeground(AppColors.WHITE);
         pnl.add(pnlTop, BorderLayout.NORTH);
         pnlTop.setBackground(MAU_NEN);
         
         JPanel pnlContent = new JPanel();
         JPanel pnlContentTop = new JPanel();
         pnlContentTop.setLayout(new BorderLayout());
-        pnlContent.setBackground(Color.WHITE);
+        pnlContent.setBackground(AppColors.WHITE);
         pnlContent.setLayout(new BorderLayout());
         JTextField txtTimPhong = new JTextField(20);
         txtTimPhong.setPreferredSize(new Dimension(200, 30));

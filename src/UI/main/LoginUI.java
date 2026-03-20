@@ -1,27 +1,27 @@
 package ui.main;
 
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import ui.util.RoundedButton;
 import ui.util.RoundedPanel;
 import ui.util.RoundedPasswordField;
 import ui.util.RoundedTextField;
 import ui.util.ValidationPopup;
+import ui.util.AppColors;
 
 public class LoginUI extends JFrame {
 
     // HTML-mapped Colors
-    private final Color MAU_NEN = new Color(248, 250, 252); // slate-50
-    private final Color MAU_CARD = Color.WHITE;
-    private final Color MAU_TITLE = new Color(15, 23, 42); // foreground, slate-900
-    private final Color MAU_SUBTITLE = new Color(100, 116, 139); // muted-foreground, slate-500
-    private final Color MAU_LABEL = new Color(15, 23, 42); // font-medium text-sm
-    private final Color MAU_BUTTON = new Color(37, 99, 235); // primary, blue-600
-    private final Color MAU_LINK = new Color(37, 99, 235); // text-primary
+    private final Color MAU_NEN = AppColors.SLATE_50;
+    private final Color MAU_CARD = AppColors.WHITE;
+    private final Color MAU_TITLE = AppColors.SLATE_900;
+    private final Color MAU_SUBTITLE = AppColors.SLATE_500;
+    private final Color MAU_LABEL = AppColors.SLATE_900;
+    private final Color MAU_BUTTON = AppColors.PRIMARY;
+    private final Color MAU_LINK = AppColors.PRIMARY;
 
     public LoginUI() {
         initUI();
@@ -230,7 +230,7 @@ public class LoginUI extends JFrame {
         return card;
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new LoginUI().setVisible(true));
-    }
+    // public static void main(String[] args) {
+    //     SwingUtilities.invokeLater(() -> new LoginUI().setVisible(true));
+    // }
 }

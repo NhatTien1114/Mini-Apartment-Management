@@ -150,7 +150,7 @@ public class TrangChu extends JFrame{
         
         pnlContent.add(createTrangChuContent(), "0");
         pnlContent.add(new HopDongUI().getPanel(), "1");
-        pnlContent.add(new QuanLyUI().getPanel(), "2");
+        pnlContent.add(new QuanLyPhongUI().getPanel(), "2");
         pnlContent.add(new KhachThueUI().getPanel(), "3");
         pnlContent.add(new PhuongTienUI().getPanel(), "4");
         pnlContent.add(new DoanhThuUI().getPanel(), "5");

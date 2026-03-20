@@ -7,20 +7,21 @@ import java.util.*;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
+import ui.util.AppColors;
 
 public class DichVuUI {
-    private final Color MAU_NEN       = new Color(241, 245, 249);
-    private final Color MAU_CARD      = Color.WHITE;
-    private final Color MAU_BORDER    = new Color(226, 232, 240);
-    private final Color MAU_TEXT      = new Color(15, 23, 42);
-    private final Color MAU_MUTED     = new Color(100, 116, 139);
-    private final Color MAU_PRIMARY   = new Color(37, 99, 235);
-    private final Color MAU_RED       = new Color(239, 68, 68);
-    private final Color MAU_BLUE_BG   = new Color(219, 234, 254);
-    private final Color MAU_BLUE_FG   = new Color(29, 78, 216);
-    private final Color MAU_GRAY_BG   = new Color(241, 245, 249);
-    private final Color MAU_GRAY_FG   = new Color(71, 85, 105);
-    private final Color MAU_HOVER_ROW = new Color(248, 250, 252);
+    private final Color MAU_NEN       = AppColors.SLATE_100;
+    private final Color MAU_CARD      = AppColors.WHITE;
+    private final Color MAU_BORDER    = AppColors.SLATE_200;
+    private final Color MAU_TEXT      = AppColors.SLATE_900;
+    private final Color MAU_MUTED     = AppColors.SLATE_500;
+    private final Color MAU_PRIMARY   = AppColors.PRIMARY;
+    private final Color MAU_RED       = AppColors.RED_500;
+    private final Color MAU_BLUE_BG   = AppColors.PRIMARY_TINT;
+    private final Color MAU_BLUE_FG   = AppColors.PRIMARY_HOVER;
+    private final Color MAU_GRAY_BG   = AppColors.SLATE_100;
+    private final Color MAU_GRAY_FG   = AppColors.SLATE_600;
+    private final Color MAU_HOVER_ROW = AppColors.SLATE_50;
 
     private final Font FONT_TITLE  = new Font("Be Vietnam Pro", Font.BOLD, 22);
     private final Font FONT_BOLD   = new Font("Be Vietnam Pro", Font.BOLD, 13);

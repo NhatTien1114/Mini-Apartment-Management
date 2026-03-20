@@ -11,9 +11,9 @@ public class RoundedTextField extends JTextField {
     private String placeholder = "";
     private boolean isFocused = false;
     
-    private final Color RING_COLOR = new Color(59, 130, 246); // Tailwind blue-500
+    private final Color RING_COLOR = AppColors.PRIMARY_RING;
     // Màu nền xám nhạt vĩnh viễn (hsl(var(--background)) -> gần slate-50)
-    private final Color BG_COLOR = new Color(248, 250, 252); 
+    private final Color BG_COLOR = AppColors.SLATE_50;
 
     public RoundedTextField(int radius) {
         super();
@@ -22,7 +22,7 @@ public class RoundedTextField extends JTextField {
         setBorder(new EmptyBorder(8, 12, 8, 12));
         setFont(new Font("Inter", Font.PLAIN, 15));
         setBackground(BG_COLOR);
-        setForeground(new Color(15, 23, 42));
+        setForeground(AppColors.SLATE_900);
         
         // Hiệu ứng Focus Ring
         addFocusListener(new FocusAdapter() {
