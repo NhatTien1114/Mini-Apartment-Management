@@ -11,22 +11,6 @@ GO
 USE ChungCuMini;
 GO
 
-/* Drop theo thứ tự để không vướng FK */
-IF OBJECT_ID('dbo.GiaDetail', 'U') IS NOT NULL DROP TABLE dbo.GiaDetail;
-IF OBJECT_ID('dbo.GiaHeader', 'U') IS NOT NULL DROP TABLE dbo.GiaHeader;
-IF OBJECT_ID('dbo.HoaDonDetail', 'U') IS NOT NULL DROP TABLE dbo.HoaDonDetail;
-IF OBJECT_ID('dbo.HoaDon', 'U') IS NOT NULL DROP TABLE dbo.HoaDon;
-IF OBJECT_ID('dbo.DichVu', 'U') IS NOT NULL DROP TABLE dbo.DichVu;
-IF OBJECT_ID('dbo.ChiSoDienNuoc', 'U') IS NOT NULL DROP TABLE dbo.ChiSoDienNuoc;
-IF OBJECT_ID('dbo.HopDongKhachHang', 'U') IS NOT NULL DROP TABLE dbo.HopDongKhachHang;
-IF OBJECT_ID('dbo.HopDong', 'U') IS NOT NULL DROP TABLE dbo.HopDong;
-IF OBJECT_ID('dbo.KhachHang', 'U') IS NOT NULL DROP TABLE dbo.KhachHang;
-IF OBJECT_ID('dbo.Phong', 'U') IS NOT NULL DROP TABLE dbo.Phong;
-IF OBJECT_ID('dbo.Tang', 'U') IS NOT NULL DROP TABLE dbo.Tang;
-IF OBJECT_ID('dbo.Toa', 'U') IS NOT NULL DROP TABLE dbo.Toa;
-IF OBJECT_ID('dbo.TaiKhoan', 'U') IS NOT NULL DROP TABLE dbo.TaiKhoan;
-GO
-
 /* 1) TaiKhoan: role 0=Owner, 1=Admin */
 CREATE TABLE dbo.TaiKhoan (
     maTaiKhoan     NVARCHAR(20)  NOT NULL,
