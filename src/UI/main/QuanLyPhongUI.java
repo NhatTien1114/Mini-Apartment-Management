@@ -1,349 +1,551 @@
 package ui.main;
 
+import dao.PhongDAO;
+import dao.PhongDAO.Phong;
+
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import ui.util.AppColors;
+import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
 
 public class QuanLyPhongUI {
-    private final Color MAU_NEN      = AppColors.SLATE_100;
-    private final Color MAU_CARD     = AppColors.WHITE;
-    private final Color MAU_BORDER   = AppColors.SLATE_200;
-    private final Color MAU_TEXT     = AppColors.SLATE_900;
-    private final Color MAU_MUTED    = AppColors.SLATE_500;
-    private final Color MAU_PRIMARY  = AppColors.PRIMARY;
-    private final Color MAU_PRIMARY_DISABLED = AppColors.PRIMARY_DISABLED;
-    private final Color MAU_RED      = AppColors.RED_500;
-    private final Color MAU_AMBER_BG = AppColors.AMBER_BG;
-    private final Color MAU_AMBER_FG = AppColors.AMBER_FG;
-    private final Color MAU_GREEN_BG = AppColors.GREEN_BG;
-    private final Color MAU_GREEN_FG = AppColors.GREEN_600;
+
+    // ── Màu sắc ──────────────────────────────────────────────────────────────
+    private final Color MAU_NEN      = new Color(241, 245, 249);
+    private final Color MAU_CARD     = Color.WHITE;
+    private final Color MAU_BORDER   = new Color(226, 232, 240);
+    private final Color MAU_TEXT     = new Color(15, 23, 42);
+    private final Color MAU_MUTED    = new Color(100, 116, 139);
+    private final Color MAU_PRIMARY  = new Color(30, 41, 80);     // dark navy như ảnh
+    private final Color MAU_PRIMARY_HOVER = new Color(20, 30, 65);
+    private final Color MAU_RED      = new Color(239, 68, 68);
+    private final Color MAU_RED_BG   = new Color(254, 226, 226);
+    private final Color MAU_AMBER_BG = new Color(254, 249, 195);
+    private final Color MAU_AMBER_FG = new Color(161, 98, 7);
+    private final Color MAU_GREEN_BG = new Color(220, 252, 231);
+    private final Color MAU_GREEN_FG = new Color(22, 163, 74);
+    private final Color MAU_BLUE_DA_COC    = new Color(48, 140, 232);   // #308CE8
+    private final Color MAU_BLUE_DA_COC_BG = new Color(219, 237, 253);
 
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 22);
     private final Font FONT_BOLD  = new Font("Be Vietnam Pro", Font.BOLD, 13);
     private final Font FONT_PLAIN = new Font("Be Vietnam Pro", Font.PLAIN, 13);
     private final Font FONT_SMALL = new Font("Be Vietnam Pro", Font.PLAIN, 12);
 
+    private final NumberFormat NF = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+
+    private static final String[] DICH_VU_LIST = {
+            "Điện - 3,500đ/kWh",
+            "Nước - 15,000đ/m³",
+            "Internet - 100,000đ/tháng",
+            "Rác - 50,000đ/tháng",
+            "Giữ xe máy - 100,000đ/tháng",
+            "Giữ ô tô - 500,000đ/tháng"
+    };
+
+    // ── DAO & state ──────────────────────────────────────────────────────────
+    private final PhongDAO dao = new PhongDAO();
+    private JPanel floorsPanel;
+    private JScrollPane scrollPane;
+
+    // ════════════════════════════════════════════════════════════════════════
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(MAU_NEN);
-        root.setBorder(new EmptyBorder(12, 16, 16, 16));
+        root.setBorder(new EmptyBorder(24, 24, 24, 24));
 
-        JPanel container = new JPanel(new BorderLayout());
-        container.setBackground(MAU_NEN);
-        container.setBorder(new EmptyBorder(8, 0, 0, 0));
+        // ── Top bar ──
+        JPanel topBar = new JPanel(new BorderLayout());
+        topBar.setBackground(MAU_NEN);
+        topBar.setBorder(new EmptyBorder(0, 0, 18, 0));
 
+        JLabel title = new JLabel("Quản lý phòng");
+        title.setFont(FONT_TITLE);
+        title.setForeground(MAU_TEXT);
+        topBar.add(title, BorderLayout.WEST);
+
+        JButton btnAdd = makePrimaryButton("+ Thêm phòng");
+        btnAdd.addActionListener(e -> showAddDialog());
+        topBar.add(btnAdd, BorderLayout.EAST);
+
+        root.add(topBar, BorderLayout.NORTH);
+
+        // ── Content card ──
         JPanel contentCard = new JPanel(new BorderLayout());
         contentCard.setBackground(MAU_CARD);
-        contentCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(MAU_BORDER),
-            new EmptyBorder(16, 16, 16, 16)
-        ));
+        contentCard.setBorder(new LineBorder(MAU_BORDER, 1, true));
 
-        JPanel floorsPanel = new JPanel();
+        floorsPanel = new JPanel();
         floorsPanel.setBackground(MAU_CARD);
         floorsPanel.setLayout(new BoxLayout(floorsPanel, BoxLayout.Y_AXIS));
+        floorsPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        floorsPanel.add(createFloorSection("Tầng 6", new String[] {"T6.01", "T6.02", "T6.03", "T6.04"}));
-        floorsPanel.add(Box.createVerticalStrut(14));
-        floorsPanel.add(createFloorSection("Tầng 5", new String[] {"T5.01", "T5.02", "T5.03", "T5.04", "T5.05"}));
-        floorsPanel.add(Box.createVerticalStrut(14));
-        floorsPanel.add(createFloorSection("Tầng 4", new String[] {"T4.01", "T4.02", "T4.03", "T4.04", "T4.05"}));
-        floorsPanel.add(Box.createVerticalStrut(14));
-        floorsPanel.add(createFloorSection("Tầng 3", new String[] {"T3.01", "T3.02", "T3.03", "T3.04", "T3.05"}));
-        floorsPanel.add(Box.createVerticalStrut(14));
-        floorsPanel.add(createFloorSection("Tầng 2", new String[] {"T2.01", "T2.02", "T2.03", "T2.04", "T2.05", "T2.06"}));
-        floorsPanel.add(Box.createVerticalStrut(14));
-        floorsPanel.add(createFloorSection("Tầng 1", new String[] {"T1.01", "T1.02", "T1.03", "T1.04", "T1.05"}));
-
-        JScrollPane scrollPane = new JScrollPane(floorsPanel);
+        scrollPane = new JScrollPane(floorsPanel);
         scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(14);
         scrollPane.getViewport().setBackground(MAU_CARD);
 
         contentCard.add(scrollPane, BorderLayout.CENTER);
-        container.add(contentCard, BorderLayout.CENTER);
-        root.add(container, BorderLayout.CENTER);
+        root.add(contentCard, BorderLayout.CENTER);
 
+        rebuildFloors();
         return root;
     }
 
-    private JPanel createFloorSection(String floorName, String[] rooms) {
-        JPanel section = new JPanel(new BorderLayout(0, 8));
+    // ── Xây lại toàn bộ danh sách tầng/phòng ────────────────────────────────
+    private void rebuildFloors() {
+        floorsPanel.removeAll();
+
+        String[] tangs = {"T6", "T5", "T4", "T3", "T2", "T1"};
+        String[] names = {"Tầng 6", "Tầng 5", "Tầng 4", "Tầng 3", "Tầng 2", "Tầng 1"};
+
+        boolean first = true;
+        for (int i = 0; i < tangs.length; i++) {
+            List<Phong> phongs = dao.layTheoTang(tangs[i]);
+            if (phongs.isEmpty()) continue;
+            if (!first) floorsPanel.add(Box.createVerticalStrut(18));
+            floorsPanel.add(createFloorSection(names[i], phongs));
+            first = false;
+        }
+
+        floorsPanel.revalidate();
+        floorsPanel.repaint();
+    }
+
+    // ── Tầng ────────────────────────────────────────────────────────────────
+    private JPanel createFloorSection(String floorName, List<Phong> phongs) {
+        JPanel section = new JPanel(new BorderLayout(0, 10));
         section.setOpaque(false);
 
         JLabel lblFloor = new JLabel(floorName);
-        lblFloor.setFont(FONT_BOLD.deriveFont(20f));
+        lblFloor.setFont(new Font("Be Vietnam Pro", Font.BOLD, 18));
         lblFloor.setForeground(MAU_TEXT);
         section.add(lblFloor, BorderLayout.NORTH);
 
         JPanel roomsWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         roomsWrap.setOpaque(false);
-
-        for (String room : rooms) {
-            roomsWrap.add(createRoomCard(room));
-        }
+        for (Phong p : phongs)
+            roomsWrap.add(createRoomCard(p));
         section.add(roomsWrap, BorderLayout.CENTER);
-
         return section;
     }
 
-    private JPanel createRoomCard(String roomCode) {
-        final String status = getRoomStatus(roomCode);
-
-        JPanel card = new JPanel(new BorderLayout(0, 10));
+    // ── Card phòng ───────────────────────────────────────────────────────────
+    private JPanel createRoomCard(Phong phong) {
+        JPanel card = new JPanel(new BorderLayout(0, 8));
         card.setBackground(MAU_CARD);
-        card.setPreferredSize(new Dimension(218, 116));
+        card.setPreferredSize(new Dimension(210, 112));
         card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(MAU_BORDER),
-            new EmptyBorder(10, 10, 8, 10)
-        ));
+                new LineBorder(MAU_BORDER, 1),
+                new EmptyBorder(10, 12, 10, 12)));
 
+        // Header: mã phòng + badge trạng thái
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
-
-        JLabel lblRoom = new JLabel(roomCode);
-        lblRoom.setFont(FONT_BOLD.deriveFont(19f));
+        JLabel lblRoom = new JLabel(phong.maPhong);
+        lblRoom.setFont(new Font("Be Vietnam Pro", Font.BOLD, 17));
         lblRoom.setForeground(MAU_TEXT);
-
-        JLabel lblStatus = createStatusBadge(status);
-
         header.add(lblRoom, BorderLayout.WEST);
-        header.add(lblStatus, BorderLayout.EAST);
+        header.add(createStatusBadge(phong.trangThai), BorderLayout.EAST);
 
-        JLabel lblPrice = new JLabel("Giá: 3,000,000đ");
+        // Giá
+        JLabel lblPrice = new JLabel("Giá: " + NF.format(phong.giaThue) + "đ");
         lblPrice.setFont(FONT_SMALL);
         lblPrice.setForeground(MAU_MUTED);
 
-        JButton btnSetting = createSettingButton();
-        btnSetting.addActionListener(e -> showSettingDialog(roomCode, "Đã thuê".equals(status)));
+        // Buttons: Cài đặt + Xóa
+        JPanel btnRow = new JPanel(new BorderLayout(6, 0));
+        btnRow.setOpaque(false);
+
+        JButton btnSetting = makeOutlineButton("⚙ Cài đặt");
+        btnSetting.addActionListener(e -> showSettingDialog(phong));
+
+        JButton btnDelete = makeDeleteButton();
+        btnDelete.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                    SwingUtilities.getWindowAncestor(card),
+                    "Xóa phòng \"" + phong.maPhong + "\"?",
+                    "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                String err = dao.xoa(phong.maPhong);
+                if (err != null) JOptionPane.showMessageDialog(null, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                else rebuildFloors();
+            }
+        });
+
+        btnRow.add(btnSetting, BorderLayout.CENTER);
+        btnRow.add(btnDelete,  BorderLayout.EAST);
 
         JPanel body = new JPanel();
         body.setOpaque(false);
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
         body.add(lblPrice);
-        body.add(Box.createVerticalStrut(8));
-        body.add(btnSetting);
+        body.add(Box.createVerticalStrut(6));
+        body.add(btnRow);
 
         card.add(header, BorderLayout.NORTH);
-        card.add(body, BorderLayout.CENTER);
+        card.add(body,   BorderLayout.CENTER);
         return card;
     }
 
+    // ── Dialog THÊM PHÒNG ────────────────────────────────────────────────────
+    private void showAddDialog() {
+        Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+        JDialog dlg = new JDialog(owner, "Thêm phòng mới",
+                Dialog.ModalityType.APPLICATION_MODAL);
+        dlg.setSize(480, 520);
+        dlg.setLocationRelativeTo(owner);
+        dlg.setResizable(false);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(MAU_CARD);
+        root.setBorder(new EmptyBorder(22, 24, 22, 24));
+
+        // Title
+        JLabel lblTitle = new JLabel("Thêm phòng mới");
+        lblTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 18));
+        lblTitle.setForeground(MAU_TEXT);
+        lblTitle.setBorder(new EmptyBorder(0, 0, 18, 0));
+        root.add(lblTitle, BorderLayout.NORTH);
+
+        // Form
+        JPanel form = new JPanel();
+        form.setBackground(MAU_CARD);
+        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+
+        // Tên phòng
+        JTextField fMa = makeField("VD: T1.06");
+        JLabel errMa = makeErrLabel();
+
+        // Giá thuê
+        JTextField fGia = makeField("3000000");
+
+        // Trạng thái
+        JComboBox<String> cTT = makeCombo(new String[]{"Trống", "Đã cọc", "Đã thuê", "Đang sửa"});
+
+        // Dịch vụ checkboxes
+        JCheckBox[] checks = new JCheckBox[DICH_VU_LIST.length];
+        for (int i = 0; i < DICH_VU_LIST.length; i++) {
+            checks[i] = new JCheckBox(DICH_VU_LIST[i], false);
+            checks[i].setFont(FONT_PLAIN);
+            checks[i].setForeground(MAU_TEXT);
+            checks[i].setOpaque(false);
+        }
+
+        form.add(wrapField("Tên phòng", fMa));
+        form.add(errMa);
+        form.add(Box.createVerticalStrut(10));
+        form.add(wrapField("Giá thuê (VNĐ/tháng)", fGia));
+        form.add(Box.createVerticalStrut(10));
+        form.add(wrapField("Trạng thái", cTT));
+        form.add(Box.createVerticalStrut(12));
+
+        JLabel lblDv = new JLabel("Dịch vụ sử dụng");
+        lblDv.setFont(FONT_SMALL);
+        lblDv.setForeground(MAU_MUTED);
+        form.add(lblDv);
+        form.add(Box.createVerticalStrut(6));
+        for (JCheckBox cb : checks) form.add(cb);
+
+        root.add(form, BorderLayout.CENTER);
+
+        // Nút Thêm phòng
+        JButton btnSave = makePrimaryButton("Thêm phòng");
+        btnSave.addActionListener(e -> {
+            String ma  = fMa.getText().trim();
+            String giaStr = fGia.getText().trim().replaceAll("[,.]", "");
+
+            // Validate format
+            if (!dao.isValidFormat(ma)) {
+                errMa.setText("⚠ Sai định dạng, nhập dạng T1.01 → T6.09");
+                errMa.setVisible(true);
+                shakeFocus(fMa);
+                return;
+            }
+            // Kiểm tra trùng
+            if (dao.tonTai(ma)) {
+                errMa.setText("⚠ Phòng \"" + dao.normalise(ma) + "\" đã tồn tại");
+                errMa.setVisible(true);
+                shakeFocus(fMa);
+                return;
+            }
+            errMa.setVisible(false);
+
+            long gia;
+            try { gia = Long.parseLong(giaStr); }
+            catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dlg, "Giá thuê không hợp lệ!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            List<String> dvChon = new ArrayList<>();
+            for (JCheckBox cb : checks)
+                if (cb.isSelected()) dvChon.add(cb.getText().split(" - ")[0]);
+
+            String err = dao.them(ma, gia, (String) cTT.getSelectedItem(), dvChon);
+            if (err != null) {
+                JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            rebuildFloors();
+            dlg.dispose();
+        });
+
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(MAU_CARD);
+        footer.setBorder(new EmptyBorder(16, 0, 0, 0));
+        footer.add(btnSave, BorderLayout.CENTER);
+        root.add(footer, BorderLayout.SOUTH);
+
+        dlg.setContentPane(root);
+        dlg.setVisible(true);
+    }
+
+    // ── Dialog CÀI ĐẶT PHÒNG ────────────────────────────────────────────────
+    private void showSettingDialog(Phong phong) {
+        Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+        JDialog dlg = new JDialog(owner, "Cài đặt phòng " + phong.maPhong,
+                Dialog.ModalityType.APPLICATION_MODAL);
+        dlg.setSize(420, 520);
+        dlg.setLocationRelativeTo(owner);
+        dlg.setResizable(false);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(MAU_CARD);
+        root.setBorder(new EmptyBorder(22, 24, 22, 24));
+
+        JLabel lblTitle = new JLabel("Cài đặt phòng " + phong.maPhong);
+        lblTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 17));
+        lblTitle.setForeground(MAU_TEXT);
+        lblTitle.setBorder(new EmptyBorder(0, 0, 18, 0));
+        root.add(lblTitle, BorderLayout.NORTH);
+
+        JPanel form = new JPanel();
+        form.setBackground(MAU_CARD);
+        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+
+        JTextField fGia = makeField(String.valueOf(phong.giaThue));
+        JComboBox<String> cTT = makeCombo(new String[]{"Trống", "Đã cọc", "Đã thuê", "Đang sửa"});
+        cTT.setSelectedItem(phong.trangThai);
+
+        JCheckBox[] checks = new JCheckBox[DICH_VU_LIST.length];
+        for (int i = 0; i < DICH_VU_LIST.length; i++) {
+            String tenDv = DICH_VU_LIST[i].split(" - ")[0];
+            boolean checked = phong.dichVu.contains(tenDv);
+            checks[i] = new JCheckBox(DICH_VU_LIST[i], checked);
+            checks[i].setFont(FONT_PLAIN);
+            checks[i].setForeground(MAU_TEXT);
+            checks[i].setOpaque(false);
+        }
+
+        form.add(wrapField("Giá thuê (VNĐ/tháng)", fGia));
+        form.add(Box.createVerticalStrut(10));
+        form.add(wrapField("Trạng thái", cTT));
+        form.add(Box.createVerticalStrut(12));
+
+        JLabel lblDv = new JLabel("Dịch vụ sử dụng");
+        lblDv.setFont(FONT_SMALL);
+        lblDv.setForeground(MAU_MUTED);
+        form.add(lblDv);
+        form.add(Box.createVerticalStrut(6));
+        for (JCheckBox cb : checks) form.add(cb);
+
+        root.add(form, BorderLayout.CENTER);
+
+        JButton btnSave = makePrimaryButton("Lưu thay đổi");
+        btnSave.addActionListener(e -> {
+            long gia;
+            try { gia = Long.parseLong(fGia.getText().trim().replaceAll("[,.]", "")); }
+            catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dlg, "Giá thuê không hợp lệ!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            List<String> dvChon = new ArrayList<>();
+            for (JCheckBox cb : checks)
+                if (cb.isSelected()) dvChon.add(cb.getText().split(" - ")[0]);
+            String err = dao.capNhat(phong.maPhong, gia, (String) cTT.getSelectedItem(), dvChon);
+            if (err != null) {
+                JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            rebuildFloors();
+            dlg.dispose();
+        });
+
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(MAU_CARD);
+        footer.setBorder(new EmptyBorder(16, 0, 0, 0));
+        footer.add(btnSave, BorderLayout.CENTER);
+        root.add(footer, BorderLayout.SOUTH);
+
+        dlg.setContentPane(root);
+        dlg.setVisible(true);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ════════════════════════════════════════════════════════════════════════
+
     private JLabel createStatusBadge(String text) {
         JLabel badge = new JLabel(text, SwingConstants.CENTER);
-        badge.setFont(FONT_BOLD.deriveFont(11f));
+        badge.setFont(new Font("Be Vietnam Pro", Font.BOLD, 11));
         badge.setOpaque(true);
-        badge.setBorder(new EmptyBorder(3, 9, 3, 9));
-
+        badge.setBorder(new EmptyBorder(3, 8, 3, 8));
         switch (text) {
-            case "Đã thuê" -> {
-                badge.setForeground(Color.WHITE);
-                badge.setBackground(MAU_RED);
-            }
-            case "Đang sửa" -> {
-                badge.setForeground(MAU_AMBER_FG);
-                badge.setBackground(MAU_AMBER_BG);
-            }
-            default -> {
-                badge.setForeground(MAU_GREEN_FG);
-                badge.setBackground(MAU_GREEN_BG);
-            }
+            case "Đã thuê"  -> { badge.setForeground(Color.WHITE);    badge.setBackground(MAU_RED); }
+            case "Đang sửa" -> { badge.setForeground(MAU_AMBER_FG);   badge.setBackground(MAU_AMBER_BG); }
+            case "Đã cọc"   -> { badge.setForeground(Color.WHITE);    badge.setBackground(MAU_BLUE_DA_COC); }
+            default          -> { badge.setForeground(MAU_GREEN_FG);   badge.setBackground(MAU_GREEN_BG); }
         }
         return badge;
     }
 
-    private String getRoomStatus(String roomCode) {
-        if ("T6.01".equals(roomCode)) {
-            return "Đã thuê";
-        }
-        if ("T5.03".equals(roomCode)) {
-            return "Đang sửa";
-        }
-        return "Trống";
+    private JButton makePrimaryButton(String text) {
+        JButton btn = new JButton(text) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? MAU_PRIMARY_HOVER : MAU_PRIMARY);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
+        btn.setForeground(Color.WHITE);
+        btn.setContentAreaFilled(false); btn.setBorderPainted(false); btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(10, 20, 10, 20));
+        return btn;
     }
 
-    private JButton createSettingButton() {
-        JButton button = new JButton("Cài đặt");
-        button.setFont(FONT_PLAIN);
-        button.setForeground(MAU_TEXT);
-        button.setBackground(MAU_NEN);
-        button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(MAU_BORDER),
-            new EmptyBorder(5, 10, 5, 10)
-        ));
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return button;
+    private JButton makeOutlineButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(FONT_SMALL);
+        btn.setForeground(MAU_TEXT);
+        btn.setBackground(MAU_NEN);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(MAU_BORDER, 1),
+                new EmptyBorder(5, 10, 5, 10)));
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
-    private void showSettingDialog(String roomCode, boolean daThue) {
-        Window parentWindow = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
-        JDialog dialog = new JDialog(parentWindow, "Cài đặt phòng", Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        dialog.setSize(420, 560);
-        dialog.setLocationRelativeTo(parentWindow);
-
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(MAU_CARD);
-        root.setBorder(new EmptyBorder(16, 16, 16, 16));
-
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-
-        JLabel lblTitle = new JLabel("Cài đặt phòng " + roomCode);
-        lblTitle.setFont(FONT_TITLE);
-        lblTitle.setForeground(MAU_TEXT);
-
-        JButton btnClose = new JButton("x");
-        btnClose.setFocusPainted(false);
-        btnClose.setBorderPainted(false);
-        btnClose.setContentAreaFilled(false);
-        btnClose.setForeground(MAU_MUTED);
-        btnClose.setFont(FONT_BOLD.deriveFont(16f));
-        btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnClose.addActionListener(e -> dialog.dispose());
-
-        header.add(lblTitle, BorderLayout.WEST);
-        header.add(btnClose, BorderLayout.EAST);
-
-        JPanel form = new JPanel();
-        form.setOpaque(false);
-        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
-
-        JTextField txtGiaThue = createTextField("3000000");
-        JComboBox<String> cboTrangThai = createCombo(new String[] {"Trống", "Đã thuê", "Đang sửa"});
-        cboTrangThai.setSelectedItem(daThue ? "Đã thuê" : "Trống");
-
-        JTextField txtDienCu = createTextField("4");
-        JTextField txtDienMoi = createTextField("4");
-        JTextField txtNuocCu = createTextField("4");
-        JTextField txtNuocMoi = createTextField("4");
-
-        form.add(createField("Giá thuê (VNĐ/tháng)", txtGiaThue));
-        form.add(Box.createVerticalStrut(8));
-        form.add(createField("Trạng thái", cboTrangThai));
-        form.add(Box.createVerticalStrut(10));
-
-        JPanel gridSo = new JPanel(new GridLayout(2, 2, 10, 8));
-        gridSo.setOpaque(false);
-        gridSo.add(createField("Số điện cũ", txtDienCu));
-        gridSo.add(createField("Số điện mới", txtDienMoi));
-        gridSo.add(createField("Số nước cũ", txtNuocCu));
-        gridSo.add(createField("Số nước mới", txtNuocMoi));
-        form.add(gridSo);
-
-        form.add(Box.createVerticalStrut(12));
-        JLabel lblDv = new JLabel("Dịch vụ sử dụng");
-        lblDv.setFont(FONT_PLAIN);
-        lblDv.setForeground(MAU_MUTED);
-        form.add(lblDv);
-        form.add(Box.createVerticalStrut(6));
-
-        form.add(createServiceCheck("Điện - 3,500đ/KWh", true));
-        form.add(createServiceCheck("Nước - 15,000đ/m3", true));
-        form.add(createServiceCheck("Internet - 100,000đ/tháng", true));
-        form.add(createServiceCheck("Rác - 50,000đ/tháng", true));
-        form.add(createServiceCheck("Giữ xe máy - 100,000đ/tháng", true));
-        form.add(createServiceCheck("Giữ ô tô - 500,000đ/tháng", false));
-
-        form.add(Box.createVerticalGlue());
-
-        JButton btnSave = new JButton("Lưu");
-        btnSave.setFont(FONT_BOLD);
-        btnSave.setBackground(MAU_PRIMARY);
-        btnSave.setForeground(Color.WHITE);
-        btnSave.setFocusPainted(false);
-        btnSave.setBorder(new EmptyBorder(10, 16, 10, 16));
-        btnSave.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnSave.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btnSave.setBackground(MAU_PRIMARY_DISABLED);
+    private JButton makeDeleteButton() {
+        // Load bin.png từ cùng thư mục chạy, hoặc classpath
+        ImageIcon icon = null;
+        try {
+            java.net.URL url = getClass().getResource("/bin.png");
+            if (url == null) {
+                // fallback: load từ thư mục hiện tại
+                java.io.File f = new java.io.File("bin.png");
+                if (f.exists()) url = f.toURI().toURL();
             }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btnSave.setBackground(MAU_PRIMARY);
+            if (url != null) {
+                Image img = new ImageIcon(url).getImage()
+                        .getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+                icon = new ImageIcon(img);
             }
+        } catch (Exception ignored) {}
+
+        JButton btn = icon != null ? new JButton(icon) : new JButton("🗑");
+
+        if (icon == null)
+            btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+
+        btn.setOpaque(true);
+        btn.setBackground(MAU_RED);
+        btn.setForeground(Color.WHITE);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(220, 38, 38), 1, true),
+                new EmptyBorder(5, 8, 5, 8)));
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setPreferredSize(new Dimension(36, 30));
+
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { btn.setBackground(new Color(220, 38, 38)); }
+            public void mouseExited(MouseEvent e)  { btn.setBackground(MAU_RED); }
         });
-        btnSave.addActionListener(e -> dialog.dispose());
-
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(12, 0, 0, 0));
-        footer.add(btnSave, BorderLayout.CENTER);
-
-        root.add(header, BorderLayout.NORTH);
-        root.add(form, BorderLayout.CENTER);
-        root.add(footer, BorderLayout.SOUTH);
-
-        dialog.setContentPane(root);
-        dialog.setVisible(true);
+        return btn;
     }
 
-    private JPanel createField(String label, JComponent input) {
-        JPanel field = new JPanel();
-        field.setOpaque(false);
-        field.setLayout(new BoxLayout(field, BoxLayout.Y_AXIS));
-
-        JLabel lbl = new JLabel(label);
-        lbl.setFont(FONT_PLAIN);
-        lbl.setForeground(MAU_MUTED);
-
-        field.add(lbl);
-        field.add(Box.createVerticalStrut(5));
-        field.add(input);
-        return field;
-    }
-
-    private JTextField createTextField(String value) {
-        JTextField textField = new JTextField(value);
-        textField.setFont(FONT_PLAIN);
-        textField.setForeground(MAU_TEXT);
-        textField.setBackground(MAU_CARD);
-        textField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(MAU_BORDER),
-            new EmptyBorder(7, 10, 7, 10)
-        ));
-        textField.addFocusListener(new FocusAdapter() {
-            @Override
+    private JTextField makeField(String placeholder) {
+        JTextField f = new JTextField(placeholder);
+        f.setFont(FONT_PLAIN);
+        f.setForeground(MAU_TEXT);
+        f.setBackground(MAU_CARD);
+        f.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(MAU_BORDER, 1, true),
+                new EmptyBorder(7, 11, 7, 11)));
+        f.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        f.addFocusListener(new FocusAdapter() {
             public void focusGained(FocusEvent e) {
-                textField.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(MAU_PRIMARY),
-                    new EmptyBorder(7, 10, 7, 10)
-                ));
+                f.setBorder(BorderFactory.createCompoundBorder(
+                        new LineBorder(new Color(37, 99, 235), 2, true),
+                        new EmptyBorder(6, 10, 6, 10)));
             }
-
-            @Override
             public void focusLost(FocusEvent e) {
-                textField.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(MAU_BORDER),
-                    new EmptyBorder(7, 10, 7, 10)
-                ));
+                f.setBorder(BorderFactory.createCompoundBorder(
+                        new LineBorder(MAU_BORDER, 1, true),
+                        new EmptyBorder(7, 11, 7, 11)));
             }
         });
-        return textField;
+        return f;
     }
 
-    private JComboBox<String> createCombo(String[] options) {
-        JComboBox<String> combo = new JComboBox<>(options);
-        combo.setFont(FONT_PLAIN);
-        combo.setForeground(MAU_TEXT);
-        combo.setBackground(MAU_CARD);
-        combo.setBorder(BorderFactory.createLineBorder(MAU_BORDER));
-        return combo;
+    private JComboBox<String> makeCombo(String[] items) {
+        JComboBox<String> cb = new JComboBox<>(items);
+        cb.setFont(FONT_PLAIN);
+        cb.setBackground(MAU_CARD);
+        cb.setForeground(MAU_TEXT);
+        cb.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        return cb;
     }
 
-    private JCheckBox createServiceCheck(String text, boolean selected) {
-        JCheckBox checkBox = new JCheckBox(text, selected);
-        checkBox.setOpaque(false);
-        checkBox.setFont(FONT_PLAIN);
-        checkBox.setForeground(MAU_TEXT);
-        return checkBox;
+    private JPanel wrapField(String label, JComponent field) {
+        JPanel p = new JPanel();
+        p.setBackground(MAU_CARD);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(FONT_SMALL);
+        lbl.setForeground(MAU_TEXT);
+        p.add(lbl);
+        p.add(Box.createVerticalStrut(5));
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(field);
+        return p;
+    }
+
+    private JLabel makeErrLabel() {
+        JLabel lbl = new JLabel(" ");
+        lbl.setFont(FONT_SMALL);
+        lbl.setForeground(new Color(220, 38, 38));
+        lbl.setVisible(false);
+        return lbl;
+    }
+
+    private void shakeFocus(JComponent comp) {
+        comp.requestFocusInWindow();
+        Point origin = comp.getLocation();
+        javax.swing.Timer t = new javax.swing.Timer(30, null);
+        int[] step = {0};
+        int[] off  = {-6, 6, -4, 4, -2, 2, 0};
+        t.addActionListener(ev -> {
+            if (step[0] < off.length) comp.setLocation(origin.x + off[step[0]++], origin.y);
+            else { comp.setLocation(origin); t.stop(); }
+        });
+        t.start();
     }
 }

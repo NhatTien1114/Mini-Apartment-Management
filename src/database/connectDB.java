@@ -5,9 +5,11 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class connectDB {
+	// 1. Cập nhật tài khoản và mật khẩu mới của bạn ở đây
 	private static final String USERNAME = "sa";
-	private static final String PASSWORD = "123"; // Đổi mật khẩu cho phù hợp
+	private static final String PASSWORD = "sapassword";
 
+	// 2. Đảm bảo tên Database trong SQL Server của bạn đúng là "ChungCuMini"
 	private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=ChungCuMini"
 			+ ";encrypt=true;trustServerCertificate=true";
 
@@ -20,18 +22,20 @@ public class connectDB {
 					return connection;
 				}
 			} catch (SQLException e) {
-                System.out.println("Kết nối SQL Server đã bị lỗi. Đang tạo kết nối mới...");
+				System.out.println("Kết nối SQL Server đã bị lỗi. Đang tạo kết nối mới...");
 			}
 		}
 
 		try {
+			// Nạp Driver
 			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+			// Thực hiện kết nối
 			connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
 			System.out.println("Kết nối SQL Server thành công!");
 		} catch (ClassNotFoundException e) {
-			throw new RuntimeException("Không tìm thấy SQL Server JDBC Driver.", e);
+			throw new RuntimeException("Lỗi: Không tìm thấy file thư viện .jar (Driver). Hãy add mssql-jdbc vào Libraries.", e);
 		} catch (SQLException e) {
-			throw new RuntimeException("Không thể kết nối SQL Server. Kiểm tra lại server, DB, tài khoản.", e);
+			throw new RuntimeException("Lỗi: Không thể kết nối. Hãy kiểm tra: 1. SQL Service đã chạy chưa? 2. Port 1433 đã mở chưa? 3. Pass đúng chưa?", e);
 		}
 
 		return connection;
@@ -58,4 +62,15 @@ public class connectDB {
 		}
 	}
 
+	// 3. Hàm Main dùng để chuột phải và ấn RUN chạy thử
+	public static void main(String[] args) {
+		System.out.println("Đang kiểm tra kết nối...");
+		Connection testConn = connectDB.connect();
+
+		if (testConn != null) {
+			System.out.println("Chúc mừng! Bạn đã kết nối Database thành công.");
+			// Test xong thì đóng lại cho sạch
+			connectDB.closeConnection();
+		}
+	}
 }
