@@ -75,7 +75,7 @@ public class TrangChu extends JFrame{
         pnlDanhSach.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         String[] danhSachMenu = {
-                "Trang chủ", "Hợp đồng", "Quản lý", "Khách thuê",
+                "Trang chủ", "Hợp đồng", "Quản lý phòng", "Khách hàng",
                 "Phương tiện", "Doanh thu", "Dịch vụ", "Hóa đơn"
         };
 
@@ -151,7 +151,7 @@ public class TrangChu extends JFrame{
         pnlContent.add(createTrangChuContent(), "0");
         pnlContent.add(new HopDongUI().getPanel(), "1");
         pnlContent.add(new QuanLyPhongUI().getPanel(), "2");
-        pnlContent.add(new KhachThueUI().getPanel(), "3");
+        pnlContent.add(new KhachHangUI().getPanel(), "3");
         pnlContent.add(new PhuongTienUI().getPanel(), "4");
         pnlContent.add(new DoanhThuUI().getPanel(), "5");
         pnlContent.add(new DichVuUI().getPanel(), "6");
