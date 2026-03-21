@@ -1,160 +1,438 @@
 package ui.main;
 
 import java.awt.*;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import ui.util.AppColors;
+import java.awt.geom.RoundRectangle2D;
+import java.text.NumberFormat;
+import java.util.Locale;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 public class DoanhThuUI {
-    private final Color MAU_NEN = AppColors.APP_BACKGROUND;
-    private final Color MAU_DOANH_THU = AppColors.REVENUE;
-    private final Color MAU_CHI_PHI = AppColors.ORANGE_500;
-    private final Color MAU_LOI_NHUAN = AppColors.VIOLET_500;
-    private final Color MAU_LAP_DAY = AppColors.PINK_500;
-    
+
+    // ── Màu sắc ──────────────────────────────────────────────────────────────
+    private static final Color MAU_NEN         = new Color(229, 231, 235);
+    private static final Color MAU_TRANG       = Color.WHITE;
+    private static final Color MAU_XANH_LA     = new Color(34, 197, 94);
+    private static final Color MAU_XANH_DUONG  = new Color(59, 130, 246);
+    private static final Color MAU_VANG        = new Color(234, 179, 8);
+    private static final Color MAU_CHU_PHU     = new Color(107, 114, 128);
+    private static final Color MAU_CHU_CHINH   = new Color(17, 24, 39);
+    private static final Color MAU_COT         = new Color(156, 163, 175);
+    private static final Color MAU_COT_HOVER   = new Color(99, 102, 241);
+    private static final Color MAU_LUOI        = new Color(229, 231, 235);
+
+    // ── Font ─────────────────────────────────────────────────────────────────
+    private static final String FONT = "Be Vietnam Pro";
+
+    // ── Tháng ────────────────────────────────────────────────────────────────
+    private static final String[] THANG = {
+            "T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12"
+    };
+
+    // ── Mock data theo năm (index 0=2024, 1=2025, 2=2026, 3=2027) ───────────
+    private static final long[][] DATA = {
+            {5_000_000, 8_200_000, 6_100_000, 9_500_000, 11_000_000, 7_300_000,
+                    12_400_000, 10_800_000, 9_200_000, 13_100_000, 14_500_000, 18_000_000},
+            {3_500_000, 4_200_000, 6_800_000, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    };
+    private static final int[] YEARS = {2024, 2025, 2026, 2027};
+
+    // ── State ────────────────────────────────────────────────────────────────
+    private int selectedYearIndex = 2; // mặc định 2026
+
+    // ── Components cần refresh ───────────────────────────────────────────────
+    private JLabel lblTitleTong;
+    private JLabel lblTongDoanhThu;
+    private JLabel lblSoHoaDon;
+    private JLabel lblTBThang;
+    private BarChartPanel barChartPanel;
+
+    // ─────────────────────────────────────────────────────────────────────────
     public JPanel getPanel() {
-        JPanel pnl = new JPanel();
-        pnl.setLayout(new BorderLayout(20, 20));
+        JPanel pnl = new JPanel(new BorderLayout(0, 16));
         pnl.setBorder(new EmptyBorder(20, 20, 20, 20));
         pnl.setBackground(MAU_NEN);
 
-        JLabel lblTitle = new JLabel("Thống Kê Doanh Thu");
-        lblTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 24));
-        pnl.add(lblTitle, BorderLayout.NORTH);
+        pnl.add(buildHeader(), BorderLayout.NORTH);
+        pnl.add(buildBody(),   BorderLayout.CENTER);
 
-        JPanel pnlContent = new JPanel();
-        pnlContent.setLayout(new BoxLayout(pnlContent, BoxLayout.Y_AXIS));
-        pnlContent.setOpaque(false);
-
-        // --- 1. Thẻ tóm tắt ---
-        JPanel pnlCards = new JPanel(new GridLayout(1, 3, 20, 0));
-        pnlCards.setOpaque(false);
-        pnlCards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
-        pnlCards.add(createCard("Tổng doanh thu", "1.520.000.000", MAU_DOANH_THU));
-        pnlCards.add(createCard("Tổng chi phí", "670.000.000", MAU_CHI_PHI));
-        pnlCards.add(createCard("Lợi nhuận", "850.000.000", MAU_LOI_NHUAN));
-        pnlCards.add(createCard("Tỉ lệ lấp đầy", "85%", MAU_LAP_DAY));
-        // --- 2. KHỐI BIỂU ĐỒ (12 THÁNG) ---
-        JPanel pnlChartContainer = new JPanel(new BorderLayout(0, 10));
-        pnlChartContainer.setBackground(Color.WHITE);
-        pnlChartContainer.setBorder(new EmptyBorder(20, 20, 10, 20));
-        // Cho biểu đồ cao hơn một chút để 12 tháng nhìn rõ
-        pnlChartContainer.setPreferredSize(new Dimension(1000, 400));
-
-        JLabel lblChartTitle = new JLabel("Biểu đồ doanh thu & chi phí năm 2026");
-        lblChartTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 18));
-        pnlChartContainer.add(lblChartTitle, BorderLayout.NORTH);
-
-        // Panel chứa 12 cột
-        JPanel pnlBars = new JPanel(new GridLayout(1, 12, 10, 0));
-        pnlBars.setOpaque(false);
-
-        // Dữ liệu giả lập cho 12 tháng (Doanh thu, Chi phí)
-        int[][] monthlyData = {
-                {80, 40}, {90, 50}, {110, 60}, {130, 70}, {120, 65}, {140, 80},
-                {150, 85}, {130, 75}, {110, 60}, {120, 70}, {140, 90}, {160, 95}
-        };
-
-        for (int i = 0; i < 12; i++) {
-            pnlBars.add(createBarGroup("T" + (i + 1), monthlyData[i][0], monthlyData[i][1]));
-        }
-
-        pnlChartContainer.add(pnlBars, BorderLayout.CENTER);
-
-        // Chú thích
-        JPanel pnlLegend = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        pnlLegend.setOpaque(false);
-        pnlLegend.add(createLegendItem("Doanh thu", MAU_DOANH_THU));
-        pnlLegend.add(createLegendItem("Chi phí", MAU_CHI_PHI));
-        pnlChartContainer.add(pnlLegend, BorderLayout.SOUTH);
-
-        pnlContent.add(pnlCards);
-        pnlContent.add(Box.createVerticalStrut(20));
-        pnlContent.add(pnlChartContainer);
-
-        pnl.add(pnlContent, BorderLayout.CENTER);
         return pnl;
     }
-    private JPanel createBarGroup(String label, int revenue, int cost) {
-        JPanel group = new JPanel(new BorderLayout(0, 5));
-        group.setOpaque(false);
 
-        // Panel vẽ cột
-        JPanel barContainer = new JPanel(null) {
-            @Override
-            public Dimension getPreferredSize() { return new Dimension(50, 220); }
-        };
-        barContainer.setOpaque(false);
+    // ── Header ────────────────────────────────────────────────────────────────
+    private JPanel buildHeader() {
+        JPanel pnl = new JPanel(new BorderLayout());
+        pnl.setOpaque(false);
 
-        // Tính toán chiều cao (giả sử tối đa là 200px)
-        int h1 = revenue;
-        int h2 = cost;
+        JLabel lblTitle = new JLabel("Doanh thu");
+        lblTitle.setFont(new Font(FONT, Font.BOLD, 22));
+        lblTitle.setForeground(MAU_CHU_CHINH);
+        pnl.add(lblTitle, BorderLayout.WEST);
 
-        // Cột Doanh Thu (Xanh)
-        JPanel barRev = new JPanel();
-        barRev.setBackground(MAU_DOANH_THU);
-        barRev.setBounds(5, 200 - h1, 15, h1);
-        barRev.setToolTipText("<html><b>" + label + "</b><br>Doanh thu: " + revenue + ".000.000đ</html>");
+        JPanel pnlRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        pnlRight.setOpaque(false);
 
-        // Cột Chi Phí (Cam)
-        JPanel barCost = new JPanel();
-        barCost.setBackground(MAU_CHI_PHI);
-        barCost.setBounds(22, 200 - h2, 15, h2);
-        barCost.setToolTipText("<html><b>" + label + "</b><br>Chi phí: " + cost + ".000.000đ</html>");
+        JLabel lblNam = new JLabel("Năm:");
+        lblNam.setFont(new Font(FONT, Font.PLAIN, 13));
+        lblNam.setForeground(MAU_CHU_PHU);
+        lblNam.setBorder(new EmptyBorder(0, 0, 0, 6));
 
-        // Thêm hiệu ứng hover để chắc chắn Tooltip hiện nhanh
-        MouseAdapter hoverEffect = new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                ((JPanel)e.getSource()).setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                ((JPanel)e.getSource()).setBorder(null);
-            }
-        };
-        barRev.addMouseListener(hoverEffect);
-        barCost.addMouseListener(hoverEffect);
+        String[] yearStrs = new String[YEARS.length];
+        for (int i = 0; i < YEARS.length; i++) yearStrs[i] = String.valueOf(YEARS[i]);
 
-        barContainer.add(barRev);
-        barContainer.add(barCost);
+        JComboBox<String> cboNam = new JComboBox<>(yearStrs);
+        cboNam.setSelectedIndex(selectedYearIndex);
+        cboNam.setFont(new Font(FONT, Font.PLAIN, 13));
+        cboNam.setFocusable(false);
+        cboNam.setPreferredSize(new Dimension(90, 30));
+        cboNam.addActionListener(e -> {
+            selectedYearIndex = cboNam.getSelectedIndex();
+            refreshData();
+        });
 
-        JLabel lblMonth = new JLabel(label, SwingConstants.CENTER);
-        lblMonth.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 11));
+        pnlRight.add(lblNam);
+        pnlRight.add(cboNam);
+        pnl.add(pnlRight, BorderLayout.EAST);
 
-        group.add(barContainer, BorderLayout.CENTER);
-        group.add(lblMonth, BorderLayout.SOUTH);
-        return group;
+        return pnl;
     }
 
-    private JPanel createLegendItem(String text, Color color) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        p.setOpaque(false);
-        JPanel box = new JPanel();
-        box.setPreferredSize(new Dimension(12, 12));
-        box.setBackground(color);
-        p.add(box);
-        p.add(new JLabel(text));
-        return p;
+    // ── Body ─────────────────────────────────────────────────────────────────
+    private JPanel buildBody() {
+        JPanel pnl = new JPanel(new BorderLayout(0, 16));
+        pnl.setOpaque(false);
+        pnl.add(buildCards(),        BorderLayout.NORTH);
+        pnl.add(buildChartWrapper(), BorderLayout.CENTER);
+        return pnl;
     }
 
-    private JPanel createCard(String title, String value, Color color) {
-        JPanel card = new JPanel(new GridLayout(2, 1, 0, 5));
-        card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(210, 214, 219), 1),
-                new EmptyBorder(15, 15, 15, 15)
-        ));
-        JLabel lblTitle = new JLabel(title);
-        lblTitle.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
-        lblTitle.setForeground(Color.GRAY);
-        JLabel lblValue = new JLabel(value);
-        lblValue.setFont(new Font("Be Vietnam Pro", Font.BOLD, 20));
-        lblValue.setForeground(color);
-        card.add(lblTitle);
-        card.add(lblValue);
+    // ── 3 thẻ thống kê ────────────────────────────────────────────────────────
+    private JPanel buildCards() {
+        JPanel pnl = new JPanel(new GridLayout(1, 3, 12, 0));
+        pnl.setOpaque(false);
+
+        int year    = YEARS[selectedYearIndex];
+        long[] data = DATA[selectedYearIndex];
+        long tong   = tinhTong(data);
+        long soHD   = tinhSoHoaDon(data);
+        long tb     = tong / 12;
+
+        lblTitleTong    = new JLabel("Tổng doanh thu " + year);
+        lblTongDoanhThu = new JLabel(formatTien(tong));
+        lblSoHoaDon     = new JLabel(String.valueOf(soHD));
+        lblTBThang      = new JLabel(formatTien(tb));
+
+        pnl.add(buildCard(MAU_XANH_LA,    "đ",  lblTitleTong,              lblTongDoanhThu));
+        pnl.add(buildCard(MAU_XANH_DUONG, "\uD83D\uDCCA", new JLabel("Số hóa đơn"), lblSoHoaDon));
+        pnl.add(buildCard(MAU_VANG,       "\uD83D\uDCC9", new JLabel("TB/tháng"),   lblTBThang));
+
+        return pnl;
+    }
+
+    private JPanel buildCard(Color iconColor, String iconText, JLabel lblSub, JLabel lblVal) {
+        JPanel card = new JPanel(new BorderLayout(12, 0)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(MAU_TRANG);
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 14, 14));
+                g2.dispose();
+            }
+        };
+        card.setOpaque(false);
+        card.setBorder(new EmptyBorder(14, 14, 14, 14));
+
+        // Icon box
+        JPanel pnlIcon = new JPanel(new GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(iconColor);
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
+                g2.dispose();
+            }
+        };
+        pnlIcon.setOpaque(false);
+        pnlIcon.setPreferredSize(new Dimension(44, 44));
+
+        JLabel lblIcon = new JLabel(iconText);
+        if (iconText.equals("đ")) {
+            lblIcon.setFont(new Font(FONT, Font.BOLD, 20));
+            lblIcon.setForeground(MAU_TRANG);
+        } else {
+            lblIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
+        }
+        pnlIcon.add(lblIcon);
+
+        // Text
+        JPanel pnlText = new JPanel(new GridLayout(2, 1, 0, 2));
+        pnlText.setOpaque(false);
+
+        lblSub.setFont(new Font(FONT, Font.PLAIN, 11));
+        lblSub.setForeground(MAU_CHU_PHU);
+
+        lblVal.setFont(new Font(FONT, Font.BOLD, 20));
+        lblVal.setForeground(MAU_CHU_CHINH);
+
+        pnlText.add(lblSub);
+        pnlText.add(lblVal);
+
+        card.add(pnlIcon, BorderLayout.WEST);
+        card.add(pnlText, BorderLayout.CENTER);
+
         return card;
+    }
+
+    // ── Wrapper biểu đồ ──────────────────────────────────────────────────────
+    private JPanel buildChartWrapper() {
+        JPanel wrapper = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(MAU_TRANG);
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 14, 14));
+                g2.dispose();
+            }
+        };
+        wrapper.setOpaque(false);
+        wrapper.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+        JLabel lblChartTitle = new JLabel("Biểu đồ doanh thu theo tháng");
+        lblChartTitle.setFont(new Font(FONT, Font.BOLD, 14));
+        lblChartTitle.setForeground(MAU_CHU_CHINH);
+        lblChartTitle.setBorder(new EmptyBorder(0, 0, 10, 0));
+        wrapper.add(lblChartTitle, BorderLayout.NORTH);
+
+        barChartPanel = new BarChartPanel(DATA[selectedYearIndex]);
+        wrapper.add(barChartPanel, BorderLayout.CENTER);
+
+        return wrapper;
+    }
+
+    // ── Refresh khi đổi năm ───────────────────────────────────────────────────
+    private void refreshData() {
+        int year    = YEARS[selectedYearIndex];
+        long[] data = DATA[selectedYearIndex];
+        long tong   = tinhTong(data);
+        long soHD   = tinhSoHoaDon(data);
+        long tb     = tong / 12;
+
+        lblTitleTong.setText("Tổng doanh thu " + year);
+        lblTongDoanhThu.setText(formatTien(tong));
+        lblSoHoaDon.setText(String.valueOf(soHD));
+        lblTBThang.setText(formatTien(tb));
+
+        barChartPanel.setData(data);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    private long tinhTong(long[] data) {
+        long s = 0; for (long v : data) s += v; return s;
+    }
+    private long tinhSoHoaDon(long[] data) {
+        int c = 0; for (long v : data) if (v > 0) c++; return c;
+    }
+    private String formatTien(long value) {
+        if (value == 0) return "0đ";
+        return NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(value) + "đ";
+    }
+
+    // =========================================================================
+    //  BarChartPanel — tự vẽ bằng Graphics2D, KHÔNG dùng thư viện ngoài
+    // =========================================================================
+    private class BarChartPanel extends JPanel {
+
+        private long[] data;
+        private int hoveredIndex = -1;
+        private String tooltipText = null;
+        private int tooltipX, tooltipY;
+
+        BarChartPanel(long[] data) {
+            this.data = data;
+            setOpaque(false);
+            setBackground(MAU_TRANG);
+
+            addMouseMotionListener(new MouseAdapter() {
+                @Override
+                public void mouseMoved(MouseEvent e) {
+                    updateHover(e.getX(), e.getY());
+                }
+            });
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hoveredIndex = -1;
+                    tooltipText  = null;
+                    repaint();
+                }
+            });
+        }
+
+        void setData(long[] data) {
+            this.data = data;
+            hoveredIndex = -1;
+            tooltipText  = null;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+
+            int marginLeft   = 55;
+            int marginRight  = 16;
+            int marginTop    = 16;
+            int marginBottom = 30;
+
+            int chartW = w - marginLeft - marginRight;
+            int chartH = h - marginTop - marginBottom;
+
+            // Max value
+            long maxVal = 0;
+            for (long v : data) if (v > maxVal) maxVal = v;
+            if (maxVal == 0) maxVal = 1_000_000;
+
+            // Làm tròn maxVal lên bội số đẹp
+            maxVal = roundUpNice(maxVal);
+
+            // ── Lưới ngang + nhãn trục Y ──────────────────────────────────
+            int gridLines = 5;
+            g2.setFont(new Font(FONT, Font.PLAIN, 10));
+
+            for (int i = 0; i <= gridLines; i++) {
+                int yPos = marginTop + chartH - (int)((double) i / gridLines * chartH);
+                long labelVal = (long)((double) i / gridLines * maxVal);
+
+                g2.setColor(MAU_LUOI);
+                g2.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
+                        1f, new float[]{4f}, 0f));
+                g2.drawLine(marginLeft, yPos, marginLeft + chartW, yPos);
+
+                g2.setColor(MAU_CHU_PHU);
+                g2.setStroke(new BasicStroke(1f));
+                String yLabel = formatTrieu(labelVal);
+                FontMetrics fm = g2.getFontMetrics();
+                g2.drawString(yLabel, marginLeft - fm.stringWidth(yLabel) - 6,
+                        yPos + fm.getAscent() / 2 - 1);
+            }
+
+            // ── Vẽ cột ────────────────────────────────────────────────────
+            int n       = data.length;
+            float slotW = (float) chartW / n;
+            float barW  = slotW * 0.45f;
+
+            for (int i = 0; i < n; i++) {
+                int barH = (int)((double) data[i] / maxVal * chartH);
+                int x    = marginLeft + (int)(i * slotW + (slotW - barW) / 2);
+                int y    = marginTop + chartH - barH;
+
+                if (barH > 0) {
+                    g2.setColor(i == hoveredIndex ? MAU_COT_HOVER : MAU_COT);
+                    g2.setStroke(new BasicStroke(1f));
+                    int arc = Math.min(6, (int) barW / 2);
+                    g2.fill(new RoundRectangle2D.Float(x, y, barW, barH, arc, arc));
+                }
+
+                // Label trục X
+                g2.setColor(MAU_CHU_PHU);
+                FontMetrics fm = g2.getFontMetrics();
+                String lbl = THANG[i];
+                int lx = x + (int)(barW / 2) - fm.stringWidth(lbl) / 2;
+                int ly = marginTop + chartH + marginBottom - 8;
+                g2.drawString(lbl, lx, ly);
+            }
+
+            // ── Tooltip ───────────────────────────────────────────────────
+            if (tooltipText != null && hoveredIndex >= 0) {
+                drawTooltip(g2, tooltipText, tooltipX, tooltipY);
+            }
+
+            g2.dispose();
+        }
+
+        private void updateHover(int mx, int my) {
+            int w = getWidth(), h = getHeight();
+            int marginLeft = 55, marginRight = 16, marginTop = 16, marginBottom = 30;
+            int chartW = w - marginLeft - marginRight;
+            int chartH = h - marginTop - marginBottom;
+
+            int n = data.length;
+            float slotW = (float) chartW / n;
+
+            hoveredIndex = -1;
+            tooltipText  = null;
+
+            for (int i = 0; i < n; i++) {
+                int slotX = marginLeft + (int)(i * slotW);
+                if (mx >= slotX && mx < slotX + (int) slotW
+                        && my >= marginTop && my <= marginTop + chartH) {
+                    hoveredIndex = i;
+                    tooltipText  = THANG[i] + "\nrevenue : " + formatTien(data[i]);
+                    tooltipX     = mx;
+                    tooltipY     = my - 10;
+                    break;
+                }
+            }
+            repaint();
+        }
+
+        private void drawTooltip(Graphics2D g2, String text, int x, int y) {
+            String[] lines = text.split("\n");
+            Font f = new Font(FONT, Font.PLAIN, 11);
+            g2.setFont(f);
+            FontMetrics fm = g2.getFontMetrics();
+
+            int pad   = 8;
+            int lineH = fm.getHeight();
+            int bw    = 0;
+            for (String l : lines) bw = Math.max(bw, fm.stringWidth(l));
+            bw += pad * 2;
+            int bh = lineH * lines.length + pad * 2;
+
+            int tx = Math.min(x + 10, getWidth()  - bw - 4);
+            int ty = Math.max(y - bh - 4, 4);
+
+            // Shadow nhẹ
+            g2.setColor(new Color(0, 0, 0, 20));
+            g2.fillRoundRect(tx + 2, ty + 2, bw, bh, 6, 6);
+
+            // Nền trắng + viền
+            g2.setColor(MAU_TRANG);
+            g2.fillRoundRect(tx, ty, bw, bh, 6, 6);
+            g2.setColor(new Color(209, 213, 219));
+            g2.setStroke(new BasicStroke(1f));
+            g2.drawRoundRect(tx, ty, bw, bh, 6, 6);
+
+            // Text
+            g2.setColor(MAU_CHU_CHINH);
+            for (int i = 0; i < lines.length; i++) {
+                g2.drawString(lines[i], tx + pad, ty + pad + fm.getAscent() + i * lineH);
+            }
+        }
+
+        // Làm tròn lên bội số đẹp để trục Y không bị lẻ
+        private long roundUpNice(long val) {
+            if (val <= 0) return 1_000_000;
+            long magnitude = (long) Math.pow(10, (long) Math.log10(val));
+            return ((val / magnitude) + 1) * magnitude;
+        }
+
+        private String formatTrieu(long value) {
+            if (value == 0) return "0M";
+            return (value / 1_000_000) + "M";
+        }
     }
 }
