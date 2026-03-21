@@ -1,14 +1,15 @@
-package UI.main;
+package ui.main;
 
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.*;
+import ui.util.AppColors;
 
 public class PhuongTienUI {
-    private final Color MAU_XANH_CHINH = new Color(30, 80, 180);
-    private final Color MAU_NEN = new Color(229, 231, 235);
+    private final Color MAU_XANH_CHINH = AppColors.REVENUE;
+    private final Color MAU_NEN = AppColors.APP_BACKGROUND;
     private DefaultTableModel model;
     private JTable table;
 
@@ -32,7 +33,7 @@ public class PhuongTienUI {
 
         JButton btnAdd = new JButton("+ Đăng ký xe");
         btnAdd.setBackground(MAU_XANH_CHINH);
-        btnAdd.setForeground(Color.WHITE);
+        btnAdd.setForeground(AppColors.WHITE);
         btnAdd.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
         btnAdd.setFocusPainted(false);
 

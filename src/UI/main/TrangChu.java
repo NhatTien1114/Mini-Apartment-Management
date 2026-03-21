@@ -1,4 +1,4 @@
-package UI.main;
+package ui.main;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -75,7 +75,7 @@ public class TrangChu extends JFrame{
         pnlDanhSach.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         String[] danhSachMenu = {
-                "Trang chủ", "Hợp đồng", "Quản lý", "Khách thuê",
+                "Trang chủ", "Hợp đồng", "Quản lý phòng", "Khách hàng",
                 "Phương tiện", "Doanh thu", "Dịch vụ", "Hóa đơn"
         };
 
@@ -150,8 +150,8 @@ public class TrangChu extends JFrame{
         
         pnlContent.add(createTrangChuContent(), "0");
         pnlContent.add(new HopDongUI().getPanel(), "1");
-        pnlContent.add(new QuanLyUI().getPanel(), "2");
-        pnlContent.add(new KhachThueUI().getPanel(), "3");
+        pnlContent.add(new QuanLyPhongUI().getPanel(), "2");
+        pnlContent.add(new KhachHangUI().getPanel(), "3");
         pnlContent.add(new PhuongTienUI().getPanel(), "4");
         pnlContent.add(new DoanhThuUI().getPanel(), "5");
         pnlContent.add(new DichVuUI().getPanel(), "6");
@@ -197,6 +197,10 @@ public class TrangChu extends JFrame{
         JButton btnDangXuat = new JButton("Đăng xuất");
         btnDangXuat.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
         btnDangXuat.setBackground(Color.WHITE);
+        btnDangXuat.addActionListener(e -> {
+            new LoginUI().setVisible(true);
+            this.dispose();
+        });
         pnlHeader.add(btnDangXuat, BorderLayout.EAST);
 
         return pnlHeader;
@@ -294,6 +298,6 @@ public class TrangChu extends JFrame{
 
     // ================= MAIN =================
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new TrangChu("TT", "Admin"));
+        SwingUtilities.invokeLater(() -> new LoginUI().setVisible(true));
     }
 }

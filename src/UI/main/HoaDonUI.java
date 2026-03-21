@@ -1,4 +1,4 @@
-package UI.main;
+package ui.main;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -7,20 +7,21 @@ import java.util.*;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
+import ui.util.AppColors;
 
 public class HoaDonUI {
-    private final Color MAU_NEN      = new Color(241, 245, 249);
-    private final Color MAU_CARD     = Color.WHITE;
-    private final Color MAU_BORDER   = new Color(226, 232, 240);
-    private final Color MAU_TEXT     = new Color(15, 23, 42);
-    private final Color MAU_MUTED    = new Color(100, 116, 139);
-    private final Color MAU_PRIMARY  = new Color(37, 99, 235);
-    private final Color MAU_PRIMARY_DISABLED = new Color(147, 197, 253);
-    private final Color MAU_RED      = new Color(239, 68, 68);
-    private final Color MAU_AMBER_BG = new Color(254, 249, 195);
-    private final Color MAU_AMBER_FG = new Color(161, 98, 7);
-    private final Color MAU_GREEN_BG = new Color(220, 252, 231);
-    private final Color MAU_GREEN_FG = new Color(22, 163, 74);
+    private final Color MAU_NEN      = AppColors.SLATE_100;
+    private final Color MAU_CARD     = AppColors.WHITE;
+    private final Color MAU_BORDER   = AppColors.SLATE_200;
+    private final Color MAU_TEXT     = AppColors.SLATE_900;
+    private final Color MAU_MUTED    = AppColors.SLATE_500;
+    private final Color MAU_PRIMARY  = AppColors.PRIMARY;
+    private final Color MAU_PRIMARY_DISABLED = AppColors.PRIMARY_DISABLED;
+    private final Color MAU_RED      = AppColors.RED_500;
+    private final Color MAU_AMBER_BG = AppColors.AMBER_BG;
+    private final Color MAU_AMBER_FG = AppColors.AMBER_FG;
+    private final Color MAU_GREEN_BG = AppColors.GREEN_BG;
+    private final Color MAU_GREEN_FG = AppColors.GREEN_600;
 
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 22);
     private final Font FONT_BOLD  = new Font("Be Vietnam Pro", Font.BOLD, 13);
