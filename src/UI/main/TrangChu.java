@@ -1,9 +1,12 @@
 package ui.main;
 
+import dao.QuanLyPhongDAO;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import service.PhongService;
 import ui.util.PhongInfo;
 import ui.util.RoundedButton;
 
@@ -21,6 +24,7 @@ public class TrangChu extends JFrame{
     // ===== LAYOUT COMPONENTS =====
     private CardLayout cardLayout;
     private JPanel pnlContent;
+    private JPanel pnlTrangChuContent;
     private JButton[] menuButtons;
     private int selectedMenuIndex = 0;
 
@@ -30,6 +34,7 @@ public class TrangChu extends JFrame{
     private String role;
     private JLabel lblTen;
     private JLabel lblRole;
+    private final PhongService phongService = new PhongService();
 
     public TrangChu(entity.TaiKhoan tk) {
         this.taiKhoan = tk;
@@ -156,6 +161,11 @@ public class TrangChu extends JFrame{
         menuButtons[selectedMenuIndex].setBackground(MAU_MENU);
         selectedMenuIndex = index;
         menuButtons[selectedMenuIndex].setBackground(MAU_MENU_HOVER);
+
+        if (index == 0) {
+            refreshTrangChuTab();
+        }
+
         cardLayout.show(pnlContent, String.valueOf(index));
     }
 
@@ -170,7 +180,8 @@ public class TrangChu extends JFrame{
         pnlContent = new JPanel(cardLayout);
         pnlContent.setBackground(MAU_NEN);
         
-        pnlContent.add(createTrangChuContent(), "0");
+        pnlTrangChuContent = createTrangChuContent();
+        pnlContent.add(pnlTrangChuContent, "0");
         pnlContent.add(new HopDongUI().getPanel(), "1");
         pnlContent.add(new QuanLyPhongUI().getPanel(), "2");
         pnlContent.add(new KhachHangUI().getPanel(), "3");
@@ -181,6 +192,21 @@ public class TrangChu extends JFrame{
         
         pnlMain.add(pnlContent, BorderLayout.CENTER);
         return pnlMain;
+    }
+
+    private void refreshTrangChuTab() {
+        if (pnlContent == null) {
+            return;
+        }
+
+        if (pnlTrangChuContent != null) {
+            pnlContent.remove(pnlTrangChuContent);
+        }
+
+        pnlTrangChuContent = createTrangChuContent();
+        pnlContent.add(pnlTrangChuContent, "0");
+        pnlContent.revalidate();
+        pnlContent.repaint();
     }
 
     // ================= HEADER =================
@@ -265,10 +291,16 @@ public class TrangChu extends JFrame{
         pnlThongKe.setBackground(MAU_NEN);
         pnlThongKe.setPreferredSize(new Dimension(0, 70));
 
-        pnlThongKe.add(createCard("15", "Trống", MAU_XANH));
-        pnlThongKe.add(createCard("12", "Đã thuê", MAU_DO));
-        pnlThongKe.add(createCard("2", "Đã cọc", MAU_XANH_DUONG));
-        pnlThongKe.add(createCard("1", "Sữa chữa", MAU_VANG));
+        List<QuanLyPhongDAO.Phong> dsPhong = layDanhSachPhong();
+        int soPhongTrong = demTheoTrangThai(dsPhong, "Trống");
+        int soPhongDaThue = demTheoTrangThai(dsPhong, "Đã thuê");
+        int soPhongDaCoc = demTheoTrangThai(dsPhong, "Đã cọc");
+        int soPhongSua = demTheoTrangThai(dsPhong, "Đang sửa");
+
+        pnlThongKe.add(createCard(String.valueOf(soPhongTrong), "Trống", MAU_XANH));
+        pnlThongKe.add(createCard(String.valueOf(soPhongDaThue), "Đã thuê", MAU_DO));
+        pnlThongKe.add(createCard(String.valueOf(soPhongDaCoc), "Đã cọc", MAU_XANH_DUONG));
+        pnlThongKe.add(createCard(String.valueOf(soPhongSua), "Sửa chữa", MAU_VANG));
 
         return pnlThongKe;
     }
@@ -302,17 +334,17 @@ public class TrangChu extends JFrame{
         pnlSoDo.setBackground(Color.WHITE);
         pnlSoDo.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        pnlSoDo.add(createTang("TẦNG 6", new String[] { "T6.01", "T6.02", "T6.03", "T6.04" }, MAU_XANH));
-        pnlSoDo.add(createTang("TẦNG 5", new String[] { "T5.01", "T5.02", "T5.03", "T5.04", "T5.05" }, MAU_XANH));
-        pnlSoDo.add(createTang("TẦNG 4", new String[] { "T4.01", "T4.02", "T4.03", "T4.04", "T4.05" }, null));
-        pnlSoDo.add(createTang("TẦNG 3", new String[] { "T3.01", "T3.02", "T3.03", "T3.04", "T3.05" }, null));
-        pnlSoDo.add(createTang("TẦNG 2", new String[] { "T2.01", "T2.02", "T2.03", "T2.04", "T2.05", "T2.06" }, null));
-        pnlSoDo.add(createTang("TẦNG 1", new String[] { "T1.01", "T1.02", "T1.03", "T1.04", "T1.05" }, null));
+        pnlSoDo.add(createTang("TẦNG 6", phongService.layTheoTang("T6")));
+        pnlSoDo.add(createTang("TẦNG 5", phongService.layTheoTang("T5")));
+        pnlSoDo.add(createTang("TẦNG 4", phongService.layTheoTang("T4")));
+        pnlSoDo.add(createTang("TẦNG 3", phongService.layTheoTang("T3")));
+        pnlSoDo.add(createTang("TẦNG 2", phongService.layTheoTang("T2")));
+        pnlSoDo.add(createTang("TẦNG 1", phongService.layTheoTang("T1")));
 
         return pnlSoDo;
     }
 
-    private JPanel createTang(String tenTang, String[] dsPhong, Color macDinh) {
+    private JPanel createTang(String tenTang, List<QuanLyPhongDAO.Phong> dsPhong) {
         JPanel pnlTang = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
         pnlTang.setBackground(Color.WHITE);
 
@@ -321,19 +353,58 @@ public class TrangChu extends JFrame{
         lblTang.setPreferredSize(new Dimension(80, 30));
         pnlTang.add(lblTang);
 
-        for (String p : dsPhong) {
-            RoundedButton btnPhong = new RoundedButton(p, 12);
+        if (dsPhong == null || dsPhong.isEmpty()) {
+            JLabel lblTrong = new JLabel("Chưa có phòng");
+            lblTrong.setForeground(Color.GRAY);
+            lblTrong.setFont(new Font("Be Vietnam Pro", Font.ITALIC, 14));
+            pnlTang.add(lblTrong);
+            return pnlTang;
+        }
+
+        for (QuanLyPhongDAO.Phong p : dsPhong) {
+            RoundedButton btnPhong = new RoundedButton(p.maPhong, 12);
             btnPhong.setForeground(Color.WHITE);
-            btnPhong.setBackground(macDinh != null ? macDinh : MAU_XANH);
+            btnPhong.setBackground(mauTheoTrangThai(p.trangThai));
             btnPhong.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
             btnPhong.setPreferredSize(new Dimension(106, 60));
             
-            btnPhong.addActionListener(e -> new PhongInfo(p).showDialog());
+            btnPhong.addActionListener(e -> new PhongInfo(p.maPhong).showDialog());
             
             pnlTang.add(btnPhong);
         }
 
         return pnlTang;
+    }
+
+    private List<QuanLyPhongDAO.Phong> layDanhSachPhong() {
+        try {
+            return phongService.layTatCaPhong();
+        } catch (RuntimeException e) {
+            return List.of();
+        }
+    }
+
+    private int demTheoTrangThai(List<QuanLyPhongDAO.Phong> dsPhong, String trangThai) {
+        int dem = 0;
+        for (QuanLyPhongDAO.Phong phong : dsPhong) {
+            if (trangThai.equals(phong.trangThai)) {
+                dem++;
+            }
+        }
+        return dem;
+    }
+
+    private Color mauTheoTrangThai(String trangThai) {
+        if ("Đã thuê".equals(trangThai)) {
+            return MAU_DO;
+        }
+        if ("Đã cọc".equals(trangThai)) {
+            return MAU_XANH_DUONG;
+        }
+        if ("Đang sửa".equals(trangThai)) {
+            return MAU_VANG;
+        }
+        return MAU_XANH;
     }
 
     // ================= MAIN =================

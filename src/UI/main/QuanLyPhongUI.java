@@ -1,8 +1,7 @@
 package ui.main;
 
-import dao.PhongDAO;
-import dao.PhongDAO.Phong;
-
+import dao.QuanLyPhongDAO;
+import dao.QuanLyPhongDAO.Phong;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -15,7 +14,6 @@ import java.util.Locale;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.border.MatteBorder;
 
 public class QuanLyPhongUI {
 
@@ -52,8 +50,8 @@ public class QuanLyPhongUI {
             "Giữ ô tô - 500,000đ/tháng"
     };
 
-    // ── DAO & state ──────────────────────────────────────────────────────────
-    private final PhongDAO dao = new PhongDAO();
+    // ── DAO & state ────
+    private final QuanLyPhongDAO dao = new QuanLyPhongDAO();
     private JPanel floorsPanel;
     private JScrollPane scrollPane;
 
@@ -202,7 +200,7 @@ public class QuanLyPhongUI {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
         JDialog dlg = new JDialog(owner, "Thêm phòng mới",
                 Dialog.ModalityType.APPLICATION_MODAL);
-        dlg.setSize(480, 520);
+        dlg.setSize(480, 620);
         dlg.setLocationRelativeTo(owner);
         dlg.setResizable(false);
 
