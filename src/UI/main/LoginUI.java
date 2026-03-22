@@ -167,10 +167,10 @@ public class LoginUI extends JFrame {
             txtPass.setEnabled(false);
             
             Timer loadingTimer = new Timer(1500, evt -> {
-                // Mock authentication bao gồm demo account
-                if ((email.equals("admin@example.com") && pass.equals("12345678")) ||
-                    (email.equals("huyt3297@gmail.com") && pass.equals("123456"))) {
-                    new TrangChu("Admin", "Admin");
+                // Xác thực qua cơ sở dữ liệu
+                entity.TaiKhoan tk = new dao.TaiKhoanDAO().kiemTraDangNhap(email, pass);
+                if (tk != null) {
+                    new TrangChu(tk);
                     this.dispose();
                 } else {
                     // Trả lại form khi sai mật khẩu

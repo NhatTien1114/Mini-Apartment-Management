@@ -15,6 +15,15 @@ import ui.util.RoundedTextField;
 import ui.util.ValidationPopup;
 import ui.util.AppColors;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
+import entity.TaiKhoan;
+import entity.Chu;
+import entity.QuanLy;
+import dao.TaiKhoanDAO;
+
 public class SignUpUI extends JFrame {
 
     // HTML-mapped Colors
@@ -36,10 +45,26 @@ public class SignUpUI extends JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        JPanel pnlBackground = new JPanel(new GridBagLayout());
+        JPanel pnlBackground = new JPanel(new BorderLayout());
         pnlBackground.setBackground(MAU_NEN);
 
-        pnlBackground.add(createSignUpCard());
+        JScrollPane scrollPane = new JScrollPane(createSignUpCard());
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setBackground(MAU_NEN);
+        scrollPane.getViewport().setBackground(MAU_NEN);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        
+        JPanel pnlWrapper = new JPanel(new GridBagLayout());
+        pnlWrapper.setBackground(MAU_NEN);
+        pnlWrapper.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        pnlWrapper.add(createSignUpCard());
+        
+        JScrollPane outerScroll = new JScrollPane(pnlWrapper);
+        outerScroll.setBorder(BorderFactory.createEmptyBorder());
+        outerScroll.getVerticalScrollBar().setUnitIncrement(20);
+        
+        pnlBackground.add(outerScroll, BorderLayout.CENTER);
 
         add(pnlBackground);
     }
@@ -51,9 +76,9 @@ public class SignUpUI extends JFrame {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(new EmptyBorder(32, 32, 32, 32));
         
-        card.setPreferredSize(new Dimension(448, 620));
-        card.setMaximumSize(new Dimension(448, 620));
-        card.setMinimumSize(new Dimension(448, 620));
+        card.setPreferredSize(new Dimension(500, 1000));
+        card.setMaximumSize(new Dimension(500, 1000));
+        card.setMinimumSize(new Dimension(500, 1000));
 
         // HEADER BLOCK
         JPanel pnlHeader = new JPanel();
@@ -74,7 +99,7 @@ public class SignUpUI extends JFrame {
 
         pnlHeader.add(Box.createRigidArea(new Dimension(0, 4))); // mt-1
 
-        JLabel lblSubTitle = new JLabel("Hệ thống quản lý chung cư mini");
+        JLabel lblSubTitle = new JLabel("Hệ thống quản lý");
         lblSubTitle.setFont(new Font("Inter", Font.PLAIN, 14));
         lblSubTitle.setForeground(MAU_SUBTITLE);
         lblSubTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -89,16 +114,46 @@ public class SignUpUI extends JFrame {
         pnlForm.setBackground(MAU_CARD);
         pnlForm.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        Dimension inputSize = new Dimension(384, 40);
+        Dimension inputSize = new Dimension(420, 40);
 
-        // Name field
+        // --- ROLE SELECTION ---
+        JLabel lblRole = new JLabel("<html>Vai trò <font color='#ef4444'>*</font></html>");
+        lblRole.setFont(new Font("Inter", Font.BOLD, 14));
+        lblRole.setForeground(MAU_LABEL);
+        lblRole.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlForm.add(lblRole);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 8)));
+
+        JPanel pnlRole = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
+        pnlRole.setBackground(MAU_CARD);
+        pnlRole.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlRole.setMaximumSize(new Dimension(420, 30));
+        
+        JRadioButton radChu = new JRadioButton("Chủ");
+        radChu.setBackground(MAU_CARD);
+        radChu.setFont(new Font("Inter", Font.PLAIN, 14));
+        radChu.setSelected(true);
+        
+        JRadioButton radQuanLy = new JRadioButton("Quản lý");
+        radQuanLy.setBackground(MAU_CARD);
+        radQuanLy.setFont(new Font("Inter", Font.PLAIN, 14));
+        
+        ButtonGroup roleGroup = new ButtonGroup();
+        roleGroup.add(radChu);
+        roleGroup.add(radQuanLy);
+        
+        pnlRole.add(radChu);
+        pnlRole.add(radQuanLy);
+        pnlForm.add(pnlRole);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 16)));
+
+        // --- NAME FIELD ---
         JLabel lblName = new JLabel("<html>Họ và tên <font color='#ef4444'>*</font></html>");
         lblName.setFont(new Font("Inter", Font.BOLD, 14));
         lblName.setForeground(MAU_LABEL);
         lblName.setAlignmentX(Component.LEFT_ALIGNMENT);
         pnlForm.add(lblName);
-        
-        pnlForm.add(Box.createRigidArea(new Dimension(0, 8))); // space-y-2
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 8)));
 
         RoundedTextField txtName = new RoundedTextField(6); // rounded-md
         txtName.setPlaceholder("Nhập họ và tên");
@@ -106,17 +161,63 @@ public class SignUpUI extends JFrame {
         txtName.setPreferredSize(inputSize);
         txtName.setAlignmentX(Component.LEFT_ALIGNMENT);
         pnlForm.add(txtName);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        pnlForm.add(Box.createRigidArea(new Dimension(0, 16))); // space-y-4
+        // --- PHONE FIELD ---
+        JLabel lblPhone = new JLabel("<html>Số điện thoại <font color='#ef4444'>*</font></html>");
+        lblPhone.setFont(new Font("Inter", Font.BOLD, 14));
+        lblPhone.setForeground(MAU_LABEL);
+        lblPhone.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlForm.add(lblPhone);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 8)));
 
-        // Email field
-        JLabel lblEmail = new JLabel("<html>Email <font color='#ef4444'>*</font></html>");
+        RoundedTextField txtPhone = new RoundedTextField(6);
+        txtPhone.setPlaceholder("Nhập số điện thoại");
+        txtPhone.setMaximumSize(inputSize);
+        txtPhone.setPreferredSize(inputSize);
+        txtPhone.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlForm.add(txtPhone);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 16)));
+
+        // --- DATE OF BIRTH FIELD ---
+        JLabel lblDob = new JLabel("<html>Ngày sinh (dd/MM/yyyy) <font color='#ef4444'>*</font></html>");
+        lblDob.setFont(new Font("Inter", Font.BOLD, 14));
+        lblDob.setForeground(MAU_LABEL);
+        lblDob.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlForm.add(lblDob);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 8)));
+
+        RoundedTextField txtDob = new RoundedTextField(6);
+        txtDob.setPlaceholder("01/01/2000");
+        txtDob.setMaximumSize(inputSize);
+        txtDob.setPreferredSize(inputSize);
+        txtDob.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlForm.add(txtDob);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 16)));
+
+        // --- ADDRESS FIELD ---
+        JLabel lblAddress = new JLabel("<html>Địa chỉ <font color='#ef4444'>*</font></html>");
+        lblAddress.setFont(new Font("Inter", Font.BOLD, 14));
+        lblAddress.setForeground(MAU_LABEL);
+        lblAddress.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlForm.add(lblAddress);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 8)));
+
+        RoundedTextField txtAddress = new RoundedTextField(6);
+        txtAddress.setPlaceholder("Nhập địa chỉ của bạn");
+        txtAddress.setMaximumSize(inputSize);
+        txtAddress.setPreferredSize(inputSize);
+        txtAddress.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlForm.add(txtAddress);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 16)));
+
+        // --- EMAIL / USERNAME FIELD ---
+        JLabel lblEmail = new JLabel("<html>Email (Dùng làm Tên đăng nhập) <font color='#ef4444'>*</font></html>");
         lblEmail.setFont(new Font("Inter", Font.BOLD, 14));
         lblEmail.setForeground(MAU_LABEL);
         lblEmail.setAlignmentX(Component.LEFT_ALIGNMENT);
         pnlForm.add(lblEmail);
-        
-        pnlForm.add(Box.createRigidArea(new Dimension(0, 8))); // space-y-2
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 8)));
 
         RoundedTextField txtEmail = new RoundedTextField(6);
         txtEmail.setPlaceholder("admin@example.com");
@@ -124,17 +225,15 @@ public class SignUpUI extends JFrame {
         txtEmail.setPreferredSize(inputSize);
         txtEmail.setAlignmentX(Component.LEFT_ALIGNMENT);
         pnlForm.add(txtEmail);
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        pnlForm.add(Box.createRigidArea(new Dimension(0, 16))); // space-y-4
-
-        // Password field
+        // --- PASSWORD FIELD ---
         JLabel lblPass = new JLabel("<html>Mật khẩu <font color='#ef4444'>*</font></html>");
         lblPass.setFont(new Font("Inter", Font.BOLD, 14));
         lblPass.setForeground(MAU_LABEL);
         lblPass.setAlignmentX(Component.LEFT_ALIGNMENT);
         pnlForm.add(lblPass);
-
-        pnlForm.add(Box.createRigidArea(new Dimension(0, 8))); // space-y-2
+        pnlForm.add(Box.createRigidArea(new Dimension(0, 8)));
 
         RoundedPasswordField txtPass = new RoundedPasswordField(6);
         txtPass.setPlaceholder("••••••••");
@@ -142,14 +241,13 @@ public class SignUpUI extends JFrame {
         txtPass.setPreferredSize(inputSize);
         txtPass.setAlignmentX(Component.LEFT_ALIGNMENT);
         pnlForm.add(txtPass);
-
         pnlForm.add(Box.createRigidArea(new Dimension(0, 8))); // space before progress bar
 
         // Thêm thanh quy mô mạnh yếu của mật khẩu
         JPanel pnlStrength = new JPanel(new GridLayout(1, 5, 4, 0)); 
         pnlStrength.setBackground(MAU_CARD);
-        pnlStrength.setMaximumSize(new Dimension(384, 4));
-        pnlStrength.setPreferredSize(new Dimension(384, 4));
+        pnlStrength.setMaximumSize(new Dimension(420, 4));
+        pnlStrength.setPreferredSize(new Dimension(420, 4));
         pnlStrength.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JPanel[] blocks = new JPanel[5];
@@ -159,7 +257,6 @@ public class SignUpUI extends JFrame {
             pnlStrength.add(blocks[i]);
         }
         pnlForm.add(pnlStrength);
-
         pnlForm.add(Box.createRigidArea(new Dimension(0, 6))); // space before text
         
         JLabel lblStrength = new JLabel("Độ mạnh mật khẩu: Chưa nhập");
@@ -223,59 +320,78 @@ public class SignUpUI extends JFrame {
         
         btnSignUp.addActionListener(e -> {
             String name = txtName.getText().trim();
+            String phone = txtPhone.getText().trim();
+            String dobStr = txtDob.getText().trim();
+            String address = txtAddress.getText().trim();
             String email = txtEmail.getText().trim();
             String pass = new String(txtPass.getPassword());
+            boolean isChu = radChu.isSelected();
             
-            if (name.isEmpty()) {
-                ValidationPopup.show(txtName, "Please fill out this field.");
-                return;
-            }
-            if (email.isEmpty()) {
-                ValidationPopup.show(txtEmail, "Please fill out this field.");
-                return;
-            }
-            if (pass.isEmpty()) {
-                ValidationPopup.show(txtPass, "Please fill out this field.");
+            if (name.isEmpty()) { ValidationPopup.show(txtName, "Vui lòng nhập họ và tên."); return; }
+            if (phone.isEmpty()) { ValidationPopup.show(txtPhone, "Vui lòng nhập số điện thoại."); return; }
+            if (!phone.matches("\\d{10,11}")) { ValidationPopup.show(txtPhone, "Số điện thoại không hợp lệ (10-11 số)."); return; }
+            if (dobStr.isEmpty()) { ValidationPopup.show(txtDob, "Vui lòng nhập ngày sinh."); return; }
+            
+            LocalDate dob = null;
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                dob = LocalDate.parse(dobStr, formatter);
+            } catch (DateTimeParseException ex) {
+                ValidationPopup.show(txtDob, "Ngày sinh không đúng định dạng dd/MM/yyyy."); 
                 return;
             }
             
-            if (!email.contains("@")) {
-                ValidationPopup.show(txtEmail, "Please include an '@' in the email address. '" + email + "' is missing an '@'.");
-                return;
-            }
+            if (address.isEmpty()) { ValidationPopup.show(txtAddress, "Vui lòng nhập địa chỉ."); return; }
+            if (email.isEmpty()) { ValidationPopup.show(txtEmail, "Vui lòng nhập email."); return; }
             if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
-                ValidationPopup.show(txtEmail, "Please enter a part following '@'. '" + email + "' is incomplete.");
-                return;
+                ValidationPopup.show(txtEmail, "Email không hợp lệ."); return;
             }
+            if (pass.isEmpty()) { ValidationPopup.show(txtPass, "Vui lòng nhập mật khẩu."); return; }
             
-            if (pass.length() < 8) {
-                ValidationPopup.show(txtPass, "Please lengthen this text to 8 characters or more (you are currently using " + pass.length() + " characters).");
-                return;
-            }
-            if (!pass.matches(".*[A-Z].*")) {
-                ValidationPopup.show(txtPass, "Password must contain at least one uppercase letter.");
-                return;
-            }
+            if (pass.length() < 8) { ValidationPopup.show(txtPass, "Mật khẩu phải từ 8 ký tự trở lên."); return; }
+            if (!pass.matches(".*[A-Z].*")) { ValidationPopup.show(txtPass, "Mật khẩu phải chứa ký tự viết hoa."); return; }
             if (!pass.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*")) {
-                ValidationPopup.show(txtPass, "Password must contain at least one special character.");
+                ValidationPopup.show(txtPass, "Mật khẩu phải chứa ký tự đặc biệt."); return;
+            }
+            
+            // Database Transaction Logic
+            TaiKhoanDAO dao = new TaiKhoanDAO();
+            if (dao.kiemTraTonTaiTenDangNhap(email)) {
+                JOptionPane.showMessageDialog(this, "Email/Tên đăng nhập đã tồn tại trên hệ thống!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
-            JOptionPane.showMessageDialog(this, "Đăng ký thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
-            new LoginUI().setVisible(true);
-            this.dispose();
+            String generatedId = dao.phatSinhMaTaiKhoan(email);
+            TaiKhoan taiKhoan;
+            
+            if (isChu) {
+                taiKhoan = new Chu(generatedId, email, pass, name, phone, dob, address);
+            } else {
+                taiKhoan = new QuanLy(generatedId, email, pass, name, phone, dob, address);
+            }
+            
+            boolean success = dao.insertTaiKhoan(taiKhoan);
+            
+            if (success) {
+                ui.util.MessageDialog.show(this, "Đăng ký thành công!", "Tài khoản của bạn đã được khởi tạo.", ui.util.MessageDialog.MessageType.SUCCESS);
+                new LoginUI().setVisible(true);
+                this.dispose();
+            } else {
+                ui.util.MessageDialog.show(this, "Lỗi hệ thống", "Có lỗi xảy ra khi lưu vào CSDL. Vui lòng thử lại.", ui.util.MessageDialog.MessageType.ERROR);
+            }
         });
         
         // Hỗ trợ Enter ở bất cứ đâu trên form
         this.getRootPane().setDefaultButton(btnSignUp);
         txtName.addActionListener(e -> btnSignUp.doClick());
+        txtPhone.addActionListener(e -> btnSignUp.doClick());
+        txtDob.addActionListener(e -> btnSignUp.doClick());
+        txtAddress.addActionListener(e -> btnSignUp.doClick());
         txtEmail.addActionListener(e -> btnSignUp.doClick());
         txtPass.addActionListener(e -> btnSignUp.doClick());
         
         pnlForm.add(btnSignUp);
-
         card.add(pnlForm);
-
         card.add(Box.createVerticalGlue()); // Push link to bottom
 
         // Link Log in
@@ -291,23 +407,18 @@ public class SignUpUI extends JFrame {
                 dispose();
             }
             @Override
-            public void mouseEntered(MouseEvent e) {
-                lblLogin.setText("<html><u>Đã có tài khoản? Đăng nhập</u></html>");
-            }
+            public void mouseEntered(MouseEvent e) { lblLogin.setText("<html><u>Đã có tài khoản? Đăng nhập</u></html>"); }
             @Override
-            public void mouseExited(MouseEvent e) {
-                lblLogin.setText("Đã có tài khoản? Đăng nhập");
-            }
+            public void mouseExited(MouseEvent e) { lblLogin.setText("Đã có tài khoản? Đăng nhập"); }
         });
         
-        // mt-6 (24px) handled by glue and preferred layout spacing
         JPanel pnlFooter = new JPanel(new FlowLayout(FlowLayout.CENTER));
         pnlFooter.setBackground(MAU_CARD);
         pnlFooter.setBorder(new EmptyBorder(24, 0, 0, 0)); // mt-6
         pnlFooter.add(lblLogin);
         
         card.add(pnlFooter);
-
+        
         return card;
     }
 

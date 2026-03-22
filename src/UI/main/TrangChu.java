@@ -25,13 +25,35 @@ public class TrangChu extends JFrame{
     private int selectedMenuIndex = 0;
 
     // ===== THÔNG TIN USER =====
-    private final String tenTaiKhoan;
-    private final String role;
+    private final entity.TaiKhoan taiKhoan;
+    private String tenTaiKhoan;
+    private String role;
+    private JLabel lblTen;
+    private JLabel lblRole;
 
-    public TrangChu(String tenTaiKhoan, String role) {
-        this.tenTaiKhoan = tenTaiKhoan;
-        this.role = role;
+    public TrangChu(entity.TaiKhoan tk) {
+        this.taiKhoan = tk;
+        extractUserInfo();
         initUI();
+    }
+    
+    public void extractUserInfo() {
+        if (this.taiKhoan instanceof entity.Chu) {
+            this.tenTaiKhoan = ((entity.Chu) this.taiKhoan).getHoTen();
+            this.role = "Chủ";
+        } else if (this.taiKhoan instanceof entity.QuanLy) {
+            this.tenTaiKhoan = ((entity.QuanLy) this.taiKhoan).getHoTen();
+            this.role = "Quản lý";
+        } else {
+            this.tenTaiKhoan = "Người dùng";
+            this.role = "Khách";
+        }
+    }
+    
+    public void updateUserInfo() {
+        extractUserInfo();
+        if (lblTen != null) lblTen.setText(this.tenTaiKhoan);
+        if (lblRole != null) lblRole.setText(this.role);
     }
 
     private void initUI() {
@@ -170,16 +192,17 @@ public class TrangChu extends JFrame{
 
         JPanel pnlUser = new JPanel(new FlowLayout(FlowLayout.LEFT));
         pnlUser.setBackground(Color.WHITE);
+        pnlUser.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         ImageIcon iconAvatar = new ImageIcon("img/icons/avatar.png");
         Image imgAvatar = iconAvatar.getImage();
         Image imgAvatarScale = imgAvatar.getScaledInstance(30, 30, Image.SCALE_SMOOTH);
         ImageIcon iconAvatarMoi = new ImageIcon(imgAvatarScale);
         JLabel lblAvatar = new JLabel(iconAvatarMoi);
-        JLabel lblRole = new JLabel(role);
+        lblRole = new JLabel(role);
         lblRole.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
 
-        JLabel lblTen = new JLabel(tenTaiKhoan);
+        lblTen = new JLabel(tenTaiKhoan);
         lblTen.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
 
         JPanel pnlThongTin = new JPanel();
@@ -191,6 +214,23 @@ public class TrangChu extends JFrame{
         pnlUser.add(lblAvatar);
         pnlUser.add(Box.createHorizontalStrut(10));
         pnlUser.add(pnlThongTin);
+
+        pnlUser.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                new AccountInfoDialog(TrangChu.this, taiKhoan).setVisible(true);
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                pnlUser.setBackground(new Color(245, 245, 245));
+                pnlThongTin.setBackground(new Color(245, 245, 245));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                pnlUser.setBackground(Color.WHITE);
+                pnlThongTin.setBackground(Color.WHITE);
+            }
+        });
 
         pnlHeader.add(pnlUser, BorderLayout.WEST);
 
