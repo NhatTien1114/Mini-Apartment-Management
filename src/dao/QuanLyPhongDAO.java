@@ -39,7 +39,7 @@ public class QuanLyPhongDAO {
 
     // Cache dịch vụ theo phòng để không mất trạng thái trong cùng phiên UI.
     // Hiện tại schema chưa có bảng liên kết phòng-dịch vụ.
-    private final Map<String, List<String>> serviceCache = new HashMap<>();
+    private static final Map<String, List<String>> serviceCache = new HashMap<>();
 
     private static final List<String> DEFAULT_SERVICES = List.of("Điện", "Nước", "Internet", "Rác");
 
@@ -50,7 +50,7 @@ public class QuanLyPhongDAO {
         return maPhong != null && ROOM_PATTERN.matcher(maPhong.trim().toUpperCase()).matches();
     }
 
-    public String normalise(String maPhong) {
+    public static String normalise(String maPhong) {
         return maPhong == null ? "" : maPhong.trim().toUpperCase();
     }
 
@@ -122,7 +122,7 @@ public class QuanLyPhongDAO {
         }
     }
 
-    private List<String> getServicesByRoom(String maPhong) {
+    private static List<String> getServicesByRoom(String maPhong) {
         String key = normalise(maPhong);
         List<String> cached = serviceCache.get(key);
         if (cached != null) {
@@ -197,7 +197,7 @@ public class QuanLyPhongDAO {
         }
     }
 
-    public Phong layTheoMa(String maPhong) {
+    public static Phong layTheoMa(String maPhong) {
         String ma = normalise(maPhong);
         String sql = "SELECT maPhong, trangThaiPhong FROM Phong WHERE maPhong = ?";
         try {
