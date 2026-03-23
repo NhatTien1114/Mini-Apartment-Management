@@ -1,7 +1,7 @@
 package ui.main;
 
 import dao.QuanLyPhongDAO;
-import dao.QuanLyPhongDAO.Phong;
+import entity.Phong;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -14,6 +14,7 @@ import java.util.Locale;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import ui.util.RoundedTextField;
 
 public class QuanLyPhongUI {
 
@@ -149,14 +150,14 @@ public class QuanLyPhongUI {
         // Header: mã phòng + badge trạng thái
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
-        JLabel lblRoom = new JLabel(phong.maPhong);
+        JLabel lblRoom = new JLabel(phong.getMaPhong());
         lblRoom.setFont(new Font("Be Vietnam Pro", Font.BOLD, 17));
         lblRoom.setForeground(MAU_TEXT);
         header.add(lblRoom, BorderLayout.WEST);
-        header.add(createStatusBadge(phong.trangThai), BorderLayout.EAST);
+        header.add(createStatusBadge(phong.getTrangThai().getTen()), BorderLayout.EAST);
 
         // Giá
-        JLabel lblPrice = new JLabel("Giá: " + NF.format(phong.giaThue) + "đ");
+        JLabel lblPrice = new JLabel("Giá: " + NF.format(phong.getGiaThue()) + "đ");
         lblPrice.setFont(FONT_SMALL);
         lblPrice.setForeground(MAU_MUTED);
 
@@ -171,10 +172,10 @@ public class QuanLyPhongUI {
         btnDelete.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(
                     SwingUtilities.getWindowAncestor(card),
-                    "Xóa phòng \"" + phong.maPhong + "\"?",
+                    "Xóa phòng \"" + phong.getMaPhong() + "\"?",
                     "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (confirm == JOptionPane.YES_OPTION) {
-                String err = dao.xoa(phong.maPhong);
+                String err = dao.xoa(phong.getMaPhong());
                 if (err != null) JOptionPane.showMessageDialog(null, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
                 else rebuildFloors();
             }
@@ -221,11 +222,15 @@ public class QuanLyPhongUI {
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
 
         // Tên phòng
-        JTextField fMa = makeField("VD: T1.06");
+        RoundedTextField txtMa = new RoundedTextField(6);
+        txtMa.setMaximumSize(new Dimension(420, 40));
+        txtMa.setPlaceholder("VD: T1.06");
         JLabel errMa = makeErrLabel();
 
         // Giá thuê
-        JTextField fGia = makeField("3000000");
+        RoundedTextField txtGia = new RoundedTextField(6);
+        txtGia.setMaximumSize(new Dimension(420, 40));
+        txtGia.setPlaceholder("VD: 3000000");
 
         // Trạng thái
         JComboBox<String> cTT = makeCombo(new String[]{"Trống", "Đã cọc", "Đã thuê", "Đang sửa"});
@@ -239,10 +244,10 @@ public class QuanLyPhongUI {
             checks[i].setOpaque(false);
         }
 
-        form.add(wrapField("Tên phòng", fMa));
+        form.add(wrapField("Tên phòng", txtMa));
         form.add(errMa);
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Giá thuê (VNĐ/tháng)", fGia));
+        form.add(wrapField("Giá thuê (VNĐ/tháng)", txtGia));
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Trạng thái", cTT));
         form.add(Box.createVerticalStrut(12));
@@ -259,21 +264,21 @@ public class QuanLyPhongUI {
         // Nút Thêm phòng
         JButton btnSave = makePrimaryButton("Thêm phòng");
         btnSave.addActionListener(e -> {
-            String ma  = fMa.getText().trim();
-            String giaStr = fGia.getText().trim().replaceAll("[,.]", "");
+            String ma  = txtMa.getText().trim();
+            String giaStr = txtGia.getText().trim().replaceAll("[,.]", "");
 
             // Validate format
             if (!dao.isValidFormat(ma)) {
-                errMa.setText("⚠ Sai định dạng, nhập dạng T1.01 → T6.09");
+                errMa.setText("Sai định dạng, nhập dạng T1.01");
                 errMa.setVisible(true);
-                shakeFocus(fMa);
+                shakeFocus(txtMa);
                 return;
             }
             // Kiểm tra trùng
             if (dao.tonTai(ma)) {
-                errMa.setText("⚠ Phòng \"" + dao.normalise(ma) + "\" đã tồn tại");
+                errMa.setText("Phòng \"" + dao.normalise(ma) + "\" đã tồn tại");
                 errMa.setVisible(true);
-                shakeFocus(fMa);
+                shakeFocus(txtMa);
                 return;
             }
             errMa.setVisible(false);
@@ -311,7 +316,7 @@ public class QuanLyPhongUI {
     // ── Dialog CÀI ĐẶT PHÒNG ────────────────────────────────────────────────
     private void showSettingDialog(Phong phong) {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
-        JDialog dlg = new JDialog(owner, "Cài đặt phòng " + phong.maPhong,
+        JDialog dlg = new JDialog(owner, "Cài đặt phòng " + phong.getMaPhong(),
                 Dialog.ModalityType.APPLICATION_MODAL);
         dlg.setSize(420, 520);
         dlg.setLocationRelativeTo(owner);
@@ -321,7 +326,7 @@ public class QuanLyPhongUI {
         root.setBackground(MAU_CARD);
         root.setBorder(new EmptyBorder(22, 24, 22, 24));
 
-        JLabel lblTitle = new JLabel("Cài đặt phòng " + phong.maPhong);
+        JLabel lblTitle = new JLabel("Cài đặt phòng " + phong.getMaPhong());
         lblTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 17));
         lblTitle.setForeground(MAU_TEXT);
         lblTitle.setBorder(new EmptyBorder(0, 0, 18, 0));
@@ -331,21 +336,21 @@ public class QuanLyPhongUI {
         form.setBackground(MAU_CARD);
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
 
-        JTextField fGia = makeField(String.valueOf(phong.giaThue));
+        JTextField txtGia = makeField(String.valueOf(phong.getGiaThue()));
         JComboBox<String> cTT = makeCombo(new String[]{"Trống", "Đã cọc", "Đã thuê", "Đang sửa"});
-        cTT.setSelectedItem(phong.trangThai);
+        cTT.setSelectedItem(phong.getTrangThai().getTen());
 
         JCheckBox[] checks = new JCheckBox[DICH_VU_LIST.length];
         for (int i = 0; i < DICH_VU_LIST.length; i++) {
             String tenDv = DICH_VU_LIST[i].split(" - ")[0];
-            boolean checked = phong.dichVu.contains(tenDv);
+            boolean checked = phong.getDichVu() != null && phong.getDichVu().contains(tenDv);
             checks[i] = new JCheckBox(DICH_VU_LIST[i], checked);
             checks[i].setFont(FONT_PLAIN);
             checks[i].setForeground(MAU_TEXT);
             checks[i].setOpaque(false);
         }
 
-        form.add(wrapField("Giá thuê (VNĐ/tháng)", fGia));
+        form.add(wrapField("Giá thuê (VNĐ/tháng)", txtGia));
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Trạng thái", cTT));
         form.add(Box.createVerticalStrut(12));
@@ -362,7 +367,7 @@ public class QuanLyPhongUI {
         JButton btnSave = makePrimaryButton("Lưu thay đổi");
         btnSave.addActionListener(e -> {
             long gia;
-            try { gia = Long.parseLong(fGia.getText().trim().replaceAll("[,.]", "")); }
+            try { gia = Long.parseLong(txtGia.getText().trim().replaceAll("[,.]", "")); }
             catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(dlg, "Giá thuê không hợp lệ!", "Lỗi", JOptionPane.WARNING_MESSAGE);
                 return;
@@ -370,7 +375,7 @@ public class QuanLyPhongUI {
             List<String> dvChon = new ArrayList<>();
             for (JCheckBox cb : checks)
                 if (cb.isSelected()) dvChon.add(cb.getText().split(" - ")[0]);
-            String err = dao.capNhat(phong.maPhong, gia, (String) cTT.getSelectedItem(), dvChon);
+            String err = dao.capNhat(phong.getMaPhong(), gia, (String) cTT.getSelectedItem(), dvChon);
             if (err != null) {
                 JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
