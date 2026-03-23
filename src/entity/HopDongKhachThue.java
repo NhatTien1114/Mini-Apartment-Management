@@ -23,6 +23,14 @@ public class HopDongKhachThue {
             this.ten = ten;
         }
 
+        public static VaiTro fromInt(int value) {
+            if (value == 0) return DAI_DIEN;
+            if (value == 1) return THANH_VIEN;
+            return DAI_DIEN; // Mặc định nếu dữ liệu lạ
+        }
+        public int toInt() {
+            return this == DAI_DIEN ? 0 : 1;
+        }
         @Override
         public String toString() {
             return ten;

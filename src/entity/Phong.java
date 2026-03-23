@@ -58,6 +58,9 @@ public class Phong {
             return ten;
         }
 	}
+    public Phong(String maPhong){
+        this.maPhong = maPhong;
+    }
     
     public Phong(double dienTich, LoaiPhong loaiPhong, String maPhong, Tang maTang, int soNguoiHienTai, String tenPhong, TrangThai trangThai) {
         this.dienTich = dienTich;

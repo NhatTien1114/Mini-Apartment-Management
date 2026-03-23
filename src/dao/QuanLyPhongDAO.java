@@ -19,6 +19,8 @@ public class QuanLyPhongDAO {
     private static final Pattern ROOM_PATTERN =
             Pattern.compile("^T[1-6]\\.(0[1-9]|[1-9]\\d)$");
 
+    // Cache dịch vụ theo phòng để không mất trạng thái trong cùng phiên UI.
+    // Hiện tại schema chưa có bảng liên kết phòng-dịch vụ.
     private final Map<String, List<String>> serviceCache = new HashMap<>();
 
     private static final List<String> DEFAULT_SERVICES = List.of("Điện", "Nước", "Internet", "Rác");
@@ -30,7 +32,7 @@ public class QuanLyPhongDAO {
         return maPhong != null && ROOM_PATTERN.matcher(maPhong.trim().toUpperCase()).matches();
     }
 
-    public String normalise(String maPhong) {
+    public static String normalise(String maPhong) {
         return maPhong == null ? "" : maPhong.trim().toUpperCase();
     }
 

@@ -24,6 +24,16 @@ public class HopDong {
         public void setTen(String ten) {
             this.ten = ten;
         }
+
+        public static HopDong.TrangThai fromInt(int value) {
+            if (value == 1) return DANG_HIEU_LUC;
+            if (value == 0) return DA_KET_THUC;
+            return DA_KET_THUC; // Mặc định nếu dữ liệu lạ
+        }
+        public int toInt() {
+            return this == DANG_HIEU_LUC ? 1 : 0;
+        }
+
         @Override
         public String toString() {
             return ten;

@@ -3,6 +3,7 @@ package ui.main;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Path2D;
+import java.util.ArrayList;
 import java.util.Calendar;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -12,6 +13,9 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 
+import dao.HopDongDAO;
+import dao.HopDongKhachHangDAO;
+import entity.HopDong;
 import ui.util.ButtonStyles;
 import ui.util.AppColors;
 import ui.util.FormFieldStyles;
@@ -30,22 +34,48 @@ public class HopDongUI {
     private DefaultTableModel model;
     private JTable table;
 
-    private static class ContractDraft {
-        String phong;
-        String hoTen;
-        String soDienThoai;
-        String cccd;
-        String diaChi;
-        String ngayBatDau;
-        String ngayKetThuc;
-        String tienCocRaw;
-        String giaThueRaw;
+    HopDongDAO HopDongDao = new HopDongDAO();
+
+    HopDongKhachHangDAO HDKHdao = new HopDongKhachHangDAO();
+
+    public static class ContractDraft {
+        public String phong;
+        public String hoTen;
+        public String soDienThoai;
+        public String cccd;
+        public String diaChi;
+        public String ngayBatDau;
+        public String ngayKetThuc;
+        public String tienCocRaw;
+        public String giaThueRaw;
+    }
+
+    public void loadDataToTable(){
+        DefaultTableModel model = (DefaultTableModel) table.getModel();
+        model.setRowCount(0);
+
+        ArrayList<HopDong> listHD = HopDongDao.getAllHopDong();
+
+        for (HopDong row : listHD) {
+            model.addRow(new Object[]{
+                    row.getMaHopDong(),
+                    row.getMaPhong().getMaPhong(),
+                    HDKHdao.getTenNguoiDaiDienByMaPhong(String.valueOf(row.getMaPhong())),
+                    row.getNgayBatDau(),
+                    row.getNgayKetThuc(),
+                    row.getTienCoc(),
+                    row.getTienThueThang(),
+                    row.getTrangThai()
+
+            });
+        }
     }
 
     public JPanel getPanel() {
         pnlRoot = new JPanel(new BorderLayout(0, 24));
         pnlRoot.setBorder(new EmptyBorder(32, 32, 32, 32));
         pnlRoot.setBackground(MAU_NEN);
+        table = new JTable();
         
         // --- HEADER ---
         JPanel pnlHeader = new JPanel(new BorderLayout());
@@ -123,18 +153,12 @@ public class HopDongUI {
         cardMargin.setBorder(new EmptyBorder(4, 24, 24, 24));
         
         String[] columnNames = {"Mã HĐ", "Phòng", "Khách thuê", "Ngày bắt đầu", "Ngày kết thúc", "Tiền cọc", "Tiền thuê/tháng", "Trạng thái", ""};
-        Object[][] data = {
-            {"HD001", "T1.02", "Nguyễn Văn An", "01/15/2025", "01/15/2026", "7.000.000đ", "3.500.000đ", "Đang hiệu lực", ""},
-            {"HD002", "T1.03", "Trần Thị Bình", "03/01/2025", "03/01/2026", "8.000.000đ", "4.000.000đ", "Đang hiệu lực", ""},
-            {"HD003", "T2.01", "Lê Hoàng Cường", "02/10/2025", "02/10/2026", "7.000.000đ", "3.500.000đ", "Đang hiệu lực", ""},
-            {"HD004", "T2.02", "Phạm Minh Dũng", "04/01/2025", "04/01/2026", "7.000.000đ", "3.500.000đ", "Đang hiệu lực", ""},
-            {"HD005", "T2.03", "Hoàng Thị Em", "05/15/2025", "05/15/2026", "8.000.000đ", "4.000.000đ", "Đang hiệu lực", ""},
-            {"HD006", "T3.01", "Đặng Thị Giang", "01/01/2025", "01/01/2026", "7.000.000đ", "3.500.000đ", "Sắp hết hạn", ""}
-        };
-        
-        model = new DefaultTableModel(data, columnNames) {
-            @Override public boolean isCellEditable(int row, int column) { return column == 8; }
-        };
+
+        this.model = new DefaultTableModel(columnNames, 0);
+        this.table = new JTable(this.model); // Sử dụng biến class
+
+        loadDataToTable();
+
         
         table = new JTable(model);
         table.setRowHeight(56);
@@ -340,16 +364,14 @@ public class HopDongUI {
         pnlContent.setOpaque(false);
 
         String[] roomOptions = {
-            "T1.01 - 3,000,000đ",
-            "T1.02 - 3,000,000đ",
-            "T1.03 - 3,200,000đ",
-            "T2.01 - 3,500,000đ",
-            "T2.02 - 3,500,000đ",
-            "T3.01 - 3,800,000đ",
-            "T3.02 - 3,800,000đ",
-            "T4.01 - 4,000,000đ",
-            "T5.01 - 4,200,000đ",
-            "T6.01 - 4,500,000đ"
+            "P102 - 3,000,000đ",
+            "P103 - 3,200,000đ",
+            "P201 - 3,500,000đ",
+            "P202 - 3,500,000đ",
+            "P302 - 3,800,000đ",
+            "P401 - 4,000,000đ",
+            "P501 - 4,200,000đ",
+            "P601 - 4,500,000đ"
         };
 
         JComboBox<String> cboPhong = FormFieldStyles.createRoomCombo(
@@ -485,23 +507,28 @@ public class HopDongUI {
                 dialog.setVisible(false);
                 boolean accepted = showContractPreviewDialog(draft);
                 if (accepted) {
-                    String genId = "HD" + System.currentTimeMillis();
-                    Object[] newRow = {
-                        genId,
-                        draft.phong,
-                        draft.hoTen,
-                        draft.ngayBatDau,
-                        draft.ngayKetThuc,
-                        formatCurrency(draft.tienCocRaw),
-                        formatCurrency(draft.giaThueRaw),
-                        "Đang hiệu lực",
-                        ""
-                    };
-                    model.addRow(newRow);
-                    showToast("Tạo hợp đồng thành công");
-                    dialog.dispose();
-                } else {
-                    dialog.setVisible(true);
+                    HopDongDAO dao = new HopDongDAO();
+                    boolean success = dao.luuHopDongMoi(draft); // Gọi hàm lưu vào DB
+
+                    if (success) {
+                        // Nếu DB lưu thành công mới cập nhật lên Table giao diện
+                        Object[] newRow = {
+                                "HD_AUTO", // Bạn có thể lấy mã thật từ DAO trả về
+                                draft.phong,
+                                draft.hoTen,
+                                draft.ngayBatDau,
+                                draft.ngayKetThuc,
+                                formatCurrency(draft.tienCocRaw),
+                                formatCurrency(draft.giaThueRaw),
+                                "Đang hiệu lực",
+                                ""
+                        };
+                        model.addRow(newRow);
+                        showToast("Lưu vào cơ sở dữ liệu thành công!");
+                        dialog.dispose();
+                    } else {
+                        showToast("Lỗi: Không thể lưu vào cơ sở dữ liệu!");
+                    }
                 }
             }
         });
