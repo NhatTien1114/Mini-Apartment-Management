@@ -15,9 +15,9 @@ import java.util.regex.Pattern;
 
 public class QuanLyPhongDAO {
 
-    // ── Format hợp lệ: T{1-6}.{01-09} ──
+    // ── Format hợp lệ: P{1-6}.{01-09} ──
     private static final Pattern ROOM_PATTERN =
-            Pattern.compile("^T[1-6]\\.(0[1-9]|[1-9]\\d)$");
+            Pattern.compile("^P[1-6]\\.(0[1-9]|[1-9]\\d)$");
 
     // Cache dịch vụ theo phòng để không mất trạng thái trong cùng phiên UI.
     // Hiện tại schema chưa có bảng liên kết phòng-dịch vụ.
@@ -36,9 +36,10 @@ public class QuanLyPhongDAO {
         return maPhong == null ? "" : maPhong.trim().toUpperCase();
     }
 
+    // P1.01 → T1  (maTang trong DB vẫn dùng prefix T)
     private static String tangFromRoom(String maPhong) {
-        int dot = maPhong.indexOf('.');
-        return dot > 0 ? maPhong.substring(0, dot) : "";
+        if (maPhong == null || maPhong.length() < 2) return "";
+        return "T" + maPhong.charAt(1);
     }
 
     private static int toTrangThai(String trangThai) {
@@ -48,7 +49,7 @@ public class QuanLyPhongDAO {
         return 0;
     }
 
-    private Phong buildPhong(String maPhong, int code) {
+    private Phong buildPhong(String maPhong, int code, long giaThue) {
         Phong.TrangThai tt = switch (code) {
             case 1 -> Phong.TrangThai.THUE;
             case 2 -> Phong.TrangThai.SUA;
@@ -56,7 +57,7 @@ public class QuanLyPhongDAO {
             default -> Phong.TrangThai.TRONG;
         };
         Phong p = new Phong(0, null, maPhong, null, 0, maPhong, tt);
-        p.setGiaThue(3_000_000L);
+        p.setGiaThue(giaThue);
         p.setDichVu(getServicesByRoom(maPhong));
         return p;
     }
@@ -124,13 +125,13 @@ public class QuanLyPhongDAO {
     public String them(String maPhong, long giaThue, String trangThai, List<String> dichVu) {
         String ma = normalise(maPhong);
         if (!isValidFormat(ma))
-            return "Tên phòng không đúng định dạng (VD: T1.01, T2.06)";
+            return "Tên phòng không đúng định dạng (VD: P1.01, P2.06)";
         if (giaThue <= 0)
             return "Giá thuê phải lớn hơn 0";
 
         String maTang = tangFromRoom(ma);
-        String sql = "INSERT INTO Phong (maPhong, maTang, tenPhong, dienTich, loaiPhong, trangThaiPhong, soNguoiHienTai) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Phong (maPhong, maTang, tenPhong, dienTich, loaiPhong, trangThaiPhong, soNguoiHienTai, giaThue) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try {
             Connection con = connectDB.getConnection();
@@ -149,6 +150,7 @@ public class QuanLyPhongDAO {
                 ps.setInt(5, 0);
                 ps.setInt(6, toTrangThai(trangThai));
                 ps.setInt(7, 0);
+                ps.setLong(8, giaThue);
                 int rows = ps.executeUpdate();
                 if (rows == 0) {
                     return "Không thể thêm phòng vào database";
@@ -164,7 +166,7 @@ public class QuanLyPhongDAO {
 
     // ── READ ───
     public List<Phong> layTatCa() {
-        String sql = "SELECT maPhong, trangThaiPhong FROM Phong ORDER BY maPhong";
+        String sql = "SELECT maPhong, trangThaiPhong, giaThue FROM Phong ORDER BY maPhong";
         List<Phong> result = new ArrayList<>();
 
         try {
@@ -173,18 +175,18 @@ public class QuanLyPhongDAO {
                     ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     String maPhong = rs.getString("maPhong");
-                    result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong")));
+                    result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong"), rs.getLong("giaThue")));
                 }
             }
-            return result;
         } catch (SQLException e) {
-            throw new RuntimeException("Lỗi khi lấy danh sách phòng.", e);
+            // Chưa có dữ liệu hoặc lỗi kết nối → trả danh sách rỗng, không crash UI
         }
+        return result;
     }
 
     public Phong layTheoMa(String maPhong) {
         String ma = normalise(maPhong);
-        String sql = "SELECT maPhong, trangThaiPhong FROM Phong WHERE maPhong = ?";
+        String sql = "SELECT maPhong, trangThaiPhong, giaThue FROM Phong WHERE maPhong = ?";
         try {
             Connection con = connectDB.getConnection();
             try (PreparedStatement ps = con.prepareStatement(sql)) {
@@ -193,12 +195,13 @@ public class QuanLyPhongDAO {
                     if (!rs.next()) {
                         return null;
                     }
-                    return buildPhong(ma, rs.getInt("trangThaiPhong"));
+                    return buildPhong(ma, rs.getInt("trangThaiPhong"), rs.getLong("giaThue"));
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Lỗi khi lấy phòng theo mã.", e);
+            // Chưa có dữ liệu hoặc lỗi kết nối → trả null
         }
+        return null;
     }
 
     public boolean tonTai(String maPhong) {
@@ -212,13 +215,14 @@ public class QuanLyPhongDAO {
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Lỗi khi kiểm tra tồn tại phòng.", e);
+            // Lỗi kết nối → coi như chưa tồn tại
         }
+        return false;
     }
 
     /** Lấy danh sách phòng theo tầng, VD tầng "T3" */
     public List<Phong> layTheoTang(String tang) {
-        String sql = "SELECT maPhong, trangThaiPhong FROM Phong WHERE maTang = ? ORDER BY maPhong";
+        String sql = "SELECT maPhong, trangThaiPhong, giaThue FROM Phong WHERE maTang = ? ORDER BY maPhong";
         List<Phong> result = new ArrayList<>();
         try {
             Connection con = connectDB.getConnection();
@@ -227,19 +231,19 @@ public class QuanLyPhongDAO {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String maPhong = rs.getString("maPhong");
-                        result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong")));
+                        result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong"), rs.getLong("giaThue")));
                     }
                 }
             }
-            return result;
         } catch (SQLException e) {
-            throw new RuntimeException("Lỗi khi lấy phòng theo tầng.", e);
+            // Chưa có dữ liệu hoặc lỗi kết nối → trả danh sách rỗng
         }
+        return result;
     }
 
     /** Lấy danh sách phòng theo tòa thông qua quan hệ Tang -> Toa */
     public List<Phong> layTheoToa(String maToa) {
-        String sql = "SELECT p.maPhong, p.trangThaiPhong "
+        String sql = "SELECT p.maPhong, p.trangThaiPhong, p.giaThue "
                 + "FROM Phong p "
                 + "INNER JOIN Tang t ON p.maTang = t.maTang "
                 + "WHERE t.maToa = ? "
@@ -252,14 +256,14 @@ public class QuanLyPhongDAO {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String maPhong = rs.getString("maPhong");
-                        result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong")));
+                        result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong"), rs.getLong("giaThue")));
                     }
                 }
             }
-            return result;
         } catch (SQLException e) {
-            throw new RuntimeException("Lỗi khi lấy phòng theo tòa.", e);
+            // Chưa có dữ liệu hoặc lỗi kết nối → trả danh sách rỗng
         }
+        return result;
     }
 
     // ── UPDATE ───
@@ -271,12 +275,13 @@ public class QuanLyPhongDAO {
         if (giaThue <= 0)
             return "Giá thuê phải lớn hơn 0";
 
-        String sql = "UPDATE Phong SET trangThaiPhong = ? WHERE maPhong = ?";
+        String sql = "UPDATE Phong SET trangThaiPhong = ?, giaThue = ? WHERE maPhong = ?";
         try {
             Connection con = connectDB.getConnection();
             try (PreparedStatement ps = con.prepareStatement(sql)) {
                 ps.setInt(1, toTrangThai(trangThai));
-                ps.setString(2, ma);
+                ps.setLong(2, giaThue);
+                ps.setString(3, ma);
                 int rows = ps.executeUpdate();
                 if (rows == 0) {
                     return "Không tìm thấy phòng \"" + ma + "\"";

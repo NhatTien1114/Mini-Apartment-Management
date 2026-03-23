@@ -224,7 +224,7 @@ public class QuanLyPhongUI {
         // Tên phòng
         RoundedTextField txtMa = new RoundedTextField(6);
         txtMa.setMaximumSize(new Dimension(420, 40));
-        txtMa.setPlaceholder("VD: T1.06");
+        txtMa.setPlaceholder("VD: P1.06");
         JLabel errMa = makeErrLabel();
 
         // Giá thuê

@@ -1,18 +1,11 @@
 package dao;
 
+import static dao.QuanLyPhongDAO.normalise;
 import database.connectDB;
-import entity.HopDong;
-import entity.HopDongKhachThue;
-import entity.KhachHang;
-import entity.Phong;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
-
-import static dao.QuanLyPhongDAO.normalise;
 
 public class HopDongKhachHangDAO {
 

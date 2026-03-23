@@ -98,19 +98,19 @@ public class TrangChu extends JFrame{
 
         JPanel pnlDanhSach = new JPanel();
         pnlDanhSach.setBackground(MAU_MENU);
-        pnlDanhSach.setLayout(new GridLayout(10, 1, 0, 10));
+        pnlDanhSach.setLayout(new GridLayout(9, 1, 0, 10));
         pnlDanhSach.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         String[] danhSachMenu = {
                 "Trang chủ", "Hợp đồng", "Quản lý phòng", "Khách hàng",
-                "Phương tiện", "Doanh thu", "Dịch vụ", "Hóa đơn"
+                "Phương tiện", "Doanh thu", "Dịch vụ", "Hóa đơn", "Bảng giá"
         };
 
         String[] danhSachIcon = {
                 "img/icons/home.png", "img/icons/google-docs.png",
                 "img/icons/settings.png", "img/icons/user.png",
                 "img/icons/bike.png", "img/icons/bar-chart.png",
-                "img/icons/support.png", "img/icons/bill.png"
+                "img/icons/support.png", "img/icons/bill.png", "img/icons/bar-chart.png"
         };
 
         menuButtons = new JButton[danhSachMenu.length];
@@ -189,6 +189,7 @@ public class TrangChu extends JFrame{
         pnlContent.add(new DoanhThuUI().getPanel(), "5");
         pnlContent.add(new DichVuUI().getPanel(), "6");
         pnlContent.add(new HoaDonUI().getPanel(), "7");
+        pnlContent.add(new BangGiaUI().getPanel(), "8");
         
         pnlMain.add(pnlContent, BorderLayout.CENTER);
         return pnlMain;

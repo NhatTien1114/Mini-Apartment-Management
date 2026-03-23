@@ -3,13 +3,11 @@ package dao;
 import database.connectDB;
 import entity.HopDong;
 import entity.Phong;
-import ui.main.HopDongUI;
-
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import ui.main.HopDongUI;
 
 public class HopDongDAO {
     public String maHopDong;
