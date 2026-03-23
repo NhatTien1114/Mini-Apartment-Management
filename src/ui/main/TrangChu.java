@@ -1,12 +1,12 @@
 package ui.main;
 
 import dao.QuanLyPhongDAO;
+import entity.Phong;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import service.PhongService;
 import ui.util.PhongInfo;
 import ui.util.RoundedButton;
 
@@ -34,7 +34,7 @@ public class TrangChu extends JFrame{
     private String role;
     private JLabel lblTen;
     private JLabel lblRole;
-    private final PhongService phongService = new PhongService();
+    private final QuanLyPhongDAO phongDAO = new QuanLyPhongDAO();
 
     public TrangChu(entity.TaiKhoan tk) {
         this.taiKhoan = tk;
@@ -42,7 +42,7 @@ public class TrangChu extends JFrame{
         initUI();
     }
     
-    public void extractUserInfo() {
+    private void extractUserInfo() {
         if (this.taiKhoan instanceof entity.Chu) {
             this.tenTaiKhoan = ((entity.Chu) this.taiKhoan).getHoTen();
             this.role = "Chủ";
@@ -291,7 +291,7 @@ public class TrangChu extends JFrame{
         pnlThongKe.setBackground(MAU_NEN);
         pnlThongKe.setPreferredSize(new Dimension(0, 70));
 
-        List<QuanLyPhongDAO.Phong> dsPhong = layDanhSachPhong();
+        List<Phong> dsPhong = layDanhSachPhong();
         int soPhongTrong = demTheoTrangThai(dsPhong, "Trống");
         int soPhongDaThue = demTheoTrangThai(dsPhong, "Đã thuê");
         int soPhongDaCoc = demTheoTrangThai(dsPhong, "Đã cọc");
@@ -334,17 +334,17 @@ public class TrangChu extends JFrame{
         pnlSoDo.setBackground(Color.WHITE);
         pnlSoDo.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        pnlSoDo.add(createTang("TẦNG 6", phongService.layTheoTang("T6")));
-        pnlSoDo.add(createTang("TẦNG 5", phongService.layTheoTang("T5")));
-        pnlSoDo.add(createTang("TẦNG 4", phongService.layTheoTang("T4")));
-        pnlSoDo.add(createTang("TẦNG 3", phongService.layTheoTang("T3")));
-        pnlSoDo.add(createTang("TẦNG 2", phongService.layTheoTang("T2")));
-        pnlSoDo.add(createTang("TẦNG 1", phongService.layTheoTang("T1")));
+        pnlSoDo.add(createTang("TẦNG 6", phongDAO.layTheoTang("T6")));
+        pnlSoDo.add(createTang("TẦNG 5", phongDAO.layTheoTang("T5")));
+        pnlSoDo.add(createTang("TẦNG 4", phongDAO.layTheoTang("T4")));
+        pnlSoDo.add(createTang("TẦNG 3", phongDAO.layTheoTang("T3")));
+        pnlSoDo.add(createTang("TẦNG 2", phongDAO.layTheoTang("T2")));
+        pnlSoDo.add(createTang("TẦNG 1", phongDAO.layTheoTang("T1")));
 
         return pnlSoDo;
     }
 
-    private JPanel createTang(String tenTang, List<QuanLyPhongDAO.Phong> dsPhong) {
+    private JPanel createTang(String tenTang, List<Phong> dsPhong) {
         JPanel pnlTang = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
         pnlTang.setBackground(Color.WHITE);
 
@@ -361,14 +361,14 @@ public class TrangChu extends JFrame{
             return pnlTang;
         }
 
-        for (QuanLyPhongDAO.Phong p : dsPhong) {
-            RoundedButton btnPhong = new RoundedButton(p.maPhong, 12);
+        for (Phong p : dsPhong) {
+            RoundedButton btnPhong = new RoundedButton(p.getMaPhong(), 12);
             btnPhong.setForeground(Color.WHITE);
-            btnPhong.setBackground(mauTheoTrangThai(p.trangThai));
+            btnPhong.setBackground(mauTheoTrangThai(p.getTrangThai().getTen()));
             btnPhong.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
             btnPhong.setPreferredSize(new Dimension(106, 60));
             
-            btnPhong.addActionListener(e -> new PhongInfo(p.maPhong).showDialog());
+            btnPhong.addActionListener(e -> new PhongInfo(p.getMaPhong()).showDialog());
             
             pnlTang.add(btnPhong);
         }
@@ -376,18 +376,18 @@ public class TrangChu extends JFrame{
         return pnlTang;
     }
 
-    private List<QuanLyPhongDAO.Phong> layDanhSachPhong() {
+    private List<Phong> layDanhSachPhong() {
         try {
-            return phongService.layTatCaPhong();
+            return phongDAO.layTatCa();
         } catch (RuntimeException e) {
             return List.of();
         }
     }
 
-    private int demTheoTrangThai(List<QuanLyPhongDAO.Phong> dsPhong, String trangThai) {
+    private int demTheoTrangThai(List<Phong> dsPhong, String trangThai) {
         int dem = 0;
-        for (QuanLyPhongDAO.Phong phong : dsPhong) {
-            if (trangThai.equals(phong.trangThai)) {
+        for (Phong phong : dsPhong) {
+            if (trangThai.equals(phong.getTrangThai().getTen())) {
                 dem++;
             }
         }

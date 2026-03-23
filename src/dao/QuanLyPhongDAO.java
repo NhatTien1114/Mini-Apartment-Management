@@ -1,6 +1,7 @@
 package dao;
 
 import database.connectDB;
+import entity.Phong;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,32 +15,13 @@ import java.util.regex.Pattern;
 
 public class QuanLyPhongDAO {
 
-    // ── Model nội bộ ───
-    public static class Phong {
-        public String  maPhong;       // VD: T2.05
-        public long    giaThue;       // VNĐ/tháng
-        public String  trangThai;     // "Trống" | "Đã thuê" | "Đang sửa"
-        public List<String> dichVu;   // danh sách tên dịch vụ đã chọn
-
-        public Phong(String maPhong, long giaThue, String trangThai, List<String> dichVu) {
-            this.maPhong   = maPhong;
-            this.giaThue   = giaThue;
-            this.trangThai = trangThai;
-            this.dichVu    = dichVu != null ? new ArrayList<>(dichVu) : new ArrayList<>();
-        }
-
-        @Override public String toString() {
-            return maPhong + " [" + trangThai + "] " + giaThue + "đ";
-        }
-    }
-
     // ── Format hợp lệ: T{1-6}.{01-09} ──
     private static final Pattern ROOM_PATTERN =
             Pattern.compile("^T[1-6]\\.(0[1-9]|[1-9]\\d)$");
 
     // Cache dịch vụ theo phòng để không mất trạng thái trong cùng phiên UI.
     // Hiện tại schema chưa có bảng liên kết phòng-dịch vụ.
-    private static final Map<String, List<String>> serviceCache = new HashMap<>();
+    private final Map<String, List<String>> serviceCache = new HashMap<>();
 
     private static final List<String> DEFAULT_SERVICES = List.of("Điện", "Nước", "Internet", "Rác");
 
@@ -59,20 +41,24 @@ public class QuanLyPhongDAO {
         return dot > 0 ? maPhong.substring(0, dot) : "";
     }
 
-    private static int toTrangThaiCode(String trangThai) {
+    private static int toTrangThai(String trangThai) {
         if ("Đã thuê".equals(trangThai)) return 1;
         if ("Đang sửa".equals(trangThai)) return 2;
         if ("Đã cọc".equals(trangThai)) return 3;
         return 0;
     }
 
-    private static String fromTrangThaiCode(int code) {
-        return switch (code) {
-            case 1 -> "Đã thuê";
-            case 2 -> "Đang sửa";
-            case 3 -> "Đã cọc";
-            default -> "Trống";
+    private Phong buildPhong(String maPhong, int code) {
+        Phong.TrangThai tt = switch (code) {
+            case 1 -> Phong.TrangThai.THUE;
+            case 2 -> Phong.TrangThai.SUA;
+            case 3 -> Phong.TrangThai.COC;
+            default -> Phong.TrangThai.TRONG;
         };
+        Phong p = new Phong(0, null, maPhong, null, 0, maPhong, tt);
+        p.setGiaThue(3_000_000L);
+        p.setDichVu(getServicesByRoom(maPhong));
+        return p;
     }
 
     private String findChuSoHuuMacDinh(Connection con) throws SQLException {
@@ -122,7 +108,7 @@ public class QuanLyPhongDAO {
         }
     }
 
-    private static List<String> getServicesByRoom(String maPhong) {
+    private List<String> getServicesByRoom(String maPhong) {
         String key = normalise(maPhong);
         List<String> cached = serviceCache.get(key);
         if (cached != null) {
@@ -161,7 +147,7 @@ public class QuanLyPhongDAO {
                 ps.setString(3, ma);
                 ps.setObject(4, null);
                 ps.setInt(5, 0);
-                ps.setInt(6, toTrangThaiCode(trangThai));
+                ps.setInt(6, toTrangThai(trangThai));
                 ps.setInt(7, 0);
                 int rows = ps.executeUpdate();
                 if (rows == 0) {
@@ -187,8 +173,7 @@ public class QuanLyPhongDAO {
                     ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     String maPhong = rs.getString("maPhong");
-                    String trangThai = fromTrangThaiCode(rs.getInt("trangThaiPhong"));
-                    result.add(new Phong(maPhong, 3_000_000L, trangThai, getServicesByRoom(maPhong)));
+                    result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong")));
                 }
             }
             return result;
@@ -197,7 +182,7 @@ public class QuanLyPhongDAO {
         }
     }
 
-    public static Phong layTheoMa(String maPhong) {
+    public Phong layTheoMa(String maPhong) {
         String ma = normalise(maPhong);
         String sql = "SELECT maPhong, trangThaiPhong FROM Phong WHERE maPhong = ?";
         try {
@@ -208,8 +193,7 @@ public class QuanLyPhongDAO {
                     if (!rs.next()) {
                         return null;
                     }
-                    String trangThai = fromTrangThaiCode(rs.getInt("trangThaiPhong"));
-                    return new Phong(ma, 3_000_000L, trangThai, getServicesByRoom(ma));
+                    return buildPhong(ma, rs.getInt("trangThaiPhong"));
                 }
             }
         } catch (SQLException e) {
@@ -243,8 +227,7 @@ public class QuanLyPhongDAO {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String maPhong = rs.getString("maPhong");
-                        String trangThai = fromTrangThaiCode(rs.getInt("trangThaiPhong"));
-                        result.add(new Phong(maPhong, 3_000_000L, trangThai, getServicesByRoom(maPhong)));
+                        result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong")));
                     }
                 }
             }
@@ -269,8 +252,7 @@ public class QuanLyPhongDAO {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String maPhong = rs.getString("maPhong");
-                        String trangThai = fromTrangThaiCode(rs.getInt("trangThaiPhong"));
-                        result.add(new Phong(maPhong, 3_000_000L, trangThai, getServicesByRoom(maPhong)));
+                        result.add(buildPhong(maPhong, rs.getInt("trangThaiPhong")));
                     }
                 }
             }
@@ -293,7 +275,7 @@ public class QuanLyPhongDAO {
         try {
             Connection con = connectDB.getConnection();
             try (PreparedStatement ps = con.prepareStatement(sql)) {
-                ps.setInt(1, toTrangThaiCode(trangThai));
+                ps.setInt(1, toTrangThai(trangThai));
                 ps.setString(2, ma);
                 int rows = ps.executeUpdate();
                 if (rows == 0) {
@@ -316,7 +298,7 @@ public class QuanLyPhongDAO {
         Phong p = layTheoMa(ma);
         if (p == null)
             return "Không tìm thấy phòng \"" + ma + "\"";
-        if ("Đã thuê".equals(p.trangThai) || "Đã cọc".equals(p.trangThai))
+        if (p.getTrangThai() == Phong.TrangThai.THUE || p.getTrangThai() == Phong.TrangThai.COC)
             return "Không thể xóa phòng đang có người thuê hoặc đã cọc";
 
         String sql = "DELETE FROM Phong WHERE maPhong = ?";
