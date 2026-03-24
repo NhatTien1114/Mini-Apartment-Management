@@ -2,7 +2,6 @@ package ui.main;
 
 import entity.KhachHang;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -44,17 +43,10 @@ import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableRowSorter;
 import service.KhachHangService;
 import ui.util.AppColors;
-import ui.util.RoundedButton;
+import ui.util.PrimaryButton;
 
 public class KhachHangUI {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-    private final Color MAU_NEN = AppColors.APP_BACKGROUND;
-    private final Color MAU_CARD = AppColors.WHITE;
-    private final Color MAU_BORDER = AppColors.SLATE_200;
-    private final Color MAU_TEXT = AppColors.SLATE_900;
-    private final Color MAU_MUTED = AppColors.SLATE_600;
-    private final Color MAU_HOVER = AppColors.SLATE_50;
 
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 24);
     private final Font FONT_BOLD = new Font("Be Vietnam Pro", Font.BOLD, 14);
@@ -65,6 +57,7 @@ public class KhachHangUI {
     private final ImageIcon ICON_BIN = loadActionIcon("bin.png", 16, 16);
 
     private final KhachHangService khachHangService = new KhachHangService();
+    private final PrimaryButton primaryButton = new PrimaryButton();
 
     private JTable table;
     private DefaultTableModel tableModel;
@@ -74,7 +67,7 @@ public class KhachHangUI {
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout(20, 20));
         root.setBorder(new EmptyBorder(20, 20, 20, 20));
-        root.setBackground(MAU_NEN);
+        root.setBackground(AppColors.APP_BACKGROUND);
 
         root.add(createTopBar(), BorderLayout.NORTH);
         root.add(createTableCard(), BorderLayout.CENTER);
@@ -85,16 +78,13 @@ public class KhachHangUI {
 
     private JPanel createTopBar() {
         JPanel top = new JPanel(new BorderLayout());
-        top.setBackground(MAU_NEN);
+        top.setBackground(AppColors.APP_BACKGROUND);
 
-        JLabel lblTitle = new JLabel("Quản lý khách thuê");
+        JLabel lblTitle = new JLabel("Quản lý khách hàng");
         lblTitle.setFont(FONT_TITLE);
-        lblTitle.setForeground(MAU_TEXT);
+        lblTitle.setForeground(AppColors.SLATE_900);
 
-        RoundedButton btnThem = new RoundedButton("+ Thêm khách hàng", 17);
-        btnThem.setFont(new Font("Be Vietnam Pro", Font.BOLD, 15));
-        btnThem.setBackground(AppColors.ACTION_BLUE);
-        btnThem.setForeground(AppColors.WHITE);
+        JButton btnThem = primaryButton.makePrimaryButton("Thêm khách hàng");
         btnThem.addActionListener(e -> showKhachHangDialog(null));
 
         top.add(lblTitle, BorderLayout.WEST);
@@ -104,28 +94,26 @@ public class KhachHangUI {
 
     private JPanel createTableCard() {
         JPanel card = new JPanel(new BorderLayout(0, 12));
-        card.setBackground(MAU_CARD);
+        card.setBackground(AppColors.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(MAU_BORDER, 1, true),
-                new EmptyBorder(12, 12, 12, 12)
-        ));
+                new LineBorder(AppColors.SLATE_200, 1, true),
+                new EmptyBorder(12, 12, 12, 12)));
 
         JPanel bar = new JPanel(new BorderLayout());
-        bar.setBackground(MAU_CARD);
+        bar.setBackground(AppColors.WHITE);
 
         txtTimKiem = new JTextField();
         txtTimKiem.setPreferredSize(new Dimension(300, 36));
         txtTimKiem.setFont(FONT_PLAIN);
         txtTimKiem.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(MAU_BORDER, 1, true),
-                new EmptyBorder(7, 10, 7, 10)
-        ));
+                new LineBorder(AppColors.SLATE_200, 1, true),
+                new EmptyBorder(7, 10, 7, 10)));
         txtTimKiem.setToolTipText("Tìm theo mã, họ tên, số điện thoại, CCCD");
 
         bar.add(txtTimKiem, BorderLayout.WEST);
         card.add(bar, BorderLayout.NORTH);
 
-        String[] cols = {"Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Thao tác"};
+        String[] cols = { "Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Thao tác" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -160,7 +148,7 @@ public class KhachHangUI {
             public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
                 Component c = super.prepareRenderer(renderer, row, column);
                 if (!isRowSelected(row)) {
-                    c.setBackground(hoverRow == row ? MAU_HOVER : MAU_CARD);
+                    c.setBackground(hoverRow == row ? AppColors.SLATE_50 : AppColors.WHITE);
                 }
                 return c;
             }
@@ -169,7 +157,7 @@ public class KhachHangUI {
         JTableHeader header = table.getTableHeader();
         header.setReorderingAllowed(false);
         header.setPreferredSize(new Dimension(0, 42));
-        header.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
+        header.setBorder(new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200));
 
         DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer() {
             @Override
@@ -177,8 +165,8 @@ public class KhachHangUI {
                     int row, int column) {
                 super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
                 setFont(FONT_SMALL);
-                setForeground(MAU_MUTED);
-                setBackground(MAU_CARD);
+                setForeground(AppColors.SLATE_600);
+                setBackground(AppColors.WHITE);
                 setBorder(new EmptyBorder(0, 10, 0, 8));
                 setHorizontalAlignment(SwingConstants.LEFT);
                 return this;
@@ -191,13 +179,13 @@ public class KhachHangUI {
 
         table.setRowHeight(52);
         table.setFont(FONT_PLAIN);
-        table.setForeground(MAU_TEXT);
+        table.setForeground(AppColors.SLATE_900);
         table.setShowVerticalLines(false);
         table.setShowHorizontalLines(false);
         table.setIntercellSpacing(new Dimension(0, 0));
-        table.setGridColor(MAU_CARD);
+        table.setGridColor(AppColors.WHITE);
         table.setSelectionBackground(AppColors.PRIMARY_TINT_HOVER);
-        table.setSelectionForeground(MAU_TEXT);
+        table.setSelectionForeground(AppColors.SLATE_900);
 
         table.getColumnModel().getColumn(0).setPreferredWidth(80);
         table.getColumnModel().getColumn(1).setPreferredWidth(220);
@@ -214,11 +202,10 @@ public class KhachHangUI {
                     int row, int col) {
                 super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, col);
                 setBorder(BorderFactory.createCompoundBorder(
-                        new MatteBorder(0, 0, 1, 0, MAU_BORDER),
-                        new EmptyBorder(0, 10, 0, 8)
-                ));
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 10, 0, 8)));
                 setFont(col == 1 ? FONT_BOLD : FONT_PLAIN);
-                setForeground(MAU_TEXT);
+                setForeground(AppColors.SLATE_900);
                 return this;
             }
         };
@@ -251,8 +238,8 @@ public class KhachHangUI {
 
         JScrollPane sp = new JScrollPane(table);
         sp.setBorder(BorderFactory.createEmptyBorder());
-        sp.getViewport().setBackground(MAU_CARD);
-        sp.setBackground(MAU_CARD);
+        sp.getViewport().setBackground(AppColors.WHITE);
+        sp.setBackground(AppColors.WHITE);
 
         card.add(sp, BorderLayout.CENTER);
         return card;
@@ -317,16 +304,16 @@ public class KhachHangUI {
         dlg.setResizable(false);
 
         JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(MAU_NEN);
+        root.setBackground(AppColors.APP_BACKGROUND);
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
         JPanel card = new JPanel(new BorderLayout(0, 14));
-        card.setBackground(MAU_CARD);
+        card.setBackground(AppColors.WHITE);
         card.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         JLabel title = new JLabel(isEdit ? "Cập nhật thông tin khách hàng" : "Nhập thông tin khách hàng");
         title.setFont(new Font("Be Vietnam Pro", Font.BOLD, 18));
-        title.setForeground(MAU_TEXT);
+        title.setForeground(AppColors.SLATE_900);
         card.add(title, BorderLayout.NORTH);
 
         JTextField txtHoTen = makeField(hoTenValue);
@@ -336,7 +323,7 @@ public class KhachHangUI {
         JTextField txtDiaChi = makeField(diaChiValue);
 
         JPanel grid = new JPanel(new GridLayout(3, 2, 12, 12));
-        grid.setBackground(MAU_CARD);
+        grid.setBackground(AppColors.WHITE);
         grid.add(wrapField("Họ tên *", txtHoTen));
         grid.add(wrapField("Số điện thoại", txtSdt));
         grid.add(wrapField("Ngày sinh (yyyy-MM-dd)", txtNgaySinh));
@@ -347,12 +334,12 @@ public class KhachHangUI {
         card.add(grid, BorderLayout.CENTER);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        actions.setBackground(MAU_CARD);
+        actions.setBackground(AppColors.WHITE);
 
         JButton btnHuy = makeOutlineButton("Hủy");
         btnHuy.addActionListener(e -> dlg.dispose());
 
-        JButton btnLuu = makePrimaryButton(isEdit ? "Cập nhật" : "Thêm");
+        JButton btnLuu = primaryButton.makePrimaryButton(isEdit ? "Cập nhật" : "Thêm");
         btnLuu.addActionListener(e -> {
             try {
                 String hoTen = txtHoTen.getText().trim();
@@ -369,7 +356,8 @@ public class KhachHangUI {
                     try {
                         ngaySinh = LocalDate.parse(ngaySinhRaw, DATE_FORMAT);
                     } catch (DateTimeParseException ex) {
-                        JOptionPane.showMessageDialog(dlg, "Ngày sinh không đúng định dạng yyyy-MM-dd.", "Sai định dạng",
+                        JOptionPane.showMessageDialog(dlg, "Ngày sinh không đúng định dạng yyyy-MM-dd.",
+                                "Sai định dạng",
                                 JOptionPane.WARNING_MESSAGE);
                         txtNgaySinh.requestFocus();
                         return;
@@ -418,59 +406,35 @@ public class KhachHangUI {
     private JTextField makeField(String value) {
         JTextField field = new JTextField(value);
         field.setFont(FONT_PLAIN);
-        field.setForeground(MAU_TEXT);
+        field.setForeground(AppColors.SLATE_900);
         field.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(MAU_BORDER, 1, true),
-                new EmptyBorder(7, 10, 7, 10)
-        ));
+                new LineBorder(AppColors.SLATE_200, 1, true),
+                new EmptyBorder(7, 10, 7, 10)));
         field.setPreferredSize(new Dimension(0, 38));
         return field;
     }
 
     private JComponent wrapField(String label, JComponent field) {
         JPanel p = new JPanel(new BorderLayout(0, 5));
-        p.setBackground(MAU_CARD);
+        p.setBackground(AppColors.WHITE);
         JLabel lbl = new JLabel(label);
         lbl.setFont(FONT_SMALL);
-        lbl.setForeground(MAU_TEXT);
+        lbl.setForeground(AppColors.SLATE_900);
         p.add(lbl, BorderLayout.NORTH);
         p.add(field, BorderLayout.CENTER);
         return p;
     }
 
-    private JButton makePrimaryButton(String text) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
-        btn.setForeground(AppColors.WHITE);
-        btn.setBackground(AppColors.PRIMARY);
-        btn.setBorder(new EmptyBorder(9, 16, 9, 16));
-        btn.setFocusPainted(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                btn.setBackground(AppColors.PRIMARY_HOVER);
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                btn.setBackground(AppColors.PRIMARY);
-            }
-        });
-        return btn;
-    }
-
     private JButton makeOutlineButton(String text) {
         JButton btn = new JButton(text);
         btn.setFont(FONT_PLAIN);
-        btn.setForeground(MAU_MUTED);
-        btn.setBackground(MAU_CARD);
+        btn.setForeground(AppColors.SLATE_600);
+        btn.setBackground(AppColors.WHITE);
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(MAU_BORDER, 1, true),
-                new EmptyBorder(8, 14, 8, 14)
-        ));
+                new LineBorder(AppColors.SLATE_200, 1, true),
+                new EmptyBorder(8, 14, 8, 14)));
         return btn;
     }
 
@@ -479,7 +443,7 @@ public class KhachHangUI {
     }
 
     private ImageIcon loadActionIcon(String fileName, int width, int height) {
-        String[] paths = {"img/icon/" + fileName, "img/icons/" + fileName};
+        String[] paths = { "img/icon/" + fileName, "img/icons/" + fileName };
         for (String path : paths) {
             ImageIcon raw = new ImageIcon(path);
             if (raw.getIconWidth() > 0 && raw.getIconHeight() > 0) {
@@ -503,8 +467,8 @@ public class KhachHangUI {
         public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus,
                 int row, int col) {
             JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 15));
-            p.setBackground(isSelected ? AppColors.PRIMARY_TINT_HOVER : MAU_CARD);
-            p.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
+            p.setBackground(isSelected ? AppColors.PRIMARY_TINT_HOVER : AppColors.WHITE);
+            p.setBorder(new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200));
 
             JLabel lblSua = makeActionIconLabel(ICON_PEN);
             JLabel lblXoa = makeActionIconLabel(ICON_BIN);
@@ -521,8 +485,8 @@ public class KhachHangUI {
 
         ActionEditor() {
             panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 11));
-            panel.setBackground(MAU_CARD);
-            panel.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
+            panel.setBackground(AppColors.WHITE);
+            panel.setBorder(new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200));
 
             JButton btnSua = makeIconButton(ICON_PEN, "Sửa");
             JButton btnXoa = makeIconButton(ICON_BIN, "Xóa");
@@ -576,7 +540,7 @@ public class KhachHangUI {
                 btn.setIcon(icon);
             } else {
                 btn.setText(tooltip);
-                btn.setForeground(MAU_MUTED);
+                btn.setForeground(AppColors.SLATE_600);
                 btn.setFont(FONT_SMALL);
             }
             btn.setToolTipText(tooltip);

@@ -1,7 +1,5 @@
 package entity;
 
-import java.util.List;
-
 public class Phong {
     private String maPhong;
     private Tang maTang;
@@ -10,8 +8,6 @@ public class Phong {
     private LoaiPhong loaiPhong;
     private TrangThai trangThai;
     private int soNguoiHienTai;
-    private long giaThue;
-    private List<String> dichVu;
 
     public enum LoaiPhong {
 		DON("Phòng Đơn"), DOI("Phòng Đôi"), STUDIO("Phòng Studio");
@@ -126,22 +122,6 @@ public class Phong {
 
     public void setSoNguoiHienTai(int soNguoiHienTai) {
         this.soNguoiHienTai = soNguoiHienTai;
-    }
-
-    public long getGiaThue() {
-        return giaThue;
-    }
-
-    public void setGiaThue(long giaThue) {
-        this.giaThue = giaThue;
-    }
-
-    public List<String> getDichVu() {
-        return dichVu;
-    }
-
-    public void setDichVu(List<String> dichVu) {
-        this.dichVu = dichVu;
     }
 
     @Override

@@ -57,8 +57,8 @@ public class QuanLyPhongDAO {
             default -> Phong.TrangThai.TRONG;
         };
         Phong p = new Phong(0, null, maPhong, null, 0, maPhong, tt);
-        p.setGiaThue(giaThue);
-        p.setDichVu(getServicesByRoom(maPhong));
+        // p.setGiaThue(giaThue);
+        // p.setDichVu(getServicesByRoom(maPhong));
         return p;
     }
 

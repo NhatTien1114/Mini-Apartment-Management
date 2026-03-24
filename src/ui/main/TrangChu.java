@@ -7,20 +7,11 @@ import java.awt.event.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import ui.util.AppColors;
 import ui.util.PhongInfo;
 import ui.util.RoundedButton;
 
-public class TrangChu extends JFrame{
-
-    // ===== MÀU HỆ THỐNG =====
-    private final Color MAU_XANH = Color.decode("#28AF60");
-    private final Color MAU_XANH_DUONG = Color.decode("#308CE8");
-    private final Color MAU_DO = Color.decode("#DC2828");
-    private final Color MAU_VANG = Color.decode("#E7B008");
-    private final Color MAU_MENU = Color.decode("#121721");
-    private final Color MAU_NEN = new Color(229, 231, 235);
-    private final Color MAU_MENU_HOVER = Color.decode("#1F2937");
-    
+public class TrangChu extends JFrame {
     // ===== LAYOUT COMPONENTS =====
     private CardLayout cardLayout;
     private JPanel pnlContent;
@@ -41,7 +32,7 @@ public class TrangChu extends JFrame{
         extractUserInfo();
         initUI();
     }
-    
+
     private void extractUserInfo() {
         if (this.taiKhoan instanceof entity.Chu) {
             this.tenTaiKhoan = ((entity.Chu) this.taiKhoan).getHoTen();
@@ -54,11 +45,13 @@ public class TrangChu extends JFrame{
             this.role = "Khách";
         }
     }
-    
+
     public void updateUserInfo() {
         extractUserInfo();
-        if (lblTen != null) lblTen.setText(this.tenTaiKhoan);
-        if (lblRole != null) lblRole.setText(this.role);
+        if (lblTen != null)
+            lblTen.setText(this.tenTaiKhoan);
+        if (lblRole != null)
+            lblRole.setText(this.role);
     }
 
     private void initUI() {
@@ -77,7 +70,7 @@ public class TrangChu extends JFrame{
     // ================= MENU BÊN TRÁI =================
     private JPanel createMenuPanel() {
         JPanel pnlMenu = new JPanel();
-        pnlMenu.setBackground(MAU_MENU);
+        pnlMenu.setBackground(AppColors.MENU_BG);
         pnlMenu.setPreferredSize(new Dimension(230, 0));
         pnlMenu.setLayout(new BorderLayout());
 
@@ -91,13 +84,13 @@ public class TrangChu extends JFrame{
         lblLogo.setHorizontalAlignment(SwingConstants.LEFT);
 
         JPanel pnlLogo = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        pnlLogo.setBackground(MAU_MENU);
+        pnlLogo.setBackground(AppColors.MENU_BG);
         pnlLogo.add(lblLogo);
 
         pnlMenu.add(pnlLogo, BorderLayout.NORTH);
 
         JPanel pnlDanhSach = new JPanel();
-        pnlDanhSach.setBackground(MAU_MENU);
+        pnlDanhSach.setBackground(AppColors.MENU_BG);
         pnlDanhSach.setLayout(new GridLayout(9, 1, 0, 10));
         pnlDanhSach.setBorder(new EmptyBorder(20, 20, 20, 20));
 
@@ -110,7 +103,8 @@ public class TrangChu extends JFrame{
                 "img/icons/home.png", "img/icons/google-docs.png",
                 "img/icons/settings.png", "img/icons/user.png",
                 "img/icons/bike.png", "img/icons/bar-chart.png",
-                "img/icons/support.png", "img/icons/bill.png", "img/icons/bar-chart.png"
+                "img/icons/support.png", "img/icons/bill.png",
+                "img/icons/menu.png"
         };
 
         menuButtons = new JButton[danhSachMenu.length];
@@ -119,48 +113,51 @@ public class TrangChu extends JFrame{
             int index = i;
             JButton btn = new JButton(danhSachMenu[i]);
             menuButtons[i] = btn;
-            
+
             ImageIcon iconGoc = new ImageIcon(danhSachIcon[i]);
             Image imgIcon = iconGoc.getImage();
             Image imgIconScale = imgIcon.getScaledInstance(20, 20, Image.SCALE_SMOOTH);
             btn.setIcon(new ImageIcon(imgIconScale));
-            
+
             btn.setFocusPainted(false);
             btn.setForeground(Color.WHITE);
-            btn.setBackground(MAU_MENU);
+            btn.setBackground(AppColors.MENU_BG);
             btn.setBorderPainted(false);
             btn.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
             btn.setHorizontalAlignment(SwingConstants.LEFT);
             btn.setIconTextGap(12);
-            
-            if (i == 0) btn.setBackground(MAU_MENU_HOVER);
-            
+
+            if (i == 0)
+                btn.setBackground(AppColors.MENU_HOVER);
+
             btn.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseEntered(MouseEvent e) {
-                    if (selectedMenuIndex != index) btn.setBackground(MAU_MENU_HOVER);
+                    if (selectedMenuIndex != index)
+                        btn.setBackground(AppColors.MENU_HOVER);
                 }
-                
+
                 @Override
                 public void mouseExited(MouseEvent e) {
-                    if (selectedMenuIndex != index) btn.setBackground(MAU_MENU);
+                    if (selectedMenuIndex != index)
+                        btn.setBackground(AppColors.MENU_BG);
                 }
             });
-            
+
             btn.addActionListener(e -> selectMenuTab(index));
-            
+
             pnlDanhSach.add(btn);
         }
 
         pnlMenu.add(pnlDanhSach, BorderLayout.CENTER);
         return pnlMenu;
     }
-    
+
     // ================= MENU SELECTION HANDLER =================
     private void selectMenuTab(int index) {
-        menuButtons[selectedMenuIndex].setBackground(MAU_MENU);
+        menuButtons[selectedMenuIndex].setBackground(AppColors.MENU_BG);
         selectedMenuIndex = index;
-        menuButtons[selectedMenuIndex].setBackground(MAU_MENU_HOVER);
+        menuButtons[selectedMenuIndex].setBackground(AppColors.MENU_HOVER);
 
         if (index == 0) {
             refreshTrangChuTab();
@@ -172,14 +169,14 @@ public class TrangChu extends JFrame{
     // ================= PANEL CHÍNH =================
     private JPanel createMainPanel() {
         JPanel pnlMain = new JPanel(new BorderLayout());
-        pnlMain.setBackground(MAU_NEN);
+        pnlMain.setBackground(AppColors.APP_BACKGROUND);
 
         pnlMain.add(createHeaderPanel(), BorderLayout.NORTH);
-        
+
         cardLayout = new CardLayout();
         pnlContent = new JPanel(cardLayout);
-        pnlContent.setBackground(MAU_NEN);
-        
+        pnlContent.setBackground(AppColors.APP_BACKGROUND);
+
         pnlTrangChuContent = createTrangChuContent();
         pnlContent.add(pnlTrangChuContent, "0");
         pnlContent.add(new HopDongUI().getPanel(), "1");
@@ -190,7 +187,7 @@ public class TrangChu extends JFrame{
         pnlContent.add(new DichVuUI().getPanel(), "6");
         pnlContent.add(new HoaDonUI().getPanel(), "7");
         pnlContent.add(new BangGiaUI().getPanel(), "8");
-        
+
         pnlMain.add(pnlContent, BorderLayout.CENTER);
         return pnlMain;
     }
@@ -247,11 +244,13 @@ public class TrangChu extends JFrame{
             public void mouseClicked(MouseEvent e) {
                 new AccountInfoDialog(TrangChu.this, taiKhoan).setVisible(true);
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 pnlUser.setBackground(new Color(245, 245, 245));
                 pnlThongTin.setBackground(new Color(245, 245, 245));
             }
+
             @Override
             public void mouseExited(MouseEvent e) {
                 pnlUser.setBackground(Color.WHITE);
@@ -278,7 +277,7 @@ public class TrangChu extends JFrame{
         JPanel pnlTrangChu = new JPanel();
         pnlTrangChu.setLayout(new BorderLayout(20, 20));
         pnlTrangChu.setBorder(new EmptyBorder(20, 20, 20, 20));
-        pnlTrangChu.setBackground(MAU_NEN);
+        pnlTrangChu.setBackground(AppColors.APP_BACKGROUND);
 
         pnlTrangChu.add(createThongKePanel(), BorderLayout.NORTH);
         pnlTrangChu.add(createSoDoPhongPanel(), BorderLayout.CENTER);
@@ -289,7 +288,7 @@ public class TrangChu extends JFrame{
     // ================= THỐNG KÊ =================
     private JPanel createThongKePanel() {
         JPanel pnlThongKe = new JPanel(new GridLayout(1, 4, 10, 0));
-        pnlThongKe.setBackground(MAU_NEN);
+        pnlThongKe.setBackground(AppColors.APP_BACKGROUND);
         pnlThongKe.setPreferredSize(new Dimension(0, 70));
 
         List<Phong> dsPhong = layDanhSachPhong();
@@ -298,10 +297,10 @@ public class TrangChu extends JFrame{
         int soPhongDaCoc = demTheoTrangThai(dsPhong, "Đã cọc");
         int soPhongSua = demTheoTrangThai(dsPhong, "Đang sửa");
 
-        pnlThongKe.add(createCard(String.valueOf(soPhongTrong), "Trống", MAU_XANH));
-        pnlThongKe.add(createCard(String.valueOf(soPhongDaThue), "Đã thuê", MAU_DO));
-        pnlThongKe.add(createCard(String.valueOf(soPhongDaCoc), "Đã cọc", MAU_XANH_DUONG));
-        pnlThongKe.add(createCard(String.valueOf(soPhongSua), "Sửa chữa", MAU_VANG));
+        pnlThongKe.add(createCard(String.valueOf(soPhongTrong), "Trống", AppColors.GREEN));
+        pnlThongKe.add(createCard(String.valueOf(soPhongDaThue), "Đã thuê", AppColors.RED));
+        pnlThongKe.add(createCard(String.valueOf(soPhongDaCoc), "Đã cọc", AppColors.BLUE));
+        pnlThongKe.add(createCard(String.valueOf(soPhongSua), "Sửa chữa", AppColors.WARNING));
 
         return pnlThongKe;
     }
@@ -368,9 +367,9 @@ public class TrangChu extends JFrame{
             btnPhong.setBackground(mauTheoTrangThai(p.getTrangThai().getTen()));
             btnPhong.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
             btnPhong.setPreferredSize(new Dimension(106, 60));
-            
+
             btnPhong.addActionListener(e -> new PhongInfo(p.getMaPhong()).showDialog());
-            
+
             pnlTang.add(btnPhong);
         }
 
@@ -397,15 +396,15 @@ public class TrangChu extends JFrame{
 
     private Color mauTheoTrangThai(String trangThai) {
         if ("Đã thuê".equals(trangThai)) {
-            return MAU_DO;
+            return AppColors.RED;
         }
         if ("Đã cọc".equals(trangThai)) {
-            return MAU_XANH_DUONG;
+            return AppColors.BLUE;
         }
         if ("Đang sửa".equals(trangThai)) {
-            return MAU_VANG;
+            return AppColors.WARNING;
         }
-        return MAU_XANH;
+        return AppColors.GREEN;
     }
 
     // ================= MAIN =================

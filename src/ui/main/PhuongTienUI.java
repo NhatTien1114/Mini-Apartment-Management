@@ -6,12 +6,14 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.*;
 import ui.util.AppColors;
+import ui.util.PrimaryButton;
 
 public class PhuongTienUI {
     private final Color MAU_XANH_CHINH = AppColors.REVENUE;
     private final Color MAU_NEN = AppColors.APP_BACKGROUND;
     private DefaultTableModel model;
     private JTable table;
+    private final PrimaryButton primaryButton = new PrimaryButton();
 
     public JPanel getPanel() {
         JPanel pnl = new JPanel(new BorderLayout(20, 20));
@@ -31,7 +33,7 @@ public class PhuongTienUI {
         JTextField txtSearch = new JTextField(20);
         txtSearch.setToolTipText("Tìm kiếm theo biển số hoặc tên...");
 
-        JButton btnAdd = new JButton("+ Đăng ký xe");
+        JButton btnAdd = primaryButton.makePrimaryButton("Đăng ký xe");
         btnAdd.setBackground(MAU_XANH_CHINH);
         btnAdd.setForeground(AppColors.WHITE);
         btnAdd.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
@@ -45,13 +47,15 @@ public class PhuongTienUI {
         pnlTop.add(pnlActions, BorderLayout.EAST);
 
         // --- BẢNG DỮ LIỆU ---
-        String[] columns = {"Biển số xe", "Loại xe", "Chủ sở hữu", "Phòng", "Phí gửi/tháng", "Thao tác"};
-        model = new DefaultTableModel(new Object[][]{
-                {"29A-123.45", "Ô tô", "Nguyễn Văn An", "T1.102", "1.200.000", "✎  🗑"},
-                {"51G-999.99", "Xe máy", "Trần Thị Bình", "T2.205", "150.000", "✎  🗑"}
+        String[] columns = { "Biển số xe", "Loại xe", "Chủ sở hữu", "Phòng", "Phí gửi/tháng", "Thao tác" };
+        model = new DefaultTableModel(new Object[][] {
+                { "29A-123.45", "Ô tô", "Nguyễn Văn An", "T1.102", "1.200.000", "✎  🗑" },
+                { "51G-999.99", "Xe máy", "Trần Thị Bình", "T2.205", "150.000", "✎  🗑" }
         }, columns) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
         table = new JTable(model);
@@ -95,13 +99,13 @@ public class PhuongTienUI {
 
     // --- CHỨC NĂNG 1: ĐĂNG KÝ XE ---
     private void showRegistrationDialog() {
-        JDialog dialog = new JDialog((Frame)null, "Đăng ký phương tiện mới", true);
+        JDialog dialog = new JDialog((Frame) null, "Đăng ký phương tiện mới", true);
         setupDialogForm(dialog, null);
     }
 
     // --- CHỨC NĂNG 2: SỬA PHƯƠNG TIỆN ---
     private void showEditDialog(int modelRow) {
-        JDialog dialog = new JDialog((Frame)null, "Chỉnh sửa phương tiện", true);
+        JDialog dialog = new JDialog((Frame) null, "Chỉnh sửa phương tiện", true);
         setupDialogForm(dialog, modelRow);
     }
 
@@ -112,7 +116,7 @@ public class PhuongTienUI {
         pnlForm.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         JTextField txtBien = new JTextField();
-        JComboBox<String> cbLoai = new JComboBox<>(new String[]{"Xe máy", "Ô tô", "Xe điện"});
+        JComboBox<String> cbLoai = new JComboBox<>(new String[] { "Xe máy", "Ô tô", "Xe điện" });
         JTextField txtChu = new JTextField();
         JTextField txtPhong = new JTextField();
         JTextField txtPhi = new JTextField();
@@ -124,18 +128,26 @@ public class PhuongTienUI {
             txtPhi.setText(model.getValueAt(rowToEdit, 4).toString());
         }
 
-        pnlForm.add(new JLabel("Biển số:")); pnlForm.add(txtBien);
-        pnlForm.add(new JLabel("Loại xe:")); pnlForm.add(cbLoai);
-        pnlForm.add(new JLabel("Chủ xe:")); pnlForm.add(txtChu);
-        pnlForm.add(new JLabel("Phòng:")); pnlForm.add(txtPhong);
-        pnlForm.add(new JLabel("Phí gửi (vnđ):")); pnlForm.add(txtPhi);
+        pnlForm.add(new JLabel("Biển số:"));
+        pnlForm.add(txtBien);
+        pnlForm.add(new JLabel("Loại xe:"));
+        pnlForm.add(cbLoai);
+        pnlForm.add(new JLabel("Chủ xe:"));
+        pnlForm.add(txtChu);
+        pnlForm.add(new JLabel("Phòng:"));
+        pnlForm.add(txtPhong);
+        pnlForm.add(new JLabel("Phí gửi (vnđ):"));
+        pnlForm.add(txtPhi);
 
         JButton btnConfirm = new JButton("Xác nhận");
         btnConfirm.addActionListener(e -> {
-            Object[] rowData = {txtBien.getText(), cbLoai.getSelectedItem(), txtChu.getText(), txtPhong.getText(), txtPhi.getText(), "✎  🗑"};
-            if (rowToEdit == null) model.addRow(rowData);
+            Object[] rowData = { txtBien.getText(), cbLoai.getSelectedItem(), txtChu.getText(), txtPhong.getText(),
+                    txtPhi.getText(), "✎  🗑" };
+            if (rowToEdit == null)
+                model.addRow(rowData);
             else {
-                for(int i=0; i<5; i++) model.setValueAt(rowData[i], rowToEdit, i);
+                for (int i = 0; i < 5; i++)
+                    model.setValueAt(rowData[i], rowToEdit, i);
             }
             dialog.dispose();
         });
@@ -150,7 +162,8 @@ public class PhuongTienUI {
     // --- CHỨC NĂNG 3: XÓA ---
     private void handleDelete(int modelRow) {
         String bienSo = model.getValueAt(modelRow, 0).toString();
-        int opt = JOptionPane.showConfirmDialog(null, "Xóa phương tiện " + bienSo + "?", "Xác nhận", JOptionPane.YES_NO_OPTION);
+        int opt = JOptionPane.showConfirmDialog(null, "Xóa phương tiện " + bienSo + "?", "Xác nhận",
+                JOptionPane.YES_NO_OPTION);
         if (opt == JOptionPane.YES_OPTION) {
             model.removeRow(modelRow);
         }
