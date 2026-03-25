@@ -25,15 +25,8 @@ public class PhongService {
 		return phongDAO.layTheoTang(maTang.trim());
 	}
 
-	public List<Phong> layTheoToa(String maToa) {
-		if (maToa == null || maToa.trim().isEmpty()) {
-			throw new IllegalArgumentException("Ma toa khong hop le.");
-		}
-		return phongDAO.layTheoToa(maToa.trim());
-	}
-
-	public String themPhong(String maPhong, long giaThue, String trangThai, List<String> dichVu) {
-		return phongDAO.them(maPhong, giaThue, trangThai, dichVu);
+	public String themPhong(String maPhong, String maTang, int loaiPhong, String maGiaDetail, int trangThai) {
+		return phongDAO.them(maPhong, maTang, loaiPhong, maGiaDetail, trangThai);
 	}
 
 	public String capNhatPhong(String maPhong, long giaThue, String trangThai, List<String> dichVu) {
