@@ -221,11 +221,11 @@ public class QuanLyPhongUI {
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
 
         // Tên phòng
-        JTextField fMa = makeField("VD: T1.06");
+        JTextField fMa = makeField("");
         JLabel errMa = makeErrLabel();
 
         // Giá thuê
-        JTextField fGia = makeField("3000000");
+        JTextField fGia = makeField("");
 
         // Trạng thái
         JComboBox<String> cTT = makeCombo(new String[]{"Trống", "Đã cọc", "Đã thuê", "Đang sửa"});
@@ -264,7 +264,7 @@ public class QuanLyPhongUI {
 
             // Validate format
             if (!dao.isValidFormat(ma)) {
-                errMa.setText("⚠ Sai định dạng, nhập dạng T1.01 → T6.09");
+                errMa.setText("⚠ Sai định dạng, nhập dạng P101 ");
                 errMa.setVisible(true);
                 shakeFocus(fMa);
                 return;

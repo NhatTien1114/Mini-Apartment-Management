@@ -9,7 +9,8 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.UUID;
+
 
 public class HopDongDAO {
     public String maHopDong;
@@ -51,7 +52,7 @@ public class HopDongDAO {
         }
     }
 
-    public boolean luuHopDongMoi(HopDongUI.ContractDraft draft) {
+    public static boolean newHopDong(HopDongUI.ContractDraft draft) {
         Connection con = null;
         try {
             con = connectDB.getConnection();
@@ -60,7 +61,7 @@ public class HopDongDAO {
             // Bước 1: Thêm Khách Hàng (Dùng MERGE hoặc kiểm tra EXISTS để tránh trùng mã)
             String sqlKH = "IF NOT EXISTS (SELECT 1 FROM KhachHang WHERE maKhachHang = ?) " +
                     "INSERT INTO KhachHang (maKhachHang, hoTen, soDienThoai, soCCCD, diaChiThuongTru) VALUES (?,?,?,?,?)";
-            String maKH = "KH" + System.currentTimeMillis(); // Tạo mã tạm hoặc dùng CCCD làm mã
+            String maKH = "KH" + (UUID.randomUUID().toString().substring(0, 8)); // Tạo mã tạm hoặc dùng CCCD làm mã
             try (PreparedStatement psKH = con.prepareStatement(sqlKH)) {
                 psKH.setString(1, draft.cccd); // Giả sử dùng CCCD để kiểm tra trùng
                 psKH.setString(2, maKH);
@@ -72,11 +73,11 @@ public class HopDongDAO {
             }
 
             // Bước 2: Thêm Hợp Đồng
-            String maHD = "HD" + System.currentTimeMillis();
+            String maHD = "HD" + (UUID.randomUUID().toString().substring(0, 8));
             String sqlHD = "INSERT INTO HopDong (maHopDong, maPhong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang, trangThai) VALUES (?,?,?,?,?,?,1)";
             try (PreparedStatement psHD = con.prepareStatement(sqlHD)) {
                 psHD.setString(1, maHD);
-                psHD.setString(2, draft.phong);
+                psHD.setString(2, draft.maPhong);
                 // Chuyển dd/MM/yyyy sang yyyy-MM-dd cho SQL
                 psHD.setDate(3, java.sql.Date.valueOf(convertToSqlDate(draft.ngayBatDau)));
                 psHD.setDate(4, java.sql.Date.valueOf(convertToSqlDate(draft.ngayKetThuc)));
@@ -94,7 +95,15 @@ public class HopDongDAO {
                 psHDKH.executeUpdate();
             }
 
-            con.commit(); // Hoàn tất
+            // Buớc 4: Thay đổi trạng thái Phong (từ "Trống" -> "Đã thuê")
+            String sqlPhong = "UPDATE Phong SET trangThaiPhong = ? WHERE maPhong = ?";
+            String ma = draft.maPhong;
+            try (PreparedStatement psPhong = con.prepareStatement(sqlPhong)) {
+                    psPhong.setInt(1, 1);
+                    psPhong.setString(2, ma);
+                    psPhong.executeUpdate();
+            }
+            con.commit();
             return true;
         } catch (Exception e) {
             if (con != null) try { con.rollback(); } catch (SQLException ex) {}
@@ -102,9 +111,26 @@ public class HopDongDAO {
             return false;
         }
     }
-
+    public String getMaHopDongByMaPhong (String maPhong){
+        String sql = "SELECT maHopDong FROM HopDong WHERE maPhong = ?";
+        try {
+            Connection con = connectDB.getConnection();
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, maPhong);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        return null;
+                    }
+                    String maHD = rs.getString("maHopDong");
+                    return maHD;
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi khi lấy mã HD bằng mã phòng", e);
+        }
+    }
     // Hàm phụ chuyển định dạng ngày
-    private String convertToSqlDate(String dateStr) {
+    private static String convertToSqlDate(String dateStr) {
         String[] p = dateStr.split("/");
         return p[2] + "-" + p[1] + "-" + p[0];
     }

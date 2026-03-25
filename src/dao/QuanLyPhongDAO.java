@@ -1,6 +1,8 @@
 package dao;
 
 import database.connectDB;
+import entity.Phong;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -59,7 +61,8 @@ public class QuanLyPhongDAO {
         return dot > 0 ? maPhong.substring(0, dot) : "";
     }
 
-    private static int toTrangThaiCode(String trangThai) {
+    static int toTrangThaiCode(String trangThai) {
+        if ("Trống".equals(trangThai)) return 0;
         if ("Đã thuê".equals(trangThai)) return 1;
         if ("Đang sửa".equals(trangThai)) return 2;
         if ("Đã cọc".equals(trangThai)) return 3;
@@ -333,6 +336,25 @@ public class QuanLyPhongDAO {
             return null;
         } catch (SQLException e) {
             return "Lỗi database khi xóa phòng: " + e.getMessage();
+        }
+    }
+    public ArrayList<String> getAllPhongDangTrong(){
+        String sql = "SELECT * FROM Phong WHERE trangThaiPhong = 0";
+        ArrayList<String> result = new ArrayList<>();
+
+        try {
+            Connection con = connectDB.getConnection();
+            try (PreparedStatement ps = con.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String maPhong = rs.getString("maPhong");
+
+                    result.add(maPhong);
+                }
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi khi lấy danh sách phòng.", e);
         }
     }
 }

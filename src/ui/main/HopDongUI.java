@@ -15,6 +15,7 @@ import javax.swing.text.DocumentFilter;
 
 import dao.HopDongDAO;
 import dao.HopDongKhachHangDAO;
+import dao.QuanLyPhongDAO;
 import entity.HopDong;
 import ui.util.ButtonStyles;
 import ui.util.AppColors;
@@ -34,12 +35,14 @@ public class HopDongUI {
     private DefaultTableModel model;
     private JTable table;
 
-    HopDongDAO HopDongDao = new HopDongDAO();
+    HopDongDAO HDdao = new HopDongDAO();
 
     HopDongKhachHangDAO HDKHdao = new HopDongKhachHangDAO();
 
+    QuanLyPhongDAO PhongDAO = new QuanLyPhongDAO();
+
     public static class ContractDraft {
-        public String phong;
+        public String maPhong;
         public String hoTen;
         public String soDienThoai;
         public String cccd;
@@ -54,7 +57,8 @@ public class HopDongUI {
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         model.setRowCount(0);
 
-        ArrayList<HopDong> listHD = HopDongDao.getAllHopDong();
+        ArrayList<HopDong> listHD = HDdao.getAllHopDong();
+
 
         for (HopDong row : listHD) {
             model.addRow(new Object[]{
@@ -363,19 +367,10 @@ public class HopDongUI {
         JPanel pnlContent = new JPanel(new GridLayout(0, 2, 14, 12));
         pnlContent.setOpaque(false);
 
-        String[] roomOptions = {
-            "P102 - 3,000,000đ",
-            "P103 - 3,200,000đ",
-            "P201 - 3,500,000đ",
-            "P202 - 3,500,000đ",
-            "P302 - 3,800,000đ",
-            "P401 - 4,000,000đ",
-            "P501 - 4,200,000đ",
-            "P601 - 4,500,000đ"
-        };
-
+        ArrayList<String> roomOption = PhongDAO.getAllPhongDangTrong();
+        String[] mangPhong = roomOption.toArray(new String[0]);
         JComboBox<String> cboPhong = FormFieldStyles.createRoomCombo(
-            roomOptions,
+            mangPhong,
             new Font("Inter", Font.PLAIN, 14),
             MAU_TEXT,
             BORDER_COLOR
@@ -494,7 +489,7 @@ public class HopDongUI {
                 dialog.dispose();
             } else {
                 ContractDraft draft = new ContractDraft();
-                draft.phong = phongCode;
+                draft.maPhong = phongCode;
                 draft.hoTen = txtKhach.getText().trim();
                 draft.soDienThoai = txtSoDienThoai.getText().trim();
                 draft.cccd = txtCccd.getText().trim();
@@ -507,14 +502,14 @@ public class HopDongUI {
                 dialog.setVisible(false);
                 boolean accepted = showContractPreviewDialog(draft);
                 if (accepted) {
-                    HopDongDAO dao = new HopDongDAO();
-                    boolean success = dao.luuHopDongMoi(draft); // Gọi hàm lưu vào DB
+
+                    boolean success = dao.HopDongDAO.newHopDong(draft); // Gọi hàm lưu vào DB
 
                     if (success) {
                         // Nếu DB lưu thành công mới cập nhật lên Table giao diện
                         Object[] newRow = {
-                                "HD_AUTO", // Bạn có thể lấy mã thật từ DAO trả về
-                                draft.phong,
+                                HDdao.getMaHopDongByMaPhong(draft.maPhong), // Bạn có thể lấy mã thật từ DAO trả về
+                                draft.maPhong,
                                 draft.hoTen,
                                 draft.ngayBatDau,
                                 draft.ngayKetThuc,
@@ -784,7 +779,7 @@ public class HopDongUI {
         addDocLine(doc, "Địa chỉ: " + draft.diaChi, false, 8);
 
         addDocLine(doc, "Điều 3: Nội dung hợp đồng:", true, 16);
-        addDocLine(doc, "Phòng cho thuê: " + draft.phong, false, 10);
+        addDocLine(doc, "Phòng cho thuê: " + draft.maPhong, false, 10);
         addDocLine(doc, "Thời hạn: Từ " + draft.ngayBatDau + " đến " + draft.ngayKetThuc, false, 8);
         addDocLine(doc, "Giá thuê: " + formatCurrency(draft.giaThueRaw) + "/tháng", false, 8);
         addDocLine(doc, "Tiền cọc: " + formatCurrency(draft.tienCocRaw), false, 8);
