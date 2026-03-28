@@ -77,4 +77,30 @@ public class GiaDetailDAO {
         return "GD" + maHeader + "_" + idx + "_" + (System.nanoTime() % 100000);
     }
 
+    public GiaDetail getDonGiaByMa (String maDonGia){
+        String sql = "SELECT d.* FROM GiaDetail d " +
+                "JOIN GiaHeader h ON d.maGiaHeader = h.maGiaHeader " +
+                "WHERE d.maGiaDetail = ? AND h.trangThai = 1";
+        try (Connection con = connectDB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, maDonGia);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                // Khởi tạo đối tượng và trả về
+                return new GiaDetail(
+                        rs.getString("maGiaDetail"),
+                        rs.getString("maGiaHeader"),
+                        rs.getInt("loaiPhong"),
+                        rs.getString("maDichVu"),
+                        rs.getDouble("donGia")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 }

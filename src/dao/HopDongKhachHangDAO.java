@@ -2,20 +2,22 @@ package dao;
 
 import static dao.QuanLyPhongDAO.normalise;
 import database.connectDB;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import entity.KhachHang;
+
+import java.sql.*;
+import java.time.LocalDate;
 
 public class HopDongKhachHangDAO {
 
-    public String getTenNguoiDaiDienByMaPhong(String maPhong) {
-        String hoTen = "";
-        // Chuẩn hóa mã phòng (ví dụ: " p101 " -> "P101")
-        String ma = normalise(maPhong);
+    public KhachHang getNguoiDaiDienByMaPhong(String maPhong) {
+        // 1. Kiểm tra đầu vào tránh NullPointerException
+        if (maPhong == null || maPhong.trim().isEmpty()) {
+            return null;
+        }
 
-        // SQL: Chỉ SELECT cột hoTen, JOIN qua bảng trung gian
-        String sql = "SELECT k.hoTen FROM KhachHang k " +
+        String ma = maPhong;
+
+        String sql = "SELECT k.* FROM KhachHang k " +
                 "JOIN HopDongKhachHang hdkh ON k.maKhachHang = hdkh.maKhachHang " +
                 "JOIN HopDong hd ON hdkh.maHopDong = hd.maHopDong " +
                 "WHERE hd.maPhong = ? AND hdkh.vaiTro = 0 AND hd.trangThai = 1";
@@ -26,15 +28,24 @@ public class HopDongKhachHangDAO {
             ps.setString(1, ma);
 
             try (ResultSet rs = ps.executeQuery()) {
+                KhachHang kh = null;
                 if (rs.next()) {
-                    hoTen = rs.getString("hoTen");
-                } else {
-                    hoTen = "Chưa có"; // Trả về thông báo nếu không tìm thấy
+                    String maKH = rs.getString("maKhachHang");
+                    String hoTen = rs.getString("hoTen");
+                    String SDT = rs.getString("soDienThoai");
+                    LocalDate ngaySinh = rs.getObject("ngaySinh", LocalDate.class);
+                    String CCCD = rs.getString("soCCCD");
+                    String diaChi = rs.getString("diaChiThuongTru");
+
+                    kh = new KhachHang(maKH, hoTen, SDT, ngaySinh, CCCD, diaChi);
+
                 }
+                return kh;
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Lỗi.", e);
+            // In ra lỗi chi tiết để dễ debug
+            e.printStackTrace();
+            return null;
         }
-        return hoTen;
     }
 }

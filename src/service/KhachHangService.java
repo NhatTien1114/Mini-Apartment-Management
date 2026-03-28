@@ -19,6 +19,16 @@ public class KhachHangService {
 		return khachHangDAO.themKhachHang(khachHang);
 	}
 
+	public KhachHang themKhachHangVaoPhongDaThue(KhachHang khachHang, String maPhong) {
+		if (khachHang.getHoTen() == null || khachHang.getHoTen().trim().isEmpty()) {
+			throw new IllegalArgumentException("Họ tên không được trống.");
+		}
+		if (maPhong == null || maPhong.trim().isEmpty()) {
+			throw new IllegalArgumentException("Phòng không hợp lệ.");
+		}
+		return khachHangDAO.themKhachHangVaoPhongDaThue(khachHang, maPhong.trim());
+	}
+
 	public boolean capNhatKhachHang(KhachHang khachHang) {
 		if (khachHang.getMaKhachHang() == null || khachHang.getMaKhachHang().trim().isEmpty()) {
 			throw new IllegalArgumentException("Mã khách hàng không hợp lệ.");
@@ -38,6 +48,13 @@ public class KhachHangService {
 
 	public KhachHang timTheoMa(String maKhachHang) {
 		return khachHangDAO.timTheoMa(maKhachHang);
+	}
+
+	public String layMaPhongHienTaiTheoKhach(String maKhachHang) {
+		if (maKhachHang == null || maKhachHang.trim().isEmpty()) {
+			return "";
+		}
+		return khachHangDAO.layMaPhongHienTaiTheoKhach(maKhachHang.trim());
 	}
 
 }

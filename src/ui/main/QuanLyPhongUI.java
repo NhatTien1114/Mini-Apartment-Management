@@ -86,6 +86,7 @@ public class QuanLyPhongUI {
 
         contentCard.add(scrollPane, BorderLayout.CENTER);
         root.add(contentCard, BorderLayout.CENTER);
+        rebuildFloors();
         return root;
     }
 
@@ -136,6 +137,8 @@ public class QuanLyPhongUI {
                 String err = dao.xoa(phong.getMaPhong());
                 if (err != null)
                     JOptionPane.showMessageDialog(null, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                else
+                    rebuildFloors();
             }
         });
 
@@ -418,6 +421,7 @@ public class QuanLyPhongUI {
                 JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+            rebuildFloors();
             dlg.dispose();
         });
 
@@ -604,31 +608,23 @@ public class QuanLyPhongUI {
     }
 
     private void rebuildFloors() {
-        // 1. Xóa sạch các component cũ trên panel hiển thị
+        if (floorsPanel == null)
+            return;
+
         floorsPanel.removeAll();
+        List<Tang> dsTang = tangDAO.layDanhSachTang();
 
-        // 2. Lấy danh sách tất cả các tầng từ Database
-        // Nếu ông muốn hiện cố định từ T6 -> T1 thì dùng mảng String{"T6","T5"...}
-        // Ở đây tôi dùng TangDAO để lấy cho linh hoạt
-        List<entity.Tang> dsTang = tangDAO.layDanhSachTang();
-
-        // Sắp xếp ngược lại nếu ông muốn Tầng cao hiện bên trên
         dsTang.sort((t1, t2) -> t2.getMaTang().compareTo(t1.getMaTang()));
 
-        for (entity.Tang tang : dsTang) {
-            // 3. Với mỗi tầng, đi lấy danh sách phòng của tầng đó
+        for (Tang tang : dsTang) {
             List<entity.Phong> dsPhong = dao.layTheoTang(tang.getMaTang());
 
-            // Nếu tầng có phòng thì mới hiển thị section của tầng đó
             if (!dsPhong.isEmpty()) {
                 floorsPanel.add(createFloorSection(tang.getTenTang(), dsPhong));
 
-                // Thêm khoảng cách giữa các tầng cho đẹp
                 floorsPanel.add(Box.createVerticalStrut(20));
             }
         }
-
-        // 4. Cập nhật lại giao diện (Bắt buộc phải có 2 dòng này)
         floorsPanel.revalidate();
         floorsPanel.repaint();
     }

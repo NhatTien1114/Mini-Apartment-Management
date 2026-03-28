@@ -148,6 +148,7 @@ public class Phong {
         sb.append(", loaiPhong=").append(loaiPhong);
         sb.append(", trangThai=").append(trangThai);
         sb.append(", soNguoiHienTai=").append(soNguoiHienTai);
+        sb.append(", maGiaDetail=").append(maGiaDetail);
         sb.append('}');
         return sb.toString();
     }

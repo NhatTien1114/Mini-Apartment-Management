@@ -3,10 +3,7 @@ package dao;
 import database.connectDB;
 import entity.Phong;
 import entity.Phong.LoaiPhong;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,13 +13,13 @@ import java.util.regex.Pattern;
 
 public class QuanLyPhongDAO {
 
-    private static final Pattern ROOM_PATTERN =
-            Pattern.compile("^P[1-6]\\.(0[1-9]|[1-9]\\d)$");
+    private static final Pattern ROOM_PATTERN = Pattern.compile("^P[1-6]\\.(0[1-9]|[1-9]\\d)$");
 
     private final Map<String, List<String>> serviceCache = new HashMap<>();
     private static final List<String> DEFAULT_SERVICES = List.of("Điện", "Nước", "Internet", "Rác");
 
-    public QuanLyPhongDAO() {}
+    public QuanLyPhongDAO() {
+    }
 
     public boolean isValidFormat(String maPhong) {
         return maPhong != null && ROOM_PATTERN.matcher(maPhong.trim().toUpperCase()).matches();
@@ -33,14 +30,18 @@ public class QuanLyPhongDAO {
     }
 
     private static String tangFromRoom(String maPhong) {
-        if (maPhong == null || maPhong.length() < 2) return "";
+        if (maPhong == null || maPhong.length() < 2)
+            return "";
         return "T" + maPhong.charAt(1);
     }
 
     private static int toTrangThai(String trangThai) {
-        if ("Đã thuê".equals(trangThai)) return 1;
-        if ("Đang sửa".equals(trangThai)) return 2;
-        if ("Đã cọc".equals(trangThai))   return 3;
+        if ("Đã thuê".equals(trangThai))
+            return 1;
+        if ("Đang sửa".equals(trangThai))
+            return 2;
+        if ("Đã cọc".equals(trangThai))
+            return 3;
         return 0;
     }
 
@@ -64,14 +65,16 @@ public class QuanLyPhongDAO {
         }
 
         // 3. Tạo đối tượng Phong mới
-        // Giả sử Constructor của ông là: Phong(maPhong, maTang, tenPhong, dienTich, loaiPhong, trangThai, soNguoi, maGiaDetail)
-        // Nếu ông chưa cập nhật Constructor trong Entity Phong, hãy thêm field maGiaDetail vào đó.
+        // Giả sử Constructor của ông là: Phong(maPhong, maTang, tenPhong, dienTich,
+        // loaiPhong, trangThai, soNguoi, maGiaDetail)
+        // Nếu ông chưa cập nhật Constructor trong Entity Phong, hãy thêm field
+        // maGiaDetail vào đó.
         Phong p = new Phong();
         p.setMaPhong(maPhong);
         p.setTenPhong(maPhong);
         p.setLoaiPhong(lp);
         p.setTrangThai(tt);
-        // p.setMaGiaDetail(maGiaDetail); // Cột mới ông vừa muốn thêm
+        p.setMaGiaDetail(maGiaDetail); // Cột mới ông vừa muốn thêm
 
         return p;
     }
@@ -79,14 +82,15 @@ public class QuanLyPhongDAO {
     private String findChuSoHuuMacDinh(Connection con) throws SQLException {
         String sql = "SELECT TOP 1 maTaiKhoan FROM TaiKhoan WHERE role = 0 ORDER BY maTaiKhoan";
         try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery()) {
             return rs.next() ? rs.getString("maTaiKhoan") : null;
         }
     }
 
     private void ensureDefaultToaTang(Connection con) throws SQLException {
         String ownerId = findChuSoHuuMacDinh(con);
-        if (ownerId == null || ownerId.isBlank()) return;
+        if (ownerId == null || ownerId.isBlank())
+            return;
 
         String sqlInsertToa = "IF NOT EXISTS (SELECT 1 FROM Toa WHERE maToa = 'TOA1') "
                 + "INSERT INTO Toa(maToa, tenToa, chuSoHuu) VALUES ('TOA1', N'Tòa A', ?)";
@@ -123,7 +127,7 @@ public class QuanLyPhongDAO {
         String sql = "INSERT INTO Phong (maPhong, maTang, tenPhong, loaiPhong, maGiaDetail, trangThaiPhong, soNguoiHienTai) "
                 + "VALUES (?, ?, ?, ?, ?, ?, 0)";
         try (Connection con = connectDB.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+                PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, maPhong);
             ps.setString(2, maTang);
             ps.setString(3, maPhong);
@@ -146,14 +150,15 @@ public class QuanLyPhongDAO {
         try {
             Connection con = connectDB.getConnection();
             try (PreparedStatement ps = con.prepareStatement(sql);
-                 ResultSet rs = ps.executeQuery()) {
+                    ResultSet rs = ps.executeQuery()) {
 
                 while (rs.next()) {
                     String ma = rs.getString("maPhong");
 
                     // 2. Lấy loaiPhong (nullable)
                     Integer lp = rs.getObject("loaiPhong") == null
-                            ? null : rs.getInt("loaiPhong");
+                            ? null
+                            : rs.getInt("loaiPhong");
 
                     // 3. Lấy trạng thái phòng
                     int tt = rs.getInt("trangThaiPhong");
@@ -182,7 +187,8 @@ public class QuanLyPhongDAO {
             try (PreparedStatement ps = con.prepareStatement(sql)) {
                 ps.setString(1, ma);
                 try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) return null;
+                    if (!rs.next())
+                        return null;
 
                     // 2. Lấy loaiPhong (check null bằng getObject)
                     Integer lp = rs.getObject("loaiPhong") == null ? null : rs.getInt("loaiPhong");
@@ -193,7 +199,8 @@ public class QuanLyPhongDAO {
                     // 4. Lấy maGiaDetail mới thêm
                     String maGia = rs.getString("maGiaDetail");
 
-                    // 5. Gọi buildPhong với đủ 4 tham số: maPhong, trangThaiCode, loaiPhongCode, maGiaDetail
+                    // 5. Gọi buildPhong với đủ 4 tham số: maPhong, trangThaiCode, loaiPhongCode,
+                    // maGiaDetail
                     return buildPhong(ma, tt, lp, maGia);
                 }
             }
@@ -234,7 +241,8 @@ public class QuanLyPhongDAO {
 
                         // 2. Lấy loaiPhong (nullable)
                         Integer lp = rs.getObject("loaiPhong") == null
-                                ? null : rs.getInt("loaiPhong");
+                                ? null
+                                : rs.getInt("loaiPhong");
 
                         // 3. Lấy trạng thái (mặc định 0 nếu null)
                         int tt = rs.getInt("trangThaiPhong");
@@ -302,7 +310,8 @@ public class QuanLyPhongDAO {
 
     // ── GIÁ THUÊ ──
     public long layGiaThueMoiNhat(LoaiPhong loaiPhong) {
-        if (loaiPhong == null) return -1;
+        if (loaiPhong == null)
+            return -1;
 
         String sql = "SELECT TOP 1 d.donGia "
                 + "FROM dbo.GiaDetail d "
@@ -319,7 +328,8 @@ public class QuanLyPhongDAO {
             try (PreparedStatement ps = con.prepareStatement(sql)) {
                 ps.setInt(1, loaiPhong.ordinal());
                 try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) return (long) rs.getDouble("donGia");
+                    if (rs.next())
+                        return (long) rs.getDouble("donGia");
                 }
             }
         } catch (SQLException e) {
@@ -351,5 +361,77 @@ public class QuanLyPhongDAO {
         } catch (SQLException e) {
             return "Lỗi database khi xóa phòng: " + e.getMessage();
         }
+    }
+
+    public ArrayList<Phong> getAllPhongTrong() {
+        String sql = "SELECT maPhong, maTang, tenPhong, dienTich, loaiPhong, soNguoiHienTai, maGiaDetail FROM Phong WHERE trangThaiPhong = ? ORDER BY maPhong";
+        ArrayList<Phong> result = new ArrayList<>();
+
+        try {
+            Connection con = connectDB.getConnection();
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, 0);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String maPhong = rs.getString("maPhong");
+
+                        String maTang = rs.getString("maTang");
+                        String tenPhong = rs.getString("tenPhong");
+                        double dienTich = rs.getDouble("dienTich");
+                        int loaiPhong = rs.getInt("loaiPhong");
+                        int trangThaiPhong = 0;
+                        int soNguoiHienTai = rs.getInt("soNguoiHienTai");
+                        String maGiaDetail = rs.getString("maGiaDetail");
+
+                        result.add(buildPhong(maPhong, trangThaiPhong, loaiPhong, maGiaDetail));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            // In lỗi ra console để ông dễ debug nếu câu SQL sai tên cột
+            System.err.println("Lỗi load ds phong trong " + e.getMessage());
+        }
+        return result;
+    }
+
+    public ArrayList<Phong> getAllPhongDaThue() {
+        String sql = "SELECT maPhong, maTang, tenPhong, dienTich, loaiPhong, soNguoiHienTai, maGiaDetail "
+                + "FROM Phong WHERE trangThaiPhong = ? ORDER BY maPhong";
+        ArrayList<Phong> result = new ArrayList<>();
+
+        try {
+            Connection con = connectDB.getConnection();
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, 1);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String maPhong = rs.getString("maPhong");
+                        Integer loaiPhong = rs.getObject("loaiPhong") == null ? null : rs.getInt("loaiPhong");
+                        String maGiaDetail = rs.getString("maGiaDetail");
+
+                        result.add(buildPhong(maPhong, 1, loaiPhong, maGiaDetail));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi load ds phong da thue " + e.getMessage());
+        }
+        return result;
+    }
+
+    public boolean updateTrangThaiPhong(String maPhong, String trangThai) {
+        String sql = "UPDATE Phong SET trangThaiPhong = ? WHERE maPhong = ?";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, toTrangThai(trangThai));
+            ps.setString(2, maPhong);
+            int rowAffected = ps.executeUpdate();
+            con.commit();
+            return rowAffected > 0;
+
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi thay đổi trạng thái phòng " + e.getMessage());
+        }
+        return false;
     }
 }
