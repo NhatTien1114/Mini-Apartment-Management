@@ -12,6 +12,8 @@ import java.awt.FlowLayout;
 import java.awt.Image;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -133,6 +135,15 @@ public class BangGiaUI {
         root.add(createTongHopSection(), BorderLayout.CENTER);
 
         loadTongHop();
+
+        // Reload data when tab is shown
+        root.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                loadTongHop();
+            }
+        });
+
         return root;
     }
 

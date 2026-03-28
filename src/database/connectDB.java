@@ -22,16 +22,14 @@ public class connectDB {
 					return connection;
 				}
 			} catch (SQLException e) {
-				System.out.println("Kết nối SQL Server đã bị lỗi. Đang tạo kết nối mới...");
+				// Connection closed, will reconnect
 			}
 		}
 
 		try {
 			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
 			connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
-			System.out.println("========================================");
-			System.out.println("KẾT NỐI SQL SERVER THÀNH CÔNG RỒI ÔNG ƠI!");
-			System.out.println("========================================");
+			System.out.println("KẺT NốI SQL SERVER THÀNH CÔNG!");
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(
 					"Lỗi: Không tìm thấy file thư viện .jar (Driver). Hãy add mssql-jdbc vào Libraries.", e);
