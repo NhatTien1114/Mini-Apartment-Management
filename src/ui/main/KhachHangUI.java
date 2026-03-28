@@ -1,6 +1,8 @@
 package ui.main;
 
+import dao.QuanLyPhongDAO;
 import entity.KhachHang;
+import entity.Phong;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -8,17 +10,20 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Frame;
-import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Window;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.AbstractCellEditor;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -57,6 +62,7 @@ public class KhachHangUI {
     private final ImageIcon ICON_BIN = loadActionIcon("bin.png", 16, 16);
 
     private final KhachHangService khachHangService = new KhachHangService();
+    private final QuanLyPhongDAO phongDAO = new QuanLyPhongDAO();
     private final PrimaryButton primaryButton = new PrimaryButton();
 
     private JTable table;
@@ -113,11 +119,11 @@ public class KhachHangUI {
         bar.add(txtTimKiem, BorderLayout.WEST);
         card.add(bar, BorderLayout.NORTH);
 
-        String[] cols = { "Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Thao tác" };
+        String[] cols = { "Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Phòng", "Thao tác" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 6;
+                return column == 7;
             }
         };
 
@@ -192,9 +198,10 @@ public class KhachHangUI {
         table.getColumnModel().getColumn(2).setPreferredWidth(110);
         table.getColumnModel().getColumn(3).setPreferredWidth(130);
         table.getColumnModel().getColumn(4).setPreferredWidth(110);
-        table.getColumnModel().getColumn(5).setPreferredWidth(260);
+        table.getColumnModel().getColumn(5).setPreferredWidth(220);
         table.getColumnModel().getColumn(6).setPreferredWidth(90);
-        table.getColumnModel().getColumn(6).setMaxWidth(100);
+        table.getColumnModel().getColumn(7).setPreferredWidth(90);
+        table.getColumnModel().getColumn(7).setMaxWidth(100);
 
         DefaultTableCellRenderer paddedCell = new DefaultTableCellRenderer() {
             @Override
@@ -210,12 +217,12 @@ public class KhachHangUI {
             }
         };
 
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 7; i++) {
             table.getColumnModel().getColumn(i).setCellRenderer(paddedCell);
         }
 
-        table.getColumnModel().getColumn(6).setCellRenderer(new ActionRenderer());
-        table.getColumnModel().getColumn(6).setCellEditor(new ActionEditor());
+        table.getColumnModel().getColumn(7).setCellRenderer(new ActionRenderer());
+        table.getColumnModel().getColumn(7).setCellEditor(new ActionEditor());
 
         sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
@@ -252,7 +259,7 @@ public class KhachHangUI {
             return;
         }
 
-        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 0, 1, 2, 3));
+        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 0, 1, 2, 3, 6));
     }
 
     private void loadKhachHangData() {
@@ -260,6 +267,7 @@ public class KhachHangUI {
         try {
             List<KhachHang> danhSach = khachHangService.layDanhSachKhachHang();
             for (KhachHang kh : danhSach) {
+                String maPhong = khachHangService.layMaPhongHienTaiTheoKhach(kh.getMaKhachHang());
                 tableModel.addRow(new Object[] {
                         kh.getMaKhachHang(),
                         kh.getHoTen(),
@@ -267,6 +275,7 @@ public class KhachHangUI {
                         nullSafe(kh.getSoCCCD()),
                         kh.getNgaySinh() == null ? "" : DATE_FORMAT.format(kh.getNgaySinh()),
                         nullSafe(kh.getDiaChi()),
+                        nullSafe(maPhong),
                         "ACT"
                 });
             }
@@ -299,7 +308,7 @@ public class KhachHangUI {
         Window owner = SwingUtilities.getWindowAncestor(table);
         JDialog dlg = new JDialog(owner instanceof Frame ? (Frame) owner : null,
                 isEdit ? "Sửa khách hàng" : "Thêm khách hàng", true);
-        dlg.setSize(560, 390);
+        dlg.setSize(680, 520);
         dlg.setLocationRelativeTo(owner);
         dlg.setResizable(false);
 
@@ -322,16 +331,43 @@ public class KhachHangUI {
         JTextField txtCccd = makeField(cccdValue);
         JTextField txtDiaChi = makeField(diaChiValue);
 
-        JPanel grid = new JPanel(new GridLayout(3, 2, 12, 12));
-        grid.setBackground(AppColors.WHITE);
-        grid.add(wrapField("Họ tên *", txtHoTen));
-        grid.add(wrapField("Số điện thoại", txtSdt));
-        grid.add(wrapField("Ngày sinh (yyyy-MM-dd)", txtNgaySinh));
-        grid.add(wrapField("CCCD", txtCccd));
-        grid.add(wrapField("Địa chỉ", txtDiaChi));
-        grid.add(new JPanel());
+        List<String> dsPhongDisplay = new ArrayList<>();
+        for (Phong phong : phongDAO.getAllPhongDaThue()) {
+            dsPhongDisplay.add(phong.getMaPhong());
+        }
+        if (dsPhongDisplay.isEmpty()) {
+            dsPhongDisplay.add("(Không có phòng đã thuê)");
+        }
+        JComboBox<String> cboPhongDaThue = new JComboBox<>(dsPhongDisplay.toArray(String[]::new));
+        cboPhongDaThue.setFont(FONT_PLAIN);
+        cboPhongDaThue.setBackground(AppColors.WHITE);
+        cboPhongDaThue.setForeground(AppColors.SLATE_900);
+        cboPhongDaThue.setEnabled(!isEdit);
+        cboPhongDaThue.setPreferredSize(new Dimension(0, 42));
+        cboPhongDaThue.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
-        card.add(grid, BorderLayout.CENTER);
+        txtHoTen.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        txtSdt.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        txtNgaySinh.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        txtCccd.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        txtDiaChi.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+
+        JPanel form = new JPanel();
+        form.setBackground(AppColors.WHITE);
+        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+        form.add(wrapField("Phòng (đã thuê) *", cboPhongDaThue));
+        form.add(Box.createVerticalStrut(10));
+        form.add(wrapField("Họ tên *", txtHoTen));
+        form.add(Box.createVerticalStrut(10));
+        form.add(wrapField("Số điện thoại", txtSdt));
+        form.add(Box.createVerticalStrut(10));
+        form.add(wrapField("Ngày sinh (yyyy-MM-dd)", txtNgaySinh));
+        form.add(Box.createVerticalStrut(10));
+        form.add(wrapField("CCCD", txtCccd));
+        form.add(Box.createVerticalStrut(10));
+        form.add(wrapField("Địa chỉ", txtDiaChi));
+
+        card.add(form, BorderLayout.CENTER);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setBackground(AppColors.WHITE);
@@ -380,7 +416,14 @@ public class KhachHangUI {
                         throw new RuntimeException("Không tìm thấy khách hàng để cập nhật.");
                     }
                 } else {
-                    khachHangService.themKhachHang(payload);
+                    String maPhongChon = extractRoomCode((String) cboPhongDaThue.getSelectedItem());
+                    if (maPhongChon.isEmpty()) {
+                        JOptionPane.showMessageDialog(dlg, "Vui lòng chọn phòng đã thuê.", "Thiếu thông tin",
+                                JOptionPane.WARNING_MESSAGE);
+                        cboPhongDaThue.requestFocus();
+                        return;
+                    }
+                    khachHangService.themKhachHangVaoPhongDaThue(payload, maPhongChon);
                 }
 
                 loadKhachHangData();
@@ -401,6 +444,18 @@ public class KhachHangUI {
 
     private String nullSafe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String extractRoomCode(String roomDisplay) {
+        if (roomDisplay == null) {
+            return "";
+        }
+        String value = roomDisplay.trim();
+        if (value.startsWith("(")) {
+            return "";
+        }
+        int idx = value.indexOf('-');
+        return idx > 0 ? value.substring(0, idx).trim() : value;
     }
 
     private JTextField makeField(String value) {

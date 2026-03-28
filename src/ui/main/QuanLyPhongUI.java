@@ -8,6 +8,7 @@ import entity.GiaDetail;
 import entity.GiaHeader;
 import entity.Phong;
 import entity.Phong.LoaiPhong;
+import entity.Tang;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -18,8 +19,6 @@ import java.util.Locale;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-
-import entity.Tang;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
 import ui.util.RoundedTextField;
@@ -87,9 +86,9 @@ public class QuanLyPhongUI {
 
         contentCard.add(scrollPane, BorderLayout.CENTER);
         root.add(contentCard, BorderLayout.CENTER);
+        rebuildFloors();
         return root;
     }
-
 
     private JPanel createFloorSection(String floorName, List<Phong> phongs) {
         JPanel section = new JPanel(new BorderLayout(0, 10));
@@ -100,7 +99,8 @@ public class QuanLyPhongUI {
         section.add(lblFloor, BorderLayout.NORTH);
         JPanel roomsWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         roomsWrap.setOpaque(false);
-        for (Phong p : phongs) roomsWrap.add(createRoomCard(p));
+        for (Phong p : phongs)
+            roomsWrap.add(createRoomCard(p));
         section.add(roomsWrap, BorderLayout.CENTER);
         return section;
     }
@@ -137,6 +137,8 @@ public class QuanLyPhongUI {
                 String err = dao.xoa(phong.getMaPhong());
                 if (err != null)
                     JOptionPane.showMessageDialog(null, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                else
+                    rebuildFloors();
             }
         });
 
@@ -187,9 +189,16 @@ public class QuanLyPhongUI {
         // FIX: flag để biết user đã sửa tay hay chưa
         boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+            }
         });
 
         // fill lần đầu (chưa có user edit nào)
@@ -202,7 +211,7 @@ public class QuanLyPhongUI {
             userEdited[0] = false; // fillGia setText sẽ kích listener, reset lại
         });
 
-        JComboBox<String> cTT = makeCombo(new String[]{ "Trống", "Đã cọc", "Đã thuê", "Đang sửa" });
+        JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đã thuê", "Đang sửa" });
 
         JCheckBox[] checks = new JCheckBox[DICH_VU_LIST.length];
         for (int i = 0; i < DICH_VU_LIST.length; i++) {
@@ -227,7 +236,8 @@ public class QuanLyPhongUI {
         lblDv.setForeground(AppColors.SLATE_500);
         form.add(lblDv);
         form.add(Box.createVerticalStrut(6));
-        for (JCheckBox cb : checks) form.add(cb);
+        for (JCheckBox cb : checks)
+            form.add(cb);
 
         root.add(form, BorderLayout.CENTER);
 
@@ -256,7 +266,9 @@ public class QuanLyPhongUI {
             String maGiaDetail = timMaGiaDetailPhuHop(loaiChon.ordinal());
 
             if (maGiaDetail == null) {
-                JOptionPane.showMessageDialog(dlg, "Chưa có bảng giá cho " + loaiChon.getTen() + ". Vui lòng kiểm tra lại thiết lập giá!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(dlg,
+                        "Chưa có bảng giá cho " + loaiChon.getTen() + ". Vui lòng kiểm tra lại thiết lập giá!", "Lỗi",
+                        JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
@@ -266,7 +278,8 @@ public class QuanLyPhongUI {
             // 5. Lấy danh sách dịch vụ
             List<String> dvChon = new ArrayList<>();
             for (JCheckBox cb : checks) {
-                if (cb.isSelected()) dvChon.add(cb.getText().split(" - ")[0]);
+                if (cb.isSelected())
+                    dvChon.add(cb.getText().split(" - ")[0]);
             }
 
             // 6. Gọi hàm thêm với đầy đủ tham số mới
@@ -325,7 +338,8 @@ public class QuanLyPhongUI {
         cLoai.setForeground(AppColors.SLATE_900);
         cLoai.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
         // FIX: setSelectedItem đúng loại phòng hiện tại (không còn null nữa)
-        if (currentLoai != null) cLoai.setSelectedItem(currentLoai);
+        if (currentLoai != null)
+            cLoai.setSelectedItem(currentLoai);
 
         RoundedTextField txtGia = new RoundedTextField(6);
         txtGia.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -333,9 +347,16 @@ public class QuanLyPhongUI {
         // FIX: flag chống ghi đè khi user đang sửa tay
         boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+            }
         });
 
         // fill lần đầu theo loại phòng hiện tại
@@ -348,7 +369,7 @@ public class QuanLyPhongUI {
             userEdited[0] = false;
         });
 
-        JComboBox<String> cTT = makeCombo(new String[]{ "Trống", "Đã cọc", "Đã thuê", "Đang sửa" });
+        JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đã thuê", "Đang sửa" });
         cTT.setSelectedItem(phong.getTrangThai().getTen());
 
         JCheckBox[] checks = new JCheckBox[DICH_VU_LIST.length];
@@ -371,7 +392,8 @@ public class QuanLyPhongUI {
         lblDv.setForeground(AppColors.SLATE_500);
         form.add(lblDv);
         form.add(Box.createVerticalStrut(6));
-        for (JCheckBox cb : checks) form.add(cb);
+        for (JCheckBox cb : checks)
+            form.add(cb);
 
         root.add(form, BorderLayout.CENTER);
 
@@ -389,7 +411,8 @@ public class QuanLyPhongUI {
 
             List<String> dvChon = new ArrayList<>();
             for (JCheckBox cb : checks)
-                if (cb.isSelected()) dvChon.add(cb.getText().split(" - ")[0]);
+                if (cb.isSelected())
+                    dvChon.add(cb.getText().split(" - ")[0]);
 
             // FIX: dùng overload mới để lưu cả loaiPhong vào DB
             LoaiPhong loaiChon = (LoaiPhong) cLoai.getSelectedItem();
@@ -398,6 +421,7 @@ public class QuanLyPhongUI {
                 JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+            rebuildFloors();
             dlg.dispose();
         });
 
@@ -440,10 +464,22 @@ public class QuanLyPhongUI {
         badge.setOpaque(true);
         badge.setBorder(new EmptyBorder(3, 8, 3, 8));
         switch (text) {
-            case "Đã thuê"  -> { badge.setForeground(Color.WHITE);         badge.setBackground(AppColors.RED_500); }
-            case "Đang sửa" -> { badge.setForeground(AppColors.AMBER_FG);  badge.setBackground(AppColors.AMBER_BG); }
-            case "Đã cọc"   -> { badge.setForeground(Color.WHITE);         badge.setBackground(AppColors.BLUE); }
-            default          -> { badge.setForeground(AppColors.GREEN_600); badge.setBackground(AppColors.GREEN_BG); }
+            case "Đã thuê" -> {
+                badge.setForeground(Color.WHITE);
+                badge.setBackground(AppColors.RED_500);
+            }
+            case "Đang sửa" -> {
+                badge.setForeground(AppColors.AMBER_FG);
+                badge.setBackground(AppColors.AMBER_BG);
+            }
+            case "Đã cọc" -> {
+                badge.setForeground(Color.WHITE);
+                badge.setBackground(AppColors.BLUE);
+            }
+            default -> {
+                badge.setForeground(AppColors.GREEN_600);
+                badge.setBackground(AppColors.GREEN_BG);
+            }
         }
         return badge;
     }
@@ -467,16 +503,19 @@ public class QuanLyPhongUI {
             java.net.URL url = getClass().getResource("/bin.png");
             if (url == null) {
                 java.io.File f = new java.io.File("bin.png");
-                if (f.exists()) url = f.toURI().toURL();
+                if (f.exists())
+                    url = f.toURI().toURL();
             }
             if (url != null) {
                 Image img = new ImageIcon(url).getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
                 icon = new ImageIcon(img);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         JButton btn = icon != null ? new JButton(icon) : new JButton("🗑");
-        if (icon == null) btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+        if (icon == null)
+            btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
         btn.setOpaque(true);
         btn.setBackground(AppColors.RED_500);
         btn.setForeground(AppColors.WHITE);
@@ -487,8 +526,15 @@ public class QuanLyPhongUI {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(36, 30));
         btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btn.setBackground(AppColors.RED); }
-            @Override public void mouseExited(MouseEvent e)  { btn.setBackground(AppColors.RED_500); }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(AppColors.RED);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(AppColors.RED_500);
+            }
         });
         return btn;
     }
@@ -530,10 +576,14 @@ public class QuanLyPhongUI {
         Point origin = comp.getLocation();
         javax.swing.Timer t = new javax.swing.Timer(30, null);
         int[] step = { 0 };
-        int[] off  = { -6, 6, -4, 4, -2, 2, 0 };
+        int[] off = { -6, 6, -4, 4, -2, 2, 0 };
         t.addActionListener(ev -> {
-            if (step[0] < off.length) comp.setLocation(origin.x + off[step[0]++], origin.y);
-            else { comp.setLocation(origin); t.stop(); }
+            if (step[0] < off.length)
+                comp.setLocation(origin.x + off[step[0]++], origin.y);
+            else {
+                comp.setLocation(origin);
+                t.stop();
+            }
         });
         t.start();
     }
@@ -556,32 +606,25 @@ public class QuanLyPhongUI {
         }
         return null;
     }
+
     private void rebuildFloors() {
-        // 1. Xóa sạch các component cũ trên panel hiển thị
+        if (floorsPanel == null)
+            return;
+
         floorsPanel.removeAll();
+        List<Tang> dsTang = tangDAO.layDanhSachTang();
 
-        // 2. Lấy danh sách tất cả các tầng từ Database
-        // Nếu ông muốn hiện cố định từ T6 -> T1 thì dùng mảng String{"T6","T5"...}
-        // Ở đây tôi dùng TangDAO để lấy cho linh hoạt
-        List<entity.Tang> dsTang = tangDAO.layDanhSachTang();
-
-        // Sắp xếp ngược lại nếu ông muốn Tầng cao hiện bên trên
         dsTang.sort((t1, t2) -> t2.getMaTang().compareTo(t1.getMaTang()));
 
-        for (entity.Tang tang : dsTang) {
-            // 3. Với mỗi tầng, đi lấy danh sách phòng của tầng đó
+        for (Tang tang : dsTang) {
             List<entity.Phong> dsPhong = dao.layTheoTang(tang.getMaTang());
 
-            // Nếu tầng có phòng thì mới hiển thị section của tầng đó
             if (!dsPhong.isEmpty()) {
                 floorsPanel.add(createFloorSection(tang.getTenTang(), dsPhong));
 
-                // Thêm khoảng cách giữa các tầng cho đẹp
                 floorsPanel.add(Box.createVerticalStrut(20));
             }
         }
-
-        // 4. Cập nhật lại giao diện (Bắt buộc phải có 2 dòng này)
         floorsPanel.revalidate();
         floorsPanel.repaint();
     }
