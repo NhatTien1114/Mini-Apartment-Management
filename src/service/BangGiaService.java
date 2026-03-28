@@ -9,6 +9,7 @@ import entity.GiaDetail;
 import entity.GiaHeader;
 import entity.Phong;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -115,6 +116,33 @@ public class BangGiaService {
         return ok ? null : "Không thể cập nhật ngày kết thúc";
     }
 
+    private boolean updateActiveKeys(Connection con, int loai, List<GiaDetail> details) throws SQLException {
+        if (loai == 0) {
+            try (PreparedStatement ps = con.prepareStatement("UPDATE Phong SET maGiaDetail = ? WHERE loaiPhong = ?")) {
+                for (GiaDetail d : details) {
+                    if (d.getLoaiPhong() != null) {
+                        ps.setString(1, d.getMaGiaDetail());
+                        ps.setInt(2, d.getLoaiPhong());
+                        ps.addBatch();
+                    }
+                }
+                ps.executeBatch();
+            }
+        } else {
+            try (PreparedStatement ps = con.prepareStatement("UPDATE DichVu SET maGiaDetail = ? WHERE maDichVu = ?")) {
+                for (GiaDetail d : details) {
+                    if (d.getMaDichVu() != null) {
+                        ps.setString(1, d.getMaGiaDetail());
+                        ps.setString(2, d.getMaDichVu());
+                        ps.addBatch();
+                    }
+                }
+                ps.executeBatch();
+            }
+        }
+        return true;
+    }
+
     public String taoBangGiaDayDu(int loai, LocalDate ngayBatDau, LocalDate ngayKetThuc,
             String moTa, int trangThai, List<LuuChiTietItem> items, String nguoiCapNhat) {
         if (ngayBatDau == null) {
@@ -174,6 +202,13 @@ public class BangGiaService {
             if (!detailDAO.thayTheChiTiet(con, maHeader, details)) {
                 con.rollback();
                 return "Không thể thêm chi tiết bảng giá";
+            }
+
+            if (trangThai == 1) {
+                if (!updateActiveKeys(con, loai, details)) {
+                    con.rollback();
+                    return "Không thể cập nhật giá trị kích hoạt cho Dịch vụ / Phòng";
+                }
             }
 
             con.commit();
@@ -277,6 +312,13 @@ public class BangGiaService {
             if (!headerDAO.capNhat(header)) {
                 con.rollback();
                 return "Không thể cập nhật người sửa";
+            }
+
+            if (header.getTrangThai() == 1) {
+                if (!updateActiveKeys(con, loai, details)) {
+                    con.rollback();
+                    return "Không thể cập nhật giá trị kích hoạt cho Dịch vụ / Phòng";
+                }
             }
 
             con.commit();

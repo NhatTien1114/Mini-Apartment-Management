@@ -5,6 +5,8 @@ public class DichVu {
     private String maDichVu;
     private String tenDichVu;
     private String donVi;
+    private String maGiaDetail;
+    private Double donGia;
 
     public DichVu() {
     }
@@ -13,6 +15,14 @@ public class DichVu {
         this.maDichVu = maDichVu;
         this.tenDichVu = tenDichVu;
         this.donVi = donVi;
+    }
+
+    public DichVu(String maDichVu, String tenDichVu, String donVi, String maGiaDetail, Double donGia) {
+        this.maDichVu = maDichVu;
+        this.tenDichVu = tenDichVu;
+        this.donVi = donVi;
+        this.maGiaDetail = maGiaDetail;
+        this.donGia = donGia;
     }
 
     public String getMaDichVu() {
@@ -37,6 +47,22 @@ public class DichVu {
 
     public void setDonVi(String donVi) {
         this.donVi = donVi;
+    }
+
+    public String getMaGiaDetail() {
+        return maGiaDetail;
+    }
+
+    public void setMaGiaDetail(String maGiaDetail) {
+        this.maGiaDetail = maGiaDetail;
+    }
+
+    public Double getDonGia() {
+        return donGia;
+    }
+
+    public void setDonGia(Double donGia) {
+        this.donGia = donGia;
     }
 
     @Override
