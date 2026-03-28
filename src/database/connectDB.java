@@ -8,7 +8,7 @@ import java.sql.Statement;
 
 public class connectDB {
 	private static final String USERNAME = "sa";
-	private static final String PASSWORD = "sapassword";
+	private static final String PASSWORD = "123";
 
 	private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=ChungCuMini"
 			+ ";encrypt=true;trustServerCertificate=true";
@@ -33,9 +33,12 @@ public class connectDB {
 			System.out.println("KẾT NỐI SQL SERVER THÀNH CÔNG RỒI ÔNG ƠI!");
 			System.out.println("========================================");
 		} catch (ClassNotFoundException e) {
-			throw new RuntimeException("Lỗi: Không tìm thấy file thư viện .jar (Driver). Hãy add mssql-jdbc vào Libraries.", e);
+			throw new RuntimeException(
+					"Lỗi: Không tìm thấy file thư viện .jar (Driver). Hãy add mssql-jdbc vào Libraries.", e);
 		} catch (SQLException e) {
-			throw new RuntimeException("Lỗi: Không thể kết nối. Hãy kiểm tra: 1. SQL Service chạy chưa? 2. Pass đúng chưa? 3. Tên DB 'ChungCuMini' đúng chưa?", e);
+			throw new RuntimeException(
+					"Lỗi: Không thể kết nối. Hãy kiểm tra: 1. SQL Service chạy chưa? 2. Pass đúng chưa? 3. Tên DB 'ChungCuMini' đúng chưa?",
+					e);
 		}
 
 		return connection;
@@ -46,7 +49,8 @@ public class connectDB {
 	}
 
 	public static void closeConnection() {
-		if (connection == null) return;
+		if (connection == null)
+			return;
 		try {
 			if (!connection.isClosed()) {
 				connection.close();
@@ -68,7 +72,7 @@ public class connectDB {
 			System.out.println("--- DANH SÁCH TÀI KHOẢN TRONG DATABASE ---");
 			String sql = "SELECT tenDangNhap, matKhau FROM TaiKhoan";
 			try (Statement st = con.createStatement();
-				 ResultSet rs = st.executeQuery(sql)) {
+					ResultSet rs = st.executeQuery(sql)) {
 
 				boolean hasData = false;
 				while (rs.next()) {
@@ -77,7 +81,8 @@ public class connectDB {
 				}
 
 				if (!hasData) {
-					System.out.println("!!! CẢNH BÁO: Bảng TaiKhoan đang TRỐNG TRƠN. Ông hãy vào SQL chèn data mẫu mới đăng nhập được.");
+					System.out.println(
+							"!!! CẢNH BÁO: Bảng TaiKhoan đang TRỐNG TRƠN. Ông hãy vào SQL chèn data mẫu mới đăng nhập được.");
 				}
 
 			} catch (SQLException e) {
