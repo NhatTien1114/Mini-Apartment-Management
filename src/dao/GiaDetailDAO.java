@@ -55,6 +55,7 @@ public class GiaDetailDAO {
                 String maDetail = d.getMaGiaDetail();
                 if (maDetail == null || maDetail.isBlank()) {
                     maDetail = phatSinhMaChiTiet(maGiaHeader, idx++);
+                    d.setMaGiaDetail(maDetail);
                 }
 
                 psIns.setString(1, maDetail);
