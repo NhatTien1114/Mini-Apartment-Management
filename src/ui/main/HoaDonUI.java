@@ -8,38 +8,41 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import ui.util.AppColors;
+import ui.util.PrimaryButton;
 
 public class HoaDonUI {
-    private final Color MAU_NEN      = AppColors.SLATE_100;
-    private final Color MAU_CARD     = AppColors.WHITE;
-    private final Color MAU_BORDER   = AppColors.SLATE_200;
-    private final Color MAU_TEXT     = AppColors.SLATE_900;
-    private final Color MAU_MUTED    = AppColors.SLATE_500;
-    private final Color MAU_PRIMARY  = AppColors.PRIMARY;
+    private final Color MAU_NEN = AppColors.SLATE_100;
+    private final Color MAU_CARD = AppColors.WHITE;
+    private final Color MAU_BORDER = AppColors.SLATE_200;
+    private final Color MAU_TEXT = AppColors.SLATE_900;
+    private final Color MAU_MUTED = AppColors.SLATE_500;
+    private final Color MAU_PRIMARY = AppColors.PRIMARY;
     private final Color MAU_PRIMARY_DISABLED = AppColors.PRIMARY_DISABLED;
-    private final Color MAU_RED      = AppColors.RED_500;
+    private final Color MAU_RED = AppColors.RED_500;
     private final Color MAU_AMBER_BG = AppColors.AMBER_BG;
     private final Color MAU_AMBER_FG = AppColors.AMBER_FG;
     private final Color MAU_GREEN_BG = AppColors.GREEN_BG;
     private final Color MAU_GREEN_FG = AppColors.GREEN_600;
 
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 22);
-    private final Font FONT_BOLD  = new Font("Be Vietnam Pro", Font.BOLD, 13);
+    private final Font FONT_BOLD = new Font("Be Vietnam Pro", Font.BOLD, 13);
     private final Font FONT_PLAIN = new Font("Be Vietnam Pro", Font.PLAIN, 13);
     private final Font FONT_SMALL = new Font("Be Vietnam Pro", Font.PLAIN, 12);
 
+    private final PrimaryButton primaryButton = new PrimaryButton();
+
     private final NumberFormat NF = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
-    private final String[] ROOMS  = {
+    private final String[] ROOMS = {
             "Chọn phòng",
-            "T1.01","T1.02","T1.03","T1.04","T1.05",
-            "T2.01","T2.02","T2.03","T2.04","T2.05","T2.06",
-            "T3.01","T3.02","T3.03","T3.04","T3.05",
-            "T4.01","T4.02","T4.03","T4.04","T4.05",
-            "T5.01","T5.02","T5.03","T5.04","T5.05",
-            "T6.01","T6.02","T6.03","T6.04"
+            "T1.01", "T1.02", "T1.03", "T1.04", "T1.05",
+            "T2.01", "T2.02", "T2.03", "T2.04", "T2.05", "T2.06",
+            "T3.01", "T3.02", "T3.03", "T3.04", "T3.05",
+            "T4.01", "T4.02", "T4.03", "T4.04", "T4.05",
+            "T5.01", "T5.02", "T5.03", "T5.04", "T5.05",
+            "T6.01", "T6.02", "T6.03", "T6.04"
     };
-    private final String[] MONTHS = {"T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12"};
+    private final String[] MONTHS = { "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12" };
 
     private final java.util.List<Object[]> invoiceRows = new ArrayList<>();
     private DefaultTableModel tableModel;
@@ -53,7 +56,7 @@ public class HoaDonUI {
         pnl.setBackground(MAU_NEN);
 
         pnl.add(buildTopBar(), BorderLayout.NORTH);
-        pnl.add(buildBody(),   BorderLayout.CENTER);
+        pnl.add(buildBody(), BorderLayout.CENTER);
 
         return pnl;
     }
@@ -69,7 +72,7 @@ public class HoaDonUI {
         title.setForeground(MAU_TEXT);
         bar.add(title, BorderLayout.WEST);
 
-        JButton btnAdd = makePrimaryButton("+ Tạo hóa đơn");
+        JButton btnAdd = primaryButton.makePrimaryButton("Tạo hóa đơn");
         btnAdd.addActionListener(e -> showCreateDialog());
         bar.add(btnAdd, BorderLayout.EAST);
 
@@ -78,12 +81,12 @@ public class HoaDonUI {
 
     // ── Body: CardLayout chuyển giữa empty state và bảng ────────────────────
     private JPanel buildBody() {
-        bodyCard  = new CardLayout();
+        bodyCard = new CardLayout();
         bodyPanel = new JPanel(bodyCard);
         bodyPanel.setBackground(MAU_NEN);
 
         bodyPanel.add(buildEmptyState(), "EMPTY");
-        bodyPanel.add(buildTableCard(),  "TABLE");
+        bodyPanel.add(buildTableCard(), "TABLE");
 
         bodyCard.show(bodyPanel, "EMPTY");
         return bodyPanel;
@@ -101,7 +104,8 @@ public class HoaDonUI {
 
         // Document icon (vẽ bằng tay để giống ảnh)
         JLabel ico = new JLabel() {
-            @Override protected void paintComponent(Graphics g) {
+            @Override
+            protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(new Color(148, 163, 184));
@@ -118,7 +122,11 @@ public class HoaDonUI {
                 g2.drawLine(28, 10, 36, 10);
                 g2.dispose();
             }
-            @Override public Dimension getPreferredSize() { return new Dimension(44, 44); }
+
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(44, 44);
+            }
         };
         ico.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -141,9 +149,12 @@ public class HoaDonUI {
         card.setBackground(MAU_CARD);
         card.setBorder(new LineBorder(MAU_BORDER, 1, true));
 
-        String[] cols = {"Phòng", "Tháng/Năm", "Điện (kWh)", "Nước (m³)", "Tổng tiền", "Trạng thái", ""};
+        String[] cols = { "Phòng", "Tháng/Năm", "Điện (kWh)", "Nước (m³)", "Tổng tiền", "Trạng thái", "" };
         tableModel = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return c == 6; }
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return c == 6;
+            }
         };
 
         JTable table = new JTable(tableModel);
@@ -167,16 +178,20 @@ public class HoaDonUI {
         header.setReorderingAllowed(false);
 
         DefaultTableCellRenderer hdrR = new DefaultTableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(
+            @Override
+            public Component getTableCellRendererComponent(
                     JTable t, Object v, boolean sel, boolean foc, int r, int c) {
                 super.getTableCellRendererComponent(t, v, sel, foc, r, c);
-                setBackground(MAU_CARD); setForeground(MAU_MUTED); setFont(FONT_SMALL);
+                setBackground(MAU_CARD);
+                setForeground(MAU_MUTED);
+                setFont(FONT_SMALL);
                 setBorder(new EmptyBorder(0, 16, 0, 8));
                 setHorizontalAlignment(SwingConstants.LEFT);
                 return this;
             }
         };
-        for (int i = 0; i < 7; i++) table.getColumnModel().getColumn(i).setHeaderRenderer(hdrR);
+        for (int i = 0; i < 7; i++)
+            table.getColumnModel().getColumn(i).setHeaderRenderer(hdrR);
 
         table.getColumnModel().getColumn(0).setPreferredWidth(110);
         table.getColumnModel().getColumn(1).setPreferredWidth(100);
@@ -189,17 +204,20 @@ public class HoaDonUI {
 
         // Row renderer với bottom border
         DefaultTableCellRenderer rowR = new DefaultTableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(
+            @Override
+            public Component getTableCellRendererComponent(
                     JTable t, Object v, boolean sel, boolean foc, int r, int c) {
                 super.getTableCellRendererComponent(t, v, sel, foc, r, c);
-                setFont(FONT_PLAIN); setForeground(MAU_TEXT);
+                setFont(FONT_PLAIN);
+                setForeground(MAU_TEXT);
                 setBorder(BorderFactory.createCompoundBorder(
                         new MatteBorder(0, 0, 1, 0, MAU_BORDER),
                         new EmptyBorder(0, 16, 0, 8)));
                 return this;
             }
         };
-        for (int i = 0; i < 5; i++) table.getColumnModel().getColumn(i).setCellRenderer(rowR);
+        for (int i = 0; i < 5; i++)
+            table.getColumnModel().getColumn(i).setCellRenderer(rowR);
         table.getColumnModel().getColumn(5).setCellRenderer(new StatusBadgeRenderer());
         table.getColumnModel().getColumn(6).setCellRenderer(new ActionRenderer());
         table.getColumnModel().getColumn(6).setCellEditor(new ActionEditor(table));
@@ -213,7 +231,8 @@ public class HoaDonUI {
 
     private void refreshTable() {
         tableModel.setRowCount(0);
-        for (Object[] r : invoiceRows) tableModel.addRow(r);
+        for (Object[] r : invoiceRows)
+            tableModel.addRow(r);
         bodyCard.show(bodyPanel, invoiceRows.isEmpty() ? "EMPTY" : "TABLE");
     }
 
@@ -262,37 +281,54 @@ public class HoaDonUI {
         g.anchor = GridBagConstraints.NORTH;
 
         // Row 0: Phòng (rộng) + Tháng + Năm
-        JComboBox<String> cRoom  = makeCombo(ROOMS);
+        JComboBox<String> cRoom = makeCombo(ROOMS);
         cRoom.setSelectedIndex(0);
         JComboBox<String> cMonth = makeCombo(MONTHS);
         int curMonth = Calendar.getInstance().get(Calendar.MONTH); // 0-based
         cMonth.setSelectedIndex(Math.max(0, curMonth));
         JTextField fYear = makeField(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
 
-        g.gridy = 0; g.weightx = 2.5; g.gridx = 0; g.insets = new Insets(0, 0, 0, 12);
+        g.gridy = 0;
+        g.weightx = 2.5;
+        g.gridx = 0;
+        g.insets = new Insets(0, 0, 0, 12);
         form.add(wrapField("Phòng", cRoom), g);
-        g.weightx = 1.4; g.gridx = 1; g.insets = new Insets(0, 0, 0, 12);
+        g.weightx = 1.4;
+        g.gridx = 1;
+        g.insets = new Insets(0, 0, 0, 12);
         form.add(wrapField("Tháng", cMonth), g);
-        g.weightx = 1.0; g.gridx = 2; g.insets = new Insets(0, 0, 0, 0);
+        g.weightx = 1.0;
+        g.gridx = 2;
+        g.insets = new Insets(0, 0, 0, 0);
         form.add(wrapField("Năm", fYear), g);
 
         // Row 1: Số điện cũ / mới
-        JTextField fDienCu  = makeField("0");
+        JTextField fDienCu = makeField("0");
         JTextField fDienMoi = makeField("0");
 
-        g.gridy = 1; g.weightx = 1.5; g.gridx = 0; g.insets = new Insets(14, 0, 0, 12);
+        g.gridy = 1;
+        g.weightx = 1.5;
+        g.gridx = 0;
+        g.insets = new Insets(14, 0, 0, 12);
         form.add(wrapField("Số điện cũ (kWh)", fDienCu), g);
-        g.gridx = 1; g.gridwidth = 2; g.insets = new Insets(14, 0, 0, 0);
+        g.gridx = 1;
+        g.gridwidth = 2;
+        g.insets = new Insets(14, 0, 0, 0);
         form.add(wrapField("Số điện mới (kWh)", fDienMoi), g);
         g.gridwidth = 1;
 
         // Row 2: Số nước cũ / mới
-        JTextField fNuocCu  = makeField("0");
+        JTextField fNuocCu = makeField("0");
         JTextField fNuocMoi = makeField("0");
 
-        g.gridy = 2; g.weightx = 1.5; g.gridx = 0; g.insets = new Insets(14, 0, 0, 12);
+        g.gridy = 2;
+        g.weightx = 1.5;
+        g.gridx = 0;
+        g.insets = new Insets(14, 0, 0, 12);
         form.add(wrapField("Số nước cũ (m³)", fNuocCu), g);
-        g.gridx = 1; g.gridwidth = 2; g.insets = new Insets(14, 0, 0, 0);
+        g.gridx = 1;
+        g.gridwidth = 2;
+        g.insets = new Insets(14, 0, 0, 0);
         form.add(wrapField("Số nước mới (m³)", fNuocMoi), g);
         g.gridwidth = 1;
 
@@ -304,7 +340,8 @@ public class HoaDonUI {
         botPanel.setBorder(new EmptyBorder(0, 22, 20, 22));
 
         JButton calcBtn = new JButton("Tính tổng tiền") {
-            @Override protected void paintComponent(Graphics g2) {
+            @Override
+            protected void paintComponent(Graphics g2) {
                 Graphics2D g = (Graphics2D) g2.create();
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 boolean enabled = isEnabled();
@@ -318,7 +355,9 @@ public class HoaDonUI {
         };
         calcBtn.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
         calcBtn.setForeground(Color.WHITE);
-        calcBtn.setContentAreaFilled(false); calcBtn.setBorderPainted(false); calcBtn.setFocusPainted(false);
+        calcBtn.setContentAreaFilled(false);
+        calcBtn.setBorderPainted(false);
+        calcBtn.setFocusPainted(false);
         calcBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         calcBtn.setBorder(new EmptyBorder(11, 18, 11, 18));
         calcBtn.setPreferredSize(new Dimension(0, 44));
@@ -326,12 +365,15 @@ public class HoaDonUI {
         calcBtn.addActionListener(e -> {
             // Validate
             String room = (String) cRoom.getSelectedItem();
-            if (room == null || room.equals("Chọn phòng")) { shake(cRoom); return; }
+            if (room == null || room.equals("Chọn phòng")) {
+                shake(cRoom);
+                return;
+            }
             double dCu, dMoi, nCu, nMoi;
             try {
-                dCu  = Double.parseDouble(fDienCu.getText().trim());
+                dCu = Double.parseDouble(fDienCu.getText().trim());
                 dMoi = Double.parseDouble(fDienMoi.getText().trim());
-                nCu  = Double.parseDouble(fNuocCu.getText().trim());
+                nCu = Double.parseDouble(fNuocCu.getText().trim());
                 nMoi = Double.parseDouble(fNuocMoi.getText().trim());
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(dlg, "Số liệu không hợp lệ!", "Lỗi", JOptionPane.WARNING_MESSAGE);
@@ -343,18 +385,19 @@ public class HoaDonUI {
             }
 
             // Tính
-            double tienDien   = (dMoi - dCu) * 3500;
-            double tienNuoc   = (nMoi - nCu) * 15000;
+            double tienDien = (dMoi - dCu) * 3500;
+            double tienNuoc = (nMoi - nCu) * 15000;
             double tienInternet = 100_000;
-            double tienRac      = 20_000;
-            double total        = tienDien + tienNuoc + tienInternet + tienRac;
+            double tienRac = 20_000;
+            double total = tienDien + tienNuoc + tienInternet + tienRac;
             String month = (String) cMonth.getSelectedItem();
-            String year  = fYear.getText().trim();
+            String year = fYear.getText().trim();
 
             // Mở dialog xem trước
             boolean saved = showPreviewDialog(dlg, room, month, year,
                     dCu, dMoi, tienDien, nCu, nMoi, tienNuoc, tienInternet, tienRac, total);
-            if (saved) dlg.dispose();
+            if (saved)
+                dlg.dispose();
         });
 
         botPanel.add(calcBtn, BorderLayout.CENTER);
@@ -369,45 +412,58 @@ public class HoaDonUI {
     // ════════════════════════════════════════════════════════════════════════
 
     class StatusBadgeRenderer implements TableCellRenderer {
-        @Override public Component getTableCellRendererComponent(
+        @Override
+        public Component getTableCellRendererComponent(
                 JTable t, Object v, boolean sel, boolean foc, int row, int col) {
             JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 18));
             p.setBackground(sel ? new Color(239, 246, 255) : MAU_CARD);
             p.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
             String val = v == null ? "" : v.toString();
             JLabel badge = new JLabel(val);
-            badge.setFont(FONT_SMALL); badge.setOpaque(true);
+            badge.setFont(FONT_SMALL);
+            badge.setOpaque(true);
             badge.setBorder(new EmptyBorder(3, 10, 3, 10));
             if ("Đã thanh toán".equals(val)) {
-                badge.setBackground(MAU_GREEN_BG); badge.setForeground(MAU_GREEN_FG);
+                badge.setBackground(MAU_GREEN_BG);
+                badge.setForeground(MAU_GREEN_FG);
             } else {
-                badge.setBackground(MAU_AMBER_BG); badge.setForeground(MAU_AMBER_FG);
+                badge.setBackground(MAU_AMBER_BG);
+                badge.setForeground(MAU_AMBER_FG);
             }
-            p.add(badge); return p;
+            p.add(badge);
+            return p;
         }
     }
 
     class ActionRenderer implements TableCellRenderer {
-        @Override public Component getTableCellRendererComponent(
+        @Override
+        public Component getTableCellRendererComponent(
                 JTable t, Object v, boolean sel, boolean foc, int row, int col) {
             JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 18));
             p.setBackground(sel ? new Color(239, 246, 255) : MAU_CARD);
             p.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
-            JLabel e = new JLabel("✏"); e.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14)); e.setForeground(MAU_MUTED);
-            JLabel d = new JLabel("🗑"); d.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14)); d.setForeground(MAU_RED);
-            p.add(e); p.add(d); return p;
+            JLabel e = new JLabel("✏");
+            e.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+            e.setForeground(MAU_MUTED);
+            JLabel d = new JLabel("🗑");
+            d.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+            d.setForeground(MAU_RED);
+            p.add(e);
+            p.add(d);
+            return p;
         }
     }
 
     class ActionEditor extends AbstractCellEditor implements TableCellEditor {
         private final JPanel panel;
         private int curRow;
+
         ActionEditor(JTable table) {
             panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 18));
             panel.setBackground(MAU_CARD);
             panel.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
             JButton paid = iconBtn("✅", MAU_MUTED);
-            JButton del  = iconBtn("🗑", MAU_RED);
+            JButton del = iconBtn("🗑", MAU_RED);
             paid.addActionListener(e -> {
                 stopCellEditing();
                 if (curRow < invoiceRows.size()) {
@@ -419,44 +475,38 @@ public class HoaDonUI {
                 stopCellEditing();
                 int c = JOptionPane.showConfirmDialog(panel.getTopLevelAncestor(),
                         "Xóa hóa đơn này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
-                if (c == JOptionPane.YES_OPTION) { invoiceRows.remove(curRow); refreshTable(); }
+                if (c == JOptionPane.YES_OPTION) {
+                    invoiceRows.remove(curRow);
+                    refreshTable();
+                }
             });
-            panel.add(paid); panel.add(del);
+            panel.add(paid);
+            panel.add(del);
         }
-        @Override public Component getTableCellEditorComponent(JTable t, Object v, boolean sel, int row, int col) {
-            curRow = row; return panel;
+
+        @Override
+        public Component getTableCellEditorComponent(JTable t, Object v, boolean sel, int row, int col) {
+            curRow = row;
+            return panel;
         }
-        @Override public Object getCellEditorValue() { return "ACT"; }
+
+        @Override
+        public Object getCellEditorValue() {
+            return "ACT";
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // HELPERS
     // ════════════════════════════════════════════════════════════════════════
 
-    private JButton makePrimaryButton(String text) {
-        JButton btn = new JButton(text) {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getModel().isRollover() ? new Color(29, 78, 216) : MAU_PRIMARY);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        btn.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
-        btn.setForeground(Color.WHITE);
-        btn.setContentAreaFilled(false); btn.setBorderPainted(false); btn.setFocusPainted(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setBorder(new EmptyBorder(9, 18, 9, 18));
-        return btn;
-    }
-
     private JButton iconBtn(String icon, Color fg) {
         JButton btn = new JButton(icon);
         btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         btn.setForeground(fg);
-        btn.setContentAreaFilled(false); btn.setBorderPainted(false); btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(new EmptyBorder(2, 4, 2, 4));
         return btn;
@@ -477,6 +527,7 @@ public class HoaDonUI {
                         new LineBorder(MAU_PRIMARY, 2, true),
                         new EmptyBorder(6, 10, 6, 10)));
             }
+
             @Override
             public void focusLost(FocusEvent e) {
                 f.setBorder(BorderFactory.createCompoundBorder(
@@ -512,12 +563,12 @@ public class HoaDonUI {
 
     // ── Dialog Xem trước hóa đơn ────────────────────────────────────────────
     private boolean showPreviewDialog(JDialog parent,
-                                      String room, String month, String year,
-                                      double dCu, double dMoi, double tienDien,
-                                      double nCu, double nMoi, double tienNuoc,
-                                      double tienInternet, double tienRac, double total) {
+            String room, String month, String year,
+            double dCu, double dMoi, double tienDien,
+            double nCu, double nMoi, double tienNuoc,
+            double tienInternet, double tienRac, double total) {
 
-        final boolean[] saved = {false};
+        final boolean[] saved = { false };
         String today = String.format("%d/%d/%d",
                 Calendar.getInstance().get(Calendar.DAY_OF_MONTH),
                 Calendar.getInstance().get(Calendar.MONTH) + 1,
@@ -564,7 +615,7 @@ public class HoaDonUI {
 
         JPanel subPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         subPanel.setBackground(Color.WHITE);
-        JLabel invSub = new JLabel("Tháng " + month.replace("T","") + "/" + year);
+        JLabel invSub = new JLabel("Tháng " + month.replace("T", "") + "/" + year);
         invSub.setFont(FONT_PLAIN);
         invSub.setForeground(MAU_MUTED);
         subPanel.add(invSub);
@@ -579,15 +630,18 @@ public class HoaDonUI {
         leftInfo.setBackground(Color.WHITE);
         leftInfo.setLayout(new BoxLayout(leftInfo, BoxLayout.Y_AXIS));
         JLabel lblPhong = new JLabel("<html><b>Phòng:</b> " + room + "</html>");
-        lblPhong.setFont(FONT_PLAIN); lblPhong.setForeground(MAU_TEXT);
+        lblPhong.setFont(FONT_PLAIN);
+        lblPhong.setForeground(MAU_TEXT);
         JLabel lblKhach = new JLabel("<html><b>Khách thuê:</b> —</html>");
-        lblKhach.setFont(FONT_PLAIN); lblKhach.setForeground(MAU_TEXT);
+        lblKhach.setFont(FONT_PLAIN);
+        lblKhach.setForeground(MAU_TEXT);
         leftInfo.add(lblPhong);
         leftInfo.add(Box.createVerticalStrut(4));
         leftInfo.add(lblKhach);
 
         JLabel lblNgay = new JLabel("<html><b>Ngày lập:</b> " + today + "</html>");
-        lblNgay.setFont(FONT_PLAIN); lblNgay.setForeground(MAU_TEXT);
+        lblNgay.setFont(FONT_PLAIN);
+        lblNgay.setForeground(MAU_TEXT);
 
         infoRow.add(leftInfo, BorderLayout.WEST);
         infoRow.add(lblNgay, BorderLayout.EAST);
@@ -597,17 +651,22 @@ public class HoaDonUI {
         card.add(topSection, BorderLayout.NORTH);
 
         // ── Bảng chi tiết ──
-        String[] cols = {"Khoản mục", "Chi tiết", "Thành tiền"};
+        String[] cols = { "Khoản mục", "Chi tiết", "Thành tiền" };
         Object[][] data = {
-                {"Tiền phòng", "—", "—"},
-                {"Điện",   String.format("%.0f kWh × %sđ", dMoi-dCu, NF.format(3500)),  NF.format((long)tienDien)+"đ"},
-                {"Nước",   String.format("%.1f m³ × %sđ",  nMoi-nCu, NF.format(15000)), NF.format((long)tienNuoc)+"đ"},
-                {"Internet", "—", NF.format((long)tienInternet)+"đ"},
-                {"Rác",      "—", NF.format((long)tienRac)+"đ"},
+                { "Tiền phòng", "—", "—" },
+                { "Điện", String.format("%.0f kWh × %sđ", dMoi - dCu, NF.format(3500)),
+                        NF.format((long) tienDien) + "đ" },
+                { "Nước", String.format("%.1f m³ × %sđ", nMoi - nCu, NF.format(15000)),
+                        NF.format((long) tienNuoc) + "đ" },
+                { "Internet", "—", NF.format((long) tienInternet) + "đ" },
+                { "Rác", "—", NF.format((long) tienRac) + "đ" },
         };
 
         JTable tbl = new JTable(data, cols) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
         tbl.setFont(FONT_PLAIN);
         tbl.setForeground(MAU_TEXT);
@@ -643,11 +702,15 @@ public class HoaDonUI {
         tbl.getColumnModel().getColumn(2).setCellRenderer(rRight);
 
         DefaultTableCellRenderer hLeft = new DefaultTableCellRenderer();
-        hLeft.setBackground(new Color(249, 250, 251)); hLeft.setForeground(MAU_TEXT);
-        hLeft.setFont(FONT_BOLD); hLeft.setBorder(new EmptyBorder(0, 14, 0, 12));
+        hLeft.setBackground(new Color(249, 250, 251));
+        hLeft.setForeground(MAU_TEXT);
+        hLeft.setFont(FONT_BOLD);
+        hLeft.setBorder(new EmptyBorder(0, 14, 0, 12));
         DefaultTableCellRenderer hRight = new DefaultTableCellRenderer();
-        hRight.setBackground(new Color(249, 250, 251)); hRight.setForeground(MAU_TEXT);
-        hRight.setFont(FONT_BOLD); hRight.setHorizontalAlignment(SwingConstants.RIGHT);
+        hRight.setBackground(new Color(249, 250, 251));
+        hRight.setForeground(MAU_TEXT);
+        hRight.setFont(FONT_BOLD);
+        hRight.setHorizontalAlignment(SwingConstants.RIGHT);
         hRight.setBorder(new EmptyBorder(0, 12, 0, 14));
         tbl.getColumnModel().getColumn(0).setHeaderRenderer(hLeft);
         tbl.getColumnModel().getColumn(1).setHeaderRenderer(hRight);
@@ -677,7 +740,7 @@ public class HoaDonUI {
         JLabel lblAmt = new JLabel(NF.format((long) total) + "đ");
         lblAmt.setFont(new Font("Be Vietnam Pro", Font.BOLD, 15));
         lblAmt.setForeground(MAU_TEXT);
-        totalRow.add(lblTC,  BorderLayout.WEST);
+        totalRow.add(lblTC, BorderLayout.WEST);
         totalRow.add(lblAmt, BorderLayout.EAST);
 
         // Gộp table + tổng cộng vào 1 panel
@@ -702,18 +765,18 @@ public class HoaDonUI {
         footer.setBorder(new MatteBorder(1, 0, 0, 0, MAU_BORDER));
 
         JButton btnPrint = makeOutlineIconButton("🖨", "In hóa đơn");
-        JButton btnPDF   = makeOutlineIconButton("⬇", "Tải PDF");
-        JButton btnSave  = makePrimaryButton("🗒  Lưu hóa đơn");
+        JButton btnPDF = makeOutlineIconButton("⬇", "Tải PDF");
+        JButton btnSave = primaryButton.makePrimaryButton("Lưu hóa đơn");
 
-        btnPrint.addActionListener(e ->
-                JOptionPane.showMessageDialog(prev, "Tính năng in sẽ được cập nhật!", "Thông báo", JOptionPane.INFORMATION_MESSAGE));
-        btnPDF.addActionListener(e ->
-                JOptionPane.showMessageDialog(prev, "Tính năng xuất PDF sẽ được cập nhật!", "Thông báo", JOptionPane.INFORMATION_MESSAGE));
+        btnPrint.addActionListener(e -> JOptionPane.showMessageDialog(prev, "Tính năng in sẽ được cập nhật!",
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE));
+        btnPDF.addActionListener(e -> JOptionPane.showMessageDialog(prev, "Tính năng xuất PDF sẽ được cập nhật!",
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE));
         btnSave.addActionListener(e -> {
-            invoiceRows.add(new Object[]{
+            invoiceRows.add(new Object[] {
                     room, month + "/" + year,
                     String.format("%.0f kWh", dMoi - dCu),
-                    String.format("%.1f m³",  nMoi - nCu),
+                    String.format("%.1f m³", nMoi - nCu),
                     NF.format((long) total) + "đ",
                     "Chưa thanh toán", "ACT"
             });
@@ -753,8 +816,8 @@ public class HoaDonUI {
     private void shake(Component comp) {
         Point origin = comp.getLocation();
         javax.swing.Timer timer = new javax.swing.Timer(30, null);
-        int[] step = {0};
-        int[] offsets = {-6, 6, -4, 4, -2, 2, 0};
+        int[] step = { 0 };
+        int[] offsets = { -6, 6, -4, 4, -2, 2, 0 };
         timer.addActionListener(e -> {
             if (step[0] < offsets.length) {
                 comp.setLocation(origin.x + offsets[step[0]++], origin.y);

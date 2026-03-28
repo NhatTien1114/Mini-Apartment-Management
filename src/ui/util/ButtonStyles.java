@@ -10,25 +10,13 @@ import java.awt.event.MouseEvent;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
 
 public final class ButtonStyles {
     private ButtonStyles() {
     }
 
-    public static RoundedButton createPrimary(String text, Font font, Color normal, Color hover, int radius) {
-        RoundedButton button = new RoundedButton(text, radius);
-        button.setFont(font);
-        button.setBackground(normal);
-        button.setForeground(AppColors.WHITE);
-        button.setBorder(new EmptyBorder(10, 20, 10, 20));
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        applyHover(button, normal, hover);
-        bindEnterToClick(button);
-        return button;
-    }
-
-    public static RoundedButton createSecondary(String text, Font font, Color textColor, Color normal, Color hover, int radius, Border border) {
+    public static RoundedButton createSecondary(String text, Font font, Color textColor, Color normal, Color hover,
+            int radius, Border border) {
         RoundedButton button = new RoundedButton(text, radius);
         button.setFont(font);
         button.setBackground(normal);

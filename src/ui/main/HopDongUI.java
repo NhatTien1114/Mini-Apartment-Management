@@ -13,16 +13,14 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 
+import dao.GiaDetailDAO;
 import dao.HopDongDAO;
 import dao.HopDongKhachHangDAO;
 import dao.QuanLyPhongDAO;
+import entity.GiaDetail;
 import entity.HopDong;
-import ui.util.ButtonStyles;
-import ui.util.AppColors;
-import ui.util.FormFieldStyles;
-import ui.util.RoundedButton;
-import ui.util.RoundedPanel;
-import ui.util.RoundedTextField;
+import entity.Phong;
+import ui.util.*;
 
 public class HopDongUI {
     private final Color MAU_NEN = AppColors.SLATE_50;
@@ -30,19 +28,22 @@ public class HopDongUI {
     private final Color MAU_TEXT = AppColors.SLATE_900;
     private final Color MAU_SUBTEXT = AppColors.SLATE_500;
     private final Color BORDER_COLOR = AppColors.SLATE_200;
-    
+
     private JPanel pnlRoot;
     private DefaultTableModel model;
     private JTable table;
 
-    HopDongDAO HDdao = new HopDongDAO();
+    HopDongDAO HopDongDao = new HopDongDAO();
 
     HopDongKhachHangDAO HDKHdao = new HopDongKhachHangDAO();
 
     QuanLyPhongDAO PhongDAO = new QuanLyPhongDAO();
 
+    GiaDetailDAO giaDetailDAO = new GiaDetailDAO();
+
+    private PrimaryButton primaryButton = new PrimaryButton();
     public static class ContractDraft {
-        public String maPhong;
+        public String phong;
         public String hoTen;
         public String soDienThoai;
         public String cccd;
@@ -57,14 +58,12 @@ public class HopDongUI {
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         model.setRowCount(0);
 
-        ArrayList<HopDong> listHD = HDdao.getAllHopDong();
-
+        ArrayList<HopDong> listHD = HopDongDao.getAllHopDong();
 
         for (HopDong row : listHD) {
             model.addRow(new Object[]{
-                    row.getMaHopDong(),
-                    row.getMaPhong().getMaPhong(),
-                    HDKHdao.getTenNguoiDaiDienByMaPhong(String.valueOf(row.getMaPhong())),
+                    row.getPhong().getMaPhong(),
+                    HDKHdao.getNguoiDaiDienByMaPhong(String.valueOf(row.getPhong().getMaPhong())).getHoTen(),
                     row.getNgayBatDau(),
                     row.getNgayKetThuc(),
                     row.getTienCoc(),
@@ -72,6 +71,7 @@ public class HopDongUI {
                     row.getTrangThai()
 
             });
+
         }
     }
 
@@ -89,13 +89,7 @@ public class HopDongUI {
         lblTitle.setFont(new Font("Inter", Font.BOLD, 20));
         lblTitle.setForeground(MAU_TEXT);
         
-        RoundedButton btnAdd = ButtonStyles.createPrimary(
-            " + Tạo hợp đồng ",
-            new Font("Inter", Font.BOLD, 14),
-            AppColors.PRIMARY_INDIGO,
-            AppColors.PRIMARY_INDIGO_HOVER,
-            8
-        );
+        JButton btnAdd = primaryButton.makePrimaryButton("Tạo Hợp Đồng");
         btnAdd.setBorder(new EmptyBorder(8, 16, 8, 16));
         btnAdd.addActionListener(e -> showContractForm(false, -1));
         
@@ -156,7 +150,7 @@ public class HopDongUI {
         cardMargin.setOpaque(false);
         cardMargin.setBorder(new EmptyBorder(4, 24, 24, 24));
         
-        String[] columnNames = {"Mã HĐ", "Phòng", "Khách thuê", "Ngày bắt đầu", "Ngày kết thúc", "Tiền cọc", "Tiền thuê/tháng", "Trạng thái", ""};
+        String[] columnNames = {"Phòng", "Khách thuê", "Ngày bắt đầu", "Ngày kết thúc", "Tiền cọc", "Tiền thuê/tháng", "Trạng thái", ""};
 
         this.model = new DefaultTableModel(columnNames, 0);
         this.table = new JTable(this.model); // Sử dụng biến class
@@ -236,7 +230,7 @@ public class HopDongUI {
             }
         });
         
-        table.getColumnModel().getColumn(7).setCellRenderer(new TableCellRenderer() {
+        table.getColumnModel().getColumn(6).setCellRenderer(new TableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r, int c) {
                 JPanel pnl = new JPanel(new GridBagLayout());
                 pnl.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
@@ -270,7 +264,7 @@ public class HopDongUI {
             }
         });
         
-        table.getColumnModel().getColumn(8).setCellRenderer(new TableCellRenderer() {
+        table.getColumnModel().getColumn(7).setCellRenderer(new TableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r, int c) {
                 ActionPanel pnl = new ActionPanel(true, r);
                 pnl.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
@@ -278,7 +272,7 @@ public class HopDongUI {
                 return pnl;
             }
         });
-        table.getColumnModel().getColumn(8).setCellEditor(new DefaultCellEditor(new JCheckBox()) {
+        table.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(new JCheckBox()) {
             private ActionPanel currentPanel;
             @Override public Component getTableCellEditorComponent(JTable t, Object v, boolean isSel, int r, int c) {
                 currentPanel = new ActionPanel(false, r);
@@ -287,16 +281,15 @@ public class HopDongUI {
             }
             @Override public Object getCellEditorValue() { return ""; }
         });
-        
-        table.getColumnModel().getColumn(0).setPreferredWidth(70);  
-        table.getColumnModel().getColumn(1).setPreferredWidth(60);  
-        table.getColumnModel().getColumn(2).setPreferredWidth(140); 
-        table.getColumnModel().getColumn(3).setPreferredWidth(110); 
-        table.getColumnModel().getColumn(4).setPreferredWidth(110); 
-        table.getColumnModel().getColumn(5).setPreferredWidth(100); 
-        table.getColumnModel().getColumn(6).setPreferredWidth(110); 
-        table.getColumnModel().getColumn(7).setPreferredWidth(125); 
-        table.getColumnModel().getColumn(8).setPreferredWidth(90);  
+
+        table.getColumnModel().getColumn(0).setPreferredWidth(60);
+        table.getColumnModel().getColumn(1).setPreferredWidth(140);
+        table.getColumnModel().getColumn(2).setPreferredWidth(110);
+        table.getColumnModel().getColumn(3).setPreferredWidth(110);
+        table.getColumnModel().getColumn(4).setPreferredWidth(100);
+        table.getColumnModel().getColumn(5).setPreferredWidth(110);
+        table.getColumnModel().getColumn(6).setPreferredWidth(125);
+        table.getColumnModel().getColumn(7).setPreferredWidth(90);
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -367,10 +360,21 @@ public class HopDongUI {
         JPanel pnlContent = new JPanel(new GridLayout(0, 2, 14, 12));
         pnlContent.setOpaque(false);
 
-        ArrayList<String> roomOption = PhongDAO.getAllPhongDangTrong();
-        String[] mangPhong = roomOption.toArray(new String[0]);
+
+
+        ArrayList<Phong> dsPhongTrong = PhongDAO.getAllPhongTrong();
+        String[] roomOptions = new String[dsPhongTrong.size()];
+
+
+
+        for (int i = 0; i < dsPhongTrong.size(); i++) {
+            GiaDetail gd = giaDetailDAO.getDonGiaByMa(dsPhongTrong.get(i).getMaGiaDetail());
+            double donGia = (gd != null) ? gd.getDonGia() : 0.0;
+
+            roomOptions[i] = dsPhongTrong.get(i).getMaPhong() + " - " + donGia ;
+        }
         JComboBox<String> cboPhong = FormFieldStyles.createRoomCombo(
-            mangPhong,
+            roomOptions,
             new Font("Inter", Font.PLAIN, 14),
             MAU_TEXT,
             BORDER_COLOR
@@ -392,11 +396,16 @@ public class HopDongUI {
         applyNumberFilter(txtCoc);
         applyNumberFilter(txtThue);
 
-        txtCoc.setText("0");
+        txtThue.setEditable(false);
+        txtCoc.setEditable(false);
 
         ActionListener roomListener = e -> {
             String selected = (String) cboPhong.getSelectedItem();
-            txtThue.setText(extractRoomPriceRaw(selected));
+            txtThue.setText(selected.substring(8,15));
+
+
+            txtCoc.setText(selected.substring(8,15));
+
         };
         cboPhong.addActionListener(roomListener);
         roomListener.actionPerformed(null);
@@ -441,13 +450,7 @@ public class HopDongUI {
         );
         btnCancel.addActionListener(e -> dialog.dispose());
         
-        RoundedButton btnSave = ButtonStyles.createPrimary(
-            isEdit ? "Cập nhật" : "Tạo",
-            new Font("Inter", Font.BOLD, 13),
-            new Color(34, 88, 195),
-            new Color(23, 62, 138),
-            8
-        );
+        JButton btnSave = primaryButton.makePrimaryButton(isEdit ? "Cập Nhật" : "Tạo");
         
         btnSave.addActionListener(e -> {
             String bDau = txtBatDau.getText().replace("_", "").trim();
@@ -489,7 +492,7 @@ public class HopDongUI {
                 dialog.dispose();
             } else {
                 ContractDraft draft = new ContractDraft();
-                draft.maPhong = phongCode;
+                draft.phong = phongCode;
                 draft.hoTen = txtKhach.getText().trim();
                 draft.soDienThoai = txtSoDienThoai.getText().trim();
                 draft.cccd = txtCccd.getText().trim();
@@ -502,14 +505,14 @@ public class HopDongUI {
                 dialog.setVisible(false);
                 boolean accepted = showContractPreviewDialog(draft);
                 if (accepted) {
-
-                    boolean success = dao.HopDongDAO.newHopDong(draft); // Gọi hàm lưu vào DB
+                    HopDongDAO dao = new HopDongDAO();
+                    boolean success = dao.luuHopDongMoi(draft); // Gọi hàm lưu vào DB
 
                     if (success) {
                         // Nếu DB lưu thành công mới cập nhật lên Table giao diện
                         Object[] newRow = {
-                                HDdao.getMaHopDongByMaPhong(draft.maPhong), // Bạn có thể lấy mã thật từ DAO trả về
-                                draft.maPhong,
+
+                                draft.phong,
                                 draft.hoTen,
                                 draft.ngayBatDau,
                                 draft.ngayKetThuc,
@@ -520,6 +523,8 @@ public class HopDongUI {
                         };
                         model.addRow(newRow);
                         showToast("Lưu vào cơ sở dữ liệu thành công!");
+                        System.out.println(draft.phong);
+                        PhongDAO.updateTrangThaiPhong(draft.phong.trim(), "Đã thuê");
                         dialog.dispose();
                     } else {
                         showToast("Lỗi: Không thể lưu vào cơ sở dữ liệu!");
@@ -724,7 +729,7 @@ public class HopDongUI {
         }
     }
 
-    private boolean showContractPreviewDialog(ContractDraft draft) {
+    public boolean showContractPreviewDialog(ContractDraft draft) {
         Window parent = SwingUtilities.getWindowAncestor(pnlRoot);
         JDialog dialog = new JDialog(parent, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
@@ -779,7 +784,7 @@ public class HopDongUI {
         addDocLine(doc, "Địa chỉ: " + draft.diaChi, false, 8);
 
         addDocLine(doc, "Điều 3: Nội dung hợp đồng:", true, 16);
-        addDocLine(doc, "Phòng cho thuê: " + draft.maPhong, false, 10);
+        addDocLine(doc, "Phòng cho thuê: " + draft.phong, false, 10);
         addDocLine(doc, "Thời hạn: Từ " + draft.ngayBatDau + " đến " + draft.ngayKetThuc, false, 8);
         addDocLine(doc, "Giá thuê: " + formatCurrency(draft.giaThueRaw) + "/tháng", false, 8);
         addDocLine(doc, "Tiền cọc: " + formatCurrency(draft.tienCocRaw), false, 8);
@@ -818,13 +823,7 @@ public class HopDongUI {
         );
         btnBack.addActionListener(e -> dialog.dispose());
 
-        RoundedButton btnConfirm = ButtonStyles.createPrimary(
-            "✓   Xác nhận hợp đồng",
-            new Font("Inter", Font.BOLD, 13),
-            new Color(34, 88, 195),
-            new Color(23, 62, 138),
-            8
-        );
+        JButton btnConfirm = primaryButton.makePrimaryButton("Xác nhận hợp đồng");
         btnConfirm.setBorder(new EmptyBorder(10, 12, 10, 12));
         btnConfirm.addActionListener(e -> {
             accepted[0] = true;

@@ -8,38 +8,40 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import ui.util.AppColors;
+import ui.util.PrimaryButton;
 
 public class DichVuUI {
-    private final Color MAU_NEN       = AppColors.SLATE_100;
-    private final Color MAU_CARD      = AppColors.WHITE;
-    private final Color MAU_BORDER    = AppColors.SLATE_200;
-    private final Color MAU_TEXT      = AppColors.SLATE_900;
-    private final Color MAU_MUTED     = AppColors.SLATE_500;
-    private final Color MAU_PRIMARY   = AppColors.PRIMARY;
-    private final Color MAU_RED       = AppColors.RED_500;
-    private final Color MAU_BLUE_BG   = AppColors.PRIMARY_TINT;
-    private final Color MAU_BLUE_FG   = AppColors.PRIMARY_HOVER;
-    private final Color MAU_GRAY_BG   = AppColors.SLATE_100;
-    private final Color MAU_GRAY_FG   = AppColors.SLATE_600;
+    private final Color MAU_NEN = AppColors.SLATE_100;
+    private final Color MAU_CARD = AppColors.WHITE;
+    private final Color MAU_BORDER = AppColors.SLATE_200;
+    private final Color MAU_TEXT = AppColors.SLATE_900;
+    private final Color MAU_MUTED = AppColors.SLATE_500;
+    private final Color MAU_PRIMARY = AppColors.PRIMARY;
+    private final Color MAU_RED = AppColors.RED_500;
+    private final Color MAU_BLUE_BG = AppColors.PRIMARY_TINT;
+    private final Color MAU_BLUE_FG = AppColors.PRIMARY_HOVER;
+    private final Color MAU_GRAY_BG = AppColors.SLATE_100;
+    private final Color MAU_GRAY_FG = AppColors.SLATE_600;
     private final Color MAU_HOVER_ROW = AppColors.SLATE_50;
 
-    private final Font FONT_TITLE  = new Font("Be Vietnam Pro", Font.BOLD, 22);
-    private final Font FONT_BOLD   = new Font("Be Vietnam Pro", Font.BOLD, 13);
-    private final Font FONT_PLAIN  = new Font("Be Vietnam Pro", Font.PLAIN, 13);
-    private final Font FONT_SMALL  = new Font("Be Vietnam Pro", Font.PLAIN, 12);
+    private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 22);
+    private final Font FONT_BOLD = new Font("Be Vietnam Pro", Font.BOLD, 13);
+    private final Font FONT_PLAIN = new Font("Be Vietnam Pro", Font.PLAIN, 13);
+    private final Font FONT_SMALL = new Font("Be Vietnam Pro", Font.PLAIN, 12);
+
+    private final PrimaryButton primaryButton = new PrimaryButton();
 
     private final NumberFormat NF = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
     // ── Dữ liệu mẫu ─────────────────────────────────────────────────────────
     private final java.util.List<Object[]> rows = new ArrayList<>(Arrays.asList(
-            new Object[]{"Điện",            "kWh",       3_500,     "Biến đổi"},
-            new Object[]{"Nước",            "m³",       15_000,     "Biến đổi"},
-            new Object[]{"Internet",        "tháng",   100_000,     "Cố định"},
-            new Object[]{"Rác",             "tháng",    20_000,     "Cố định"},
-            new Object[]{"Giữ xe máy",      "xe/tháng",100_000,     "Cố định"},
-            new Object[]{"Giữ xe đạp điện", "xe/tháng", 50_000,     "Cố định"},
-            new Object[]{"Giữ ô tô",        "xe/tháng",1_500_000,   "Cố định"}
-    ));
+            new Object[] { "Điện", "kWh", 3_500, "Biến đổi" },
+            new Object[] { "Nước", "m³", 15_000, "Biến đổi" },
+            new Object[] { "Internet", "tháng", 100_000, "Cố định" },
+            new Object[] { "Rác", "tháng", 20_000, "Cố định" },
+            new Object[] { "Giữ xe máy", "xe/tháng", 100_000, "Cố định" },
+            new Object[] { "Giữ xe đạp điện", "xe/tháng", 50_000, "Cố định" },
+            new Object[] { "Giữ ô tô", "xe/tháng", 1_500_000, "Cố định" }));
 
     private DefaultTableModel tableModel;
     private JTable table;
@@ -67,7 +69,7 @@ public class DichVuUI {
         title.setForeground(MAU_TEXT);
         bar.add(title, BorderLayout.WEST);
 
-        JButton btnAdd = makePrimaryButton("+ Thêm dịch vụ");
+        JButton btnAdd = primaryButton.makePrimaryButton("Thêm dịch vụ");
         btnAdd.addActionListener(e -> showDialog(null));
         bar.add(btnAdd, BorderLayout.EAST);
 
@@ -80,29 +82,45 @@ public class DichVuUI {
         card.setBackground(MAU_CARD);
         card.setBorder(new LineBorder(MAU_BORDER, 1, true));
 
-        String[] cols = {"Tên dịch vụ", "Đơn vị", "Đơn giá", "Loại", ""};
+        String[] cols = { "Tên dịch vụ", "Đơn vị", "Đơn giá", "Loại", "" };
         tableModel = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return c == 4; }
-            @Override public Class<?> getColumnClass(int c) { return Object.class; }
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return c == 4;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int c) {
+                return Object.class;
+            }
         };
         loadTable();
 
         table = new JTable(tableModel) {
             // Hover effect per row
             int hoverRow = -1;
-            { addMouseMotionListener(new MouseMotionAdapter() {
-                @Override
-                public void mouseMoved(MouseEvent e) {
-                    int r = rowAtPoint(e.getPoint());
-                    if (r != hoverRow) { hoverRow = r; repaint(); }
-                }
-            });
+            {
+                addMouseMotionListener(new MouseMotionAdapter() {
+                    @Override
+                    public void mouseMoved(MouseEvent e) {
+                        int r = rowAtPoint(e.getPoint());
+                        if (r != hoverRow) {
+                            hoverRow = r;
+                            repaint();
+                        }
+                    }
+                });
                 addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mouseExited(MouseEvent e) { hoverRow = -1; repaint(); }
+                    public void mouseExited(MouseEvent e) {
+                        hoverRow = -1;
+                        repaint();
+                    }
                 });
             }
-            @Override public Component prepareRenderer(TableCellRenderer r, int row, int col) {
+
+            @Override
+            public Component prepareRenderer(TableCellRenderer r, int row, int col) {
                 Component c = super.prepareRenderer(r, row, col);
                 if (!isRowSelected(row))
                     c.setBackground(hoverRow == row ? MAU_HOVER_ROW : MAU_CARD);
@@ -114,14 +132,15 @@ public class DichVuUI {
         JTableHeader header = table.getTableHeader();
         header.setFont(FONT_SMALL);
         header.setForeground(MAU_MUTED);
-        header.setBackground(MAU_CARD);           // ← trắng, không phải xám
+        header.setBackground(MAU_CARD); // ← trắng, không phải xám
         header.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
         header.setPreferredSize(new Dimension(0, 44));
         header.setReorderingAllowed(false);
 
         // Custom header renderer: trắng + padding trái giống row
         DefaultTableCellRenderer hdrRenderer = new DefaultTableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(
+            @Override
+            public Component getTableCellRendererComponent(
                     JTable t, Object v, boolean sel, boolean foc, int r, int c) {
                 super.getTableCellRendererComponent(t, v, sel, foc, r, c);
                 setBackground(MAU_CARD);
@@ -141,7 +160,7 @@ public class DichVuUI {
         table.setBackground(MAU_CARD);
         table.setSelectionBackground(new Color(239, 246, 255));
         table.setShowVerticalLines(false);
-        table.setShowHorizontalLines(false);      // ← tắt line mặc định
+        table.setShowHorizontalLines(false); // ← tắt line mặc định
         table.setGridColor(MAU_CARD);
         table.setIntercellSpacing(new Dimension(0, 0));
         table.setFocusable(false);
@@ -174,9 +193,9 @@ public class DichVuUI {
     private void loadTable() {
         tableModel.setRowCount(0);
         for (Object[] r : rows) {
-            tableModel.addRow(new Object[]{
+            tableModel.addRow(new Object[] {
                     r[0], r[1],
-                    NF.format((long)(int) r[2]) + "đ",
+                    NF.format((long) (int) r[2]) + "đ",
                     r[3],
                     "ACT"
             });
@@ -189,7 +208,8 @@ public class DichVuUI {
         Object[] src = editing ? rows.get(editIdx[0]) : null;
 
         JDialog dlg = new JDialog(SwingUtilities.getWindowAncestor(table) instanceof Frame
-                ? (Frame) SwingUtilities.getWindowAncestor(table) : null,
+                ? (Frame) SwingUtilities.getWindowAncestor(table)
+                : null,
                 editing ? "Sửa dịch vụ" : "Thêm dịch vụ", true);
         dlg.setSize(480, 300);
         dlg.setLocationRelativeTo(null);
@@ -216,11 +236,12 @@ public class DichVuUI {
         JPanel grid = new JPanel(new GridLayout(2, 2, 14, 14));
         grid.setBackground(MAU_CARD);
 
-        JTextField fTen   = makeField(editing ? (String) src[0] : "");
+        JTextField fTen = makeField(editing ? (String) src[0] : "");
         JTextField fDonVi = makeField(editing ? (String) src[1] : "");
-        JTextField fGia   = makeField(editing ? String.valueOf((int) src[2]) : "0");
-        JComboBox<String> cLoai = makeCombo(new String[]{"Cố định", "Biến đổi"});
-        if (editing) cLoai.setSelectedItem(src[3]);
+        JTextField fGia = makeField(editing ? String.valueOf((int) src[2]) : "0");
+        JComboBox<String> cLoai = makeCombo(new String[] { "Cố định", "Biến đổi" });
+        if (editing)
+            cLoai.setSelectedItem(src[3]);
 
         grid.add(wrapField("Tên dịch vụ", fTen));
         grid.add(wrapField("Đơn vị", fDonVi));
@@ -235,7 +256,7 @@ public class DichVuUI {
         JButton btnCancel = makeOutlineButton("Hủy");
         btnCancel.addActionListener(e -> dlg.dispose());
 
-        JButton btnSave = makePrimaryButton(editing ? "Cập nhật" : "Thêm");
+        JButton btnSave = primaryButton.makePrimaryButton(editing ? "Cập nhật" : "Thêm");
         btnSave.addActionListener(e -> {
             String ten = fTen.getText().trim();
             if (ten.isEmpty()) {
@@ -243,14 +264,17 @@ public class DichVuUI {
                 return;
             }
             int gia;
-            try { gia = Integer.parseInt(fGia.getText().trim().replace(",", "").replace(".", "")); }
-            catch (NumberFormatException ex) {
+            try {
+                gia = Integer.parseInt(fGia.getText().trim().replace(",", "").replace(".", ""));
+            } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(dlg, "Đơn giá không hợp lệ!", "Lỗi", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            Object[] row = {ten, fDonVi.getText().trim(), gia, cLoai.getSelectedItem()};
-            if (editing) rows.set(editIdx[0], row);
-            else rows.add(row);
+            Object[] row = { ten, fDonVi.getText().trim(), gia, cLoai.getSelectedItem() };
+            if (editing)
+                rows.set(editIdx[0], row);
+            else
+                rows.add(row);
             loadTable();
             dlg.dispose();
         });
@@ -259,8 +283,8 @@ public class DichVuUI {
         btnRow.add(btnSave);
 
         card.add(titleRow, BorderLayout.NORTH);
-        card.add(grid,    BorderLayout.CENTER);
-        card.add(btnRow,  BorderLayout.SOUTH);
+        card.add(grid, BorderLayout.CENTER);
+        card.add(btnRow, BorderLayout.SOUTH);
 
         root.add(card, BorderLayout.CENTER);
         dlg.setContentPane(root);
@@ -275,9 +299,9 @@ public class DichVuUI {
     class BadgeRenderer implements TableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable t, Object v,
-                                                       boolean sel, boolean foc, int row, int col) {
+                boolean sel, boolean foc, int row, int col) {
             JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 18));
-            p.setBackground(sel ? new Color(239,246,255) : MAU_CARD);
+            p.setBackground(sel ? new Color(239, 246, 255) : MAU_CARD);
             p.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
             String val = v == null ? "" : v.toString();
             JLabel badge = new JLabel(val);
@@ -300,9 +324,9 @@ public class DichVuUI {
     class ActionRenderer implements TableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable t, Object v,
-                                                       boolean sel, boolean foc, int row, int col) {
+                boolean sel, boolean foc, int row, int col) {
             JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 18));
-            p.setBackground(sel ? new Color(239,246,255) : MAU_CARD);
+            p.setBackground(sel ? new Color(239, 246, 255) : MAU_CARD);
             p.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
             p.add(makeIconLabel("✏", MAU_MUTED));
             p.add(makeIconLabel("🗑", MAU_RED));
@@ -321,9 +345,12 @@ public class DichVuUI {
             panel.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
 
             JButton btnEdit = makeIconButton("✏", MAU_MUTED);
-            JButton btnDel  = makeIconButton("🗑", MAU_RED);
+            JButton btnDel = makeIconButton("🗑", MAU_RED);
 
-            btnEdit.addActionListener(e -> { stopCellEditing(); showDialog(new int[]{curRow}); });
+            btnEdit.addActionListener(e -> {
+                stopCellEditing();
+                showDialog(new int[] { curRow });
+            });
             btnDel.addActionListener(e -> {
                 stopCellEditing();
                 int confirm = JOptionPane.showConfirmDialog(
@@ -346,33 +373,15 @@ public class DichVuUI {
             return panel;
         }
 
-        @Override public Object getCellEditorValue() { return "ACT"; }
+        @Override
+        public Object getCellEditorValue() {
+            return "ACT";
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // HELPER FACTORIES
     // ════════════════════════════════════════════════════════════════════════
-
-    private JButton makePrimaryButton(String text) {
-        JButton btn = new JButton(text) {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getModel().isRollover() ? new Color(29, 78, 216) : MAU_PRIMARY);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        btn.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
-        btn.setForeground(Color.WHITE);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setBorder(new EmptyBorder(9, 18, 9, 18));
-        return btn;
-    }
 
     private JButton makeOutlineButton(String text) {
         JButton btn = new JButton(text);
@@ -422,6 +431,7 @@ public class DichVuUI {
                         new LineBorder(MAU_PRIMARY, 2, true),
                         new EmptyBorder(6, 10, 6, 10)));
             }
+
             @Override
             public void focusLost(FocusEvent e) {
                 f.setBorder(BorderFactory.createCompoundBorder(
@@ -455,7 +465,8 @@ public class DichVuUI {
 
     private TableCellRenderer boldPaddedRenderer() {
         return new DefaultTableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(
+            @Override
+            public Component getTableCellRendererComponent(
                     JTable t, Object v, boolean sel, boolean foc, int r, int c) {
                 super.getTableCellRendererComponent(t, v, sel, foc, r, c);
                 setFont(FONT_BOLD);
@@ -471,7 +482,8 @@ public class DichVuUI {
 
     private TableCellRenderer plainPaddedRenderer() {
         return new DefaultTableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(
+            @Override
+            public Component getTableCellRendererComponent(
                     JTable t, Object v, boolean sel, boolean foc, int r, int c) {
                 super.getTableCellRendererComponent(t, v, sel, foc, r, c);
                 setFont(FONT_PLAIN);

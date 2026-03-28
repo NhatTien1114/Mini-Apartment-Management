@@ -3,7 +3,7 @@ package ui.util;
 import java.awt.Color;
 
 public final class AppColors {
-    private AppColors() {
+    public AppColors() {
     }
 
     public static final Color WHITE = Color.WHITE;
@@ -32,12 +32,16 @@ public final class AppColors {
     public static final Color PRIMARY_OVERLAY = new Color(37, 99, 235, 25);
 
     public static final Color ACTION_BLUE = new Color(65, 113, 201);
+    public static final Color ACTION_BLUE_HOVER = new Color(48, 88, 163);
     public static final Color REVENUE = new Color(30, 80, 180);
 
+    public static final Color RED = new Color(220, 40, 40);
     public static final Color RED_500 = new Color(239, 68, 68);
     public static final Color ORANGE_500 = new Color(249, 115, 22);
     public static final Color YELLOW_500 = new Color(234, 179, 8);
     public static final Color LIME_500 = new Color(132, 204, 22);
+    public static final Color BLUE = new Color(48, 140, 232);
+    public static final Color GREEN = new Color(40, 175, 96);
     public static final Color GREEN_500 = new Color(34, 197, 94);
     public static final Color GREEN_600 = new Color(22, 163, 74);
     public static final Color GREEN_DASHBOARD = new Color(40, 175, 96);

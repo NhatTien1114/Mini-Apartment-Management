@@ -8,6 +8,7 @@ public class Phong {
     private LoaiPhong loaiPhong;
     private TrangThai trangThai;
     private int soNguoiHienTai;
+    private String maGiaDetail;
 
     public enum LoaiPhong {
 		DON("Phòng Đơn"), DOI("Phòng Đôi"), STUDIO("Phòng Studio");
@@ -33,7 +34,7 @@ public class Phong {
 	}
 
     public enum TrangThai {
-		TRONG("Trống"), THUE("Đã Thuê"), SUA("Sửa Chữa"), COC("Đã Cọc");
+		TRONG("Trống"), THUE("Đã thuê"), SUA("Đang sửa"), COC("Đã cọc");
 
 		private String ten;
 
@@ -58,7 +59,7 @@ public class Phong {
         this.maPhong = maPhong;
     }
     
-    public Phong(double dienTich, LoaiPhong loaiPhong, String maPhong, Tang maTang, int soNguoiHienTai, String tenPhong, TrangThai trangThai) {
+    public Phong(double dienTich, LoaiPhong loaiPhong, String maPhong, Tang maTang, int soNguoiHienTai, String tenPhong, TrangThai trangThai, String maGiaDetail) {
         this.dienTich = dienTich;
         this.loaiPhong = loaiPhong;
         this.maPhong = maPhong;
@@ -66,6 +67,18 @@ public class Phong {
         this.soNguoiHienTai = soNguoiHienTai;
         this.tenPhong = tenPhong;
         this.trangThai = trangThai;
+        this.maGiaDetail = maGiaDetail;
+    }
+
+    public Phong() {
+    }
+
+    public String getMaGiaDetail() {
+        return maGiaDetail;
+    }
+
+    public void setMaGiaDetail(String maGiaDetail) {
+        this.maGiaDetail = maGiaDetail;
     }
 
     public String getMaPhong() {
@@ -135,6 +148,7 @@ public class Phong {
         sb.append(", loaiPhong=").append(loaiPhong);
         sb.append(", trangThai=").append(trangThai);
         sb.append(", soNguoiHienTai=").append(soNguoiHienTai);
+        sb.append(", maGiaDetail=").append(maGiaDetail);
         sb.append('}');
         return sb.toString();
     }
