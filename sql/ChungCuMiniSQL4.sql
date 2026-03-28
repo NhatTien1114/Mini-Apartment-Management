@@ -1,0 +1,10 @@
+ALTER TABLE dbo.DichVu
+ADD maGiaDetail NVARCHAR(20); 
+GO
+
+ALTER TABLE dbo.DichVu
+ADD CONSTRAINT FK_DichVu_GiaDetail 
+FOREIGN KEY (maGiaDetail) REFERENCES dbo.GiaDetail(maGiaDetail)
+ON UPDATE NO ACTION
+ON DELETE NO ACTION;
+GO
