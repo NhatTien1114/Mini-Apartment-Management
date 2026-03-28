@@ -3,11 +3,13 @@ package dao;
 import database.connectDB;
 import entity.HopDong;
 import entity.Phong;
+import ui.main.HopDongUI;
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
-import ui.main.HopDongUI;
+import java.util.List;
 
 public class HopDongDAO {
     public String maHopDong;
@@ -75,7 +77,6 @@ public class HopDongDAO {
             try (PreparedStatement psHD = con.prepareStatement(sqlHD)) {
                 psHD.setString(1, maHD);
                 psHD.setString(2, draft.phong);
-                // Chuyển dd/MM/yyyy sang yyyy-MM-dd cho SQL
                 psHD.setDate(3, java.sql.Date.valueOf(convertToSqlDate(draft.ngayBatDau)));
                 psHD.setDate(4, java.sql.Date.valueOf(convertToSqlDate(draft.ngayKetThuc)));
                 psHD.setDouble(5, Double.parseDouble(draft.tienCocRaw));
@@ -92,6 +93,9 @@ public class HopDongDAO {
                 psHDKH.executeUpdate();
             }
 
+            // Bước 4: Thay đổi trạng thái phòng
+
+            String sqlPhong = "";
             con.commit(); // Hoàn tất
             return true;
         } catch (Exception e) {
@@ -99,6 +103,31 @@ public class HopDongDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public HopDong getHopDongByMaPhong(String maPhong) {
+        String sql = "SELECT maHopDong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang, trangThai FROM HopDong WHERE maPhong = ?";
+
+        try {
+            Connection con = connectDB.getConnection();
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, maPhong);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) return null;
+                    String maHopDong = rs.getString("maHopDong");
+                    LocalDate ngayBatDau = rs.getObject("ngayBatDau", LocalDate.class);
+                    LocalDate ngayKetThuc = rs.getObject("ngayKetThuc", LocalDate.class);
+                    Double tienCoc = rs.getDouble("tienCoc");
+                    Double tienThang = rs.getDouble("tienThueThang");
+                    int tt = rs.getInt("trangThai");
+
+                    return new HopDong(maHopDong, new Phong(maPhong), ngayBatDau, ngayKetThuc, tienCoc, tienThang, HopDong.TrangThai.fromInt(tt));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("layTheoMa lỗi: " + e.getMessage());
+        }
+        return null;
     }
 
     // Hàm phụ chuyển định dạng ngày

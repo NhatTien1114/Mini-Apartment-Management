@@ -49,7 +49,7 @@ public class QuanLyPhongUI {
     private final PrimaryButton primaryButtonHelper = new PrimaryButton();
     private JPanel floorsPanel;
     private JScrollPane scrollPane;
-    private TangDAO tangDAO;
+    private TangDAO tangDAO = new TangDAO();
 
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout());

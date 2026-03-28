@@ -4,7 +4,7 @@ import java.time.LocalDate;
 
 public class HopDong {
     private String maHopDong;
-    private Phong maPhong;
+    private Phong Phong;
     private LocalDate ngayBatDau;
     private LocalDate ngayKetThuc;
     private double tienCoc;
@@ -42,7 +42,7 @@ public class HopDong {
 
     public HopDong(String maHopDong, Phong maPhong, LocalDate ngayBatDau, LocalDate ngayKetThuc, double tienCoc, double tienThueThang, TrangThai trangThai) {
         this.maHopDong = maHopDong;
-        this.maPhong = maPhong;
+        this.Phong = maPhong;
         this.ngayBatDau = ngayBatDau;
         this.ngayKetThuc = ngayKetThuc;
         this.tienCoc = tienCoc;
@@ -58,12 +58,12 @@ public class HopDong {
         this.maHopDong = maHopDong;
     }
 
-    public Phong getMaPhong() {
-        return maPhong;
+    public Phong getPhong() {
+        return Phong;
     }
 
     public void setMaPhong(Phong maPhong) {
-        this.maPhong = maPhong;
+        this.Phong = maPhong;
     }
 
     public LocalDate getNgayBatDau() {
@@ -111,7 +111,7 @@ public class HopDong {
         StringBuilder sb = new StringBuilder();
         sb.append("HopDong{");
         sb.append("maHopDong=").append(maHopDong);
-        sb.append(", maPhong=").append(maPhong);
+        sb.append(", maPhong=").append(Phong);
         sb.append(", ngayBatDau=").append(ngayBatDau);
         sb.append(", ngayKetThuc=").append(ngayKetThuc);
         sb.append(", tienCoc=").append(tienCoc);

@@ -368,11 +368,12 @@ public class TrangChu extends JFrame {
             btnPhong.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
             btnPhong.setPreferredSize(new Dimension(106, 60));
 
-            btnPhong.addActionListener(e -> new PhongInfo(p.getMaPhong()).showDialog());
-
+            btnPhong.addActionListener(e -> {
+                new PhongInfo(p.getMaPhong()).showDialog();
+                refreshTrangChuTab();
+            });
             pnlTang.add(btnPhong);
         }
-
         return pnlTang;
     }
 

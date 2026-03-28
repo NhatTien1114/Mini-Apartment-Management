@@ -222,6 +222,9 @@ public class LoginUI extends JFrame {
 
         card.add(pnlFooter);
 
+        txtEmail.setText("admin@gmail.com");
+        txtPass.setText("Admin@123");
+
         return card;
     }
 }
