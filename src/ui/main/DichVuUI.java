@@ -24,10 +24,10 @@ public class DichVuUI {
     private final Color MAU_PRIMARY = AppColors.PRIMARY;
     private final Color MAU_RED = AppColors.RED_500;
     private final Color MAU_HOVER_ROW = AppColors.SLATE_50;
-    private final Color MAU_WARN_BG = new Color(254, 243, 199); // Amber 100
-    private final Color MAU_WARN_FG = new Color(180, 83, 9); // Amber 700
-    private final Color MAU_GREEN_BG = new Color(220, 252, 231); // Green 100
-    private final Color MAU_GREEN_FG = new Color(22, 163, 74); // Green 600
+    private final Color MAU_WARN_BG = new Color(254, 243, 199);
+    private final Color MAU_WARN_FG = new Color(180, 83, 9);
+    private final Color MAU_GREEN_BG = new Color(220, 252, 231);
+    private final Color MAU_GREEN_FG = new Color(22, 163, 74);
 
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 22);
     private final Font FONT_BOLD = new Font("Be Vietnam Pro", Font.BOLD, 13);
@@ -180,27 +180,28 @@ public class DichVuUI {
         dsDichVu = dao.layTatCa();
         for (DichVu dv : dsDichVu) {
             tableModel.addRow(new Object[] {
-                    dv.getMaDichVu(), 
-                    dv.getTenDichVu(), 
+                    dv.getMaDichVu(),
+                    dv.getTenDichVu(),
                     dv.getDonVi(),
                     dv.getDonGia(),
                     "ACT"
             });
         }
+        table.revalidate();
+        table.repaint();
     }
 
     private void showDialog(DichVu editDichVu) {
         boolean editing = (editDichVu != null);
         Window owner = SwingUtilities.getWindowAncestor(table);
-        
-        // 1) Define Custom Undecorated Dialog (giống hình vẽ)
+
         JDialog dlg = new JDialog(
                 owner instanceof Frame ? (Frame) owner : null,
                 editing ? "Sửa dịch vụ" : "Thêm dịch vụ", true);
         dlg.setUndecorated(true);
-        dlg.setSize(480, 240); // Rộng rãi cho grid
+        dlg.setSize(480, 240);
         dlg.setLocationRelativeTo(owner);
-        dlg.setBackground(new Color(0, 0, 0, 0)); // Transparent bg for rounded corners
+        dlg.setBackground(new Color(0, 0, 0, 0));
 
         // ROOT PANEL (Rounded)
         ui.util.RoundedPanel root = new ui.util.RoundedPanel(16);
@@ -212,37 +213,47 @@ public class DichVuUI {
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setBackground(MAU_CARD);
         headerRow.setBorder(new EmptyBorder(0, 0, 20, 0));
-        
+
         JLabel dlgTitle = new JLabel(editing ? "Sửa dịch vụ" : "Thêm dịch vụ");
         dlgTitle.setFont(new Font("Inter", Font.BOLD, 18));
         dlgTitle.setForeground(MAU_TEXT);
-        
+
         // Nút tắt nhỏ 'X'
         JLabel btnClose = new JLabel("<html><span style='font-size:16px'>✕</span></html>");
         btnClose.setForeground(MAU_MUTED);
         btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnClose.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) { dlg.dispose(); }
-            public void mouseEntered(MouseEvent e) { btnClose.setForeground(MAU_RED); }
-            public void mouseExited(MouseEvent e) { btnClose.setForeground(MAU_MUTED); }
+            public void mouseClicked(MouseEvent e) {
+                dlg.dispose();
+            }
+
+            public void mouseEntered(MouseEvent e) {
+                btnClose.setForeground(MAU_RED);
+            }
+
+            public void mouseExited(MouseEvent e) {
+                btnClose.setForeground(MAU_MUTED);
+            }
         });
 
         headerRow.add(dlgTitle, BorderLayout.WEST);
         headerRow.add(btnClose, BorderLayout.EAST);
 
         // GRID FIELDS (1 dòng, 2 cột theo ảnh minh hoạ của Tab Dịch Vụ)
-        JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0)); 
+        JPanel grid = new JPanel(new GridLayout(1, 2, 20, 0));
         grid.setBackground(MAU_CARD);
 
         ui.util.RoundedTextField fTen = new ui.util.RoundedTextField(6);
         fTen.setPlaceholder("Nhập tên, Vd: Rác");
         fTen.setPreferredSize(new Dimension(0, 42)); // Ô nhập to bự
-        if (editing) fTen.setText(editDichVu.getTenDichVu());
-        
+        if (editing)
+            fTen.setText(editDichVu.getTenDichVu());
+
         ui.util.RoundedTextField fDonVi = new ui.util.RoundedTextField(6);
         fDonVi.setPlaceholder("Vd: Tháng");
         fDonVi.setPreferredSize(new Dimension(0, 42));
-        if (editing) fDonVi.setText(editDichVu.getDonVi());
+        if (editing)
+            fDonVi.setText(editDichVu.getDonVi());
 
         grid.add(wrapField("Tên dịch vụ", fTen));
         grid.add(wrapField("Đơn vị", fDonVi));
@@ -270,7 +281,7 @@ public class DichVuUI {
         btnSave.addActionListener(e -> {
             String ten = fTen.getText().trim();
             String donvi = fDonVi.getText().trim();
-            
+
             if (ten.isEmpty()) {
                 ValidationPopup.show(fTen, "Tên dịch vụ không được để trống!");
                 return;
@@ -285,8 +296,8 @@ public class DichVuUI {
                 editDichVu.setDonVi(donvi);
                 if (dao.updateDichVu(editDichVu)) {
                     MessageDialog.show(dlg, "Thành Công", "Đã cập nhật dịch vụ.", MessageDialog.MessageType.SUCCESS);
-                    loadTable();
                     dlg.dispose();
+                    loadTable();
                 } else {
                     MessageDialog.show(dlg, "Lỗi", "Lỗi CSDL.", MessageDialog.MessageType.ERROR);
                 }
@@ -295,9 +306,10 @@ public class DichVuUI {
                 newDv.setTenDichVu(ten);
                 newDv.setDonVi(donvi);
                 if (dao.insertDichVu(newDv)) {
-                    MessageDialog.show(dlg, "Thêm Thành Công", "Đã tạo dịch vụ mới.", MessageDialog.MessageType.SUCCESS);
-                    loadTable();
+                    MessageDialog.show(dlg, "Thêm Thành Công", "Đã tạo dịch vụ mới.",
+                            MessageDialog.MessageType.SUCCESS);
                     dlg.dispose();
+                    loadTable();
                 } else {
                     MessageDialog.show(dlg, "Lỗi", "Lỗi CSDL.", MessageDialog.MessageType.ERROR);
                 }
@@ -312,7 +324,8 @@ public class DichVuUI {
         root.add(btnRow, BorderLayout.SOUTH);
 
         // Map Keyboard ESC to close
-        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "ESC_CLOSE");
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                "ESC_CLOSE");
         root.getActionMap().put("ESC_CLOSE", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -322,19 +335,19 @@ public class DichVuUI {
 
         dlg.setContentPane(root);
 
-        // 2) Dark Overlay Logic (Tối màu xung quanh)
         if (owner instanceof JFrame frame) {
             Component oldGlassPane = frame.getGlassPane();
             JPanel overlay = new JPanel() {
                 @Override
                 protected void paintComponent(Graphics g) {
-                    g.setColor(new Color(0, 0, 0, 110)); // Dark overlay (opacity 43%)
+                    g.setColor(new Color(0, 0, 0, 110));
                     g.fillRect(0, 0, getWidth(), getHeight());
                 }
             };
             overlay.setOpaque(false);
             // Block all mouse clicks on overlay
-            overlay.addMouseListener(new MouseAdapter() {});
+            overlay.addMouseListener(new MouseAdapter() {
+            });
             frame.setGlassPane(overlay);
             overlay.setVisible(true);
 
@@ -358,12 +371,12 @@ public class DichVuUI {
             JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 18));
             p.setBackground(sel ? new Color(239, 246, 255) : MAU_CARD);
             p.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
-            
+
             JLabel badge = new JLabel();
             badge.setFont(FONT_SMALL);
             badge.setOpaque(true);
             badge.setBorder(new EmptyBorder(4, 10, 4, 10));
-            
+
             if (v == null) {
                 badge.setText("Chưa cấu hình");
                 badge.setBackground(MAU_WARN_BG);
@@ -409,7 +422,7 @@ public class DichVuUI {
             btnDel.addActionListener(e -> {
                 stopCellEditing();
                 DichVu target = dsDichVu.get(curRow);
-                
+
                 // Show Custom MessageDialog
                 int confirm = JOptionPane.showConfirmDialog(
                         panel.getTopLevelAncestor(),
@@ -417,10 +430,12 @@ public class DichVuUI {
                         "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
                 if (confirm == JOptionPane.YES_OPTION) {
                     if (dao.deleteDichVu(target.getMaDichVu())) {
-                        MessageDialog.show(null, "Đã xóa", "Đã xóa dịch vụ thành công.", MessageDialog.MessageType.SUCCESS);
+                        MessageDialog.show(null, "Đã xóa", "Đã xóa dịch vụ thành công.",
+                                MessageDialog.MessageType.SUCCESS);
                         loadTable();
                     } else {
-                        MessageDialog.show(null, "Báo lỗi", "Không thể xóa do ràng buộc dữ liệu.", MessageDialog.MessageType.ERROR);
+                        MessageDialog.show(null, "Báo lỗi", "Không thể xóa do ràng buộc dữ liệu.",
+                                MessageDialog.MessageType.ERROR);
                     }
                 }
             });
@@ -436,20 +451,9 @@ public class DichVuUI {
         }
 
         @Override
-        public Object getCellEditorValue() { return "ACT"; }
-    }
-
-    private JButton makeOutlineButton(String text) {
-        JButton btn = new JButton(text);
-        btn.setFont(FONT_PLAIN);
-        btn.setForeground(MAU_MUTED);
-        btn.setBackground(MAU_CARD);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(MAU_BORDER, 1, true),
-                new EmptyBorder(7, 16, 7, 16)));
-        btn.setFocusPainted(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return btn;
+        public Object getCellEditorValue() {
+            return "ACT";
+        }
     }
 
     private JButton makeIconButton(String icon, Color fg) {
@@ -469,31 +473,6 @@ public class DichVuUI {
         l.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 15));
         l.setForeground(fg);
         return l;
-    }
-
-    private JTextField makeField(String val) {
-        JTextField f = new JTextField(val);
-        f.setFont(FONT_PLAIN);
-        f.setForeground(MAU_TEXT);
-        f.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(MAU_BORDER, 1, true),
-                new EmptyBorder(7, 11, 7, 11)));
-        f.setPreferredSize(new Dimension(0, 38));
-        f.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                f.setBorder(BorderFactory.createCompoundBorder(
-                        new LineBorder(MAU_PRIMARY, 2, true),
-                        new EmptyBorder(6, 10, 6, 10)));
-            }
-            @Override
-            public void focusLost(FocusEvent e) {
-                f.setBorder(BorderFactory.createCompoundBorder(
-                        new LineBorder(MAU_BORDER, 1, true),
-                        new EmptyBorder(7, 11, 7, 11)));
-            }
-        });
-        return f;
     }
 
     private JPanel wrapField(String label, JComponent field) {

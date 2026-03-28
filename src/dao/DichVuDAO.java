@@ -13,24 +13,24 @@ public class DichVuDAO {
 
     public List<DichVu> layTatCa() {
         String sql = "SELECT d.maDichVu, d.tenDichVu, d.donVi, d.maGiaDetail, gd.donGia " +
-                     "FROM DichVu d " +
-                     "LEFT JOIN GiaDetail gd ON d.maGiaDetail = gd.maGiaDetail " +
-                     "ORDER BY d.tenDichVu";
-                     
+                "FROM DichVu d " +
+                "LEFT JOIN GiaDetail gd ON d.maGiaDetail = gd.maGiaDetail " +
+                "ORDER BY d.tenDichVu";
+
         List<DichVu> ds = new ArrayList<>();
 
         try {
             Connection con = connectDB.getConnection();
             try (PreparedStatement ps = con.prepareStatement(sql);
-                 ResultSet rs = ps.executeQuery()) {
+                    ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    ds.add(new DichVu(
+                    DichVu dv = new DichVu(
                             rs.getString("maDichVu"),
                             rs.getString("tenDichVu"),
                             rs.getString("donVi"),
                             rs.getString("maGiaDetail"),
-                            rs.getObject("donGia") != null ? rs.getDouble("donGia") : null
-                    ));
+                            rs.getObject("donGia") != null ? rs.getDouble("donGia") : null);
+                    ds.add(dv);
                 }
             }
         } catch (SQLException e) {
@@ -43,13 +43,15 @@ public class DichVuDAO {
     public boolean insertDichVu(DichVu dv) {
         String sqlCount = "SELECT COUNT(*) FROM DichVu";
         String sqlInsert = "INSERT INTO DichVu (maDichVu, tenDichVu, donVi) VALUES (?, ?, ?)";
-        
+
         try {
             Connection con = connectDB.getConnection();
+            con.setAutoCommit(true); // Ensure autocommit is enabled
+
             // 1. Phát sinh mã
             int count = 0;
             try (PreparedStatement psCount = con.prepareStatement(sqlCount);
-                 ResultSet rsCount = psCount.executeQuery()) {
+                    ResultSet rsCount = psCount.executeQuery()) {
                 if (rsCount.next()) {
                     count = rsCount.getInt(1);
                 }
