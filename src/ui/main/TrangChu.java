@@ -260,6 +260,17 @@ public class TrangChu extends JFrame {
 
         pnlHeader.add(pnlUser, BorderLayout.WEST);
 
+        JPanel pnlRightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        pnlRightButtons.setBackground(Color.WHITE);
+
+        if ("admin@gmail.com".equalsIgnoreCase(taiKhoan.getEmail())) {
+            JButton btnTaoTaiKhoan = new ui.util.PrimaryButton().makePrimaryButton("Tạo Tài Khoản");
+            btnTaoTaiKhoan.addActionListener(e -> {
+                new SignUpUI().setVisible(true);
+            });
+            pnlRightButtons.add(btnTaoTaiKhoan);
+        }
+
         JButton btnDangXuat = new JButton("Đăng xuất");
         btnDangXuat.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
         btnDangXuat.setBackground(Color.WHITE);
@@ -267,7 +278,9 @@ public class TrangChu extends JFrame {
             new LoginUI().setVisible(true);
             this.dispose();
         });
-        pnlHeader.add(btnDangXuat, BorderLayout.EAST);
+        
+        pnlRightButtons.add(btnDangXuat);
+        pnlHeader.add(pnlRightButtons, BorderLayout.EAST);
 
         return pnlHeader;
     }
