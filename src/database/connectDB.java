@@ -30,6 +30,7 @@ public class connectDB {
 			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
 			connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
 			System.out.println("KẺT NốI SQL SERVER THÀNH CÔNG!");
+			ensureAdminAccount(connection);
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(
 					"Lỗi: Không tìm thấy file thư viện .jar (Driver). Hãy add mssql-jdbc vào Libraries.", e);
@@ -58,6 +59,25 @@ public class connectDB {
 			throw new RuntimeException("Lỗi khi đóng kết nối SQL Server.", e);
 		} finally {
 			connection = null;
+		}
+	}
+
+	private static void ensureAdminAccount(Connection con) {
+		String sqlCheck = "SELECT 1 FROM TaiKhoan WHERE tenDangNhap = 'admin@gmail.com'";
+		try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sqlCheck)) {
+			if (!rs.next()) {
+				// Xoá record cũ (vi du: admin@example.com) để đè account mới vào
+				st.executeUpdate("DELETE FROM TaiKhoan WHERE maTaiKhoan = 'TK00'");
+
+				String sqlInsert = "INSERT INTO TaiKhoan (maTaiKhoan, tenDangNhap, matKhau, hoTen, soDienThoai, ngaySinh, diaChi, role) VALUES ('TK00', 'admin@gmail.com', 'admin123', 'Administrator', '0123456789', '2000-01-01', 'Admin System', 0)";
+				st.executeUpdate(sqlInsert);
+				System.out.println("Đã tự động khởi tạo tài khoản admin@gmail.com với vai trò Chủ.");
+			} else {
+				String sqlUpdate = "UPDATE TaiKhoan SET soDienThoai = '0123456789', ngaySinh = '2000-01-01', diaChi = 'Admin System' WHERE tenDangNhap = 'admin@gmail.com' AND soDienThoai IS NULL";
+				st.executeUpdate(sqlUpdate);
+			}
+		} catch (SQLException e) {
+			System.out.println("Lỗi lúc tạo admin account: " + e.getMessage());
 		}
 	}
 

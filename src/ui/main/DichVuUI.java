@@ -249,14 +249,17 @@ public class DichVuUI {
         if (editing)
             fTen.setText(editDichVu.getTenDichVu());
 
-        ui.util.RoundedTextField fDonVi = new ui.util.RoundedTextField(6);
-        fDonVi.setPlaceholder("Vd: Tháng");
-        fDonVi.setPreferredSize(new Dimension(0, 42));
-        if (editing)
-            fDonVi.setText(editDichVu.getDonVi());
+        JComboBox<String> cmbDonVi = new JComboBox<>(new String[]{"Tháng", "Số"});
+        cmbDonVi.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        cmbDonVi.setBackground(Color.WHITE);
+        cmbDonVi.setPreferredSize(new Dimension(0, 42));
+        if (editing) {
+            String dv = editDichVu.getDonVi();
+            if (dv != null) cmbDonVi.setSelectedItem(dv);
+        }
 
         grid.add(wrapField("Tên dịch vụ", fTen));
-        grid.add(wrapField("Đơn vị", fDonVi));
+        grid.add(wrapField("Đơn vị", cmbDonVi));
 
         // BUTTONS BOTTOM
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -280,14 +283,10 @@ public class DichVuUI {
         btnSave.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSave.addActionListener(e -> {
             String ten = fTen.getText().trim();
-            String donvi = fDonVi.getText().trim();
+            String donvi = cmbDonVi.getSelectedItem() != null ? cmbDonVi.getSelectedItem().toString().trim() : "";
 
             if (ten.isEmpty()) {
                 ValidationPopup.show(fTen, "Tên dịch vụ không được để trống!");
-                return;
-            }
-            if (donvi.isEmpty()) {
-                ValidationPopup.show(fDonVi, "Vui lòng nhập đơn vị tính!");
                 return;
             }
 
