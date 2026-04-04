@@ -91,7 +91,7 @@ public class LoginUI extends JFrame {
         pnlForm.add(Box.createRigidArea(new Dimension(0, 8))); // space-y-2 (8px)
 
         RoundedTextField txtEmail = new RoundedTextField(6); // rounded-md (6px)
-        txtEmail.setPlaceholder("admin@example.com");
+        txtEmail.setPlaceholder("admin@gmail.com");
         txtEmail.setMaximumSize(inputSize);
         txtEmail.setPreferredSize(inputSize);
         txtEmail.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -186,43 +186,8 @@ public class LoginUI extends JFrame {
         pnlForm.add(btnLogin);
 
         card.add(pnlForm);
+        
 
-        card.add(Box.createVerticalGlue()); // Push link to bottom
-
-        // Link Sign up
-        JLabel lblSignUp = new JLabel("Chưa có tài khoản? Đăng ký");
-        lblSignUp.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14)); // text-sm
-        lblSignUp.setForeground(AppColors.PRIMARY);
-        lblSignUp.setAlignmentX(Component.CENTER_ALIGNMENT);
-        lblSignUp.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        lblSignUp.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                new SignUpUI().setVisible(true);
-                dispose();
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                lblSignUp.setText("<html><u>Chưa có tài khoản? Đăng ký</u></html>");
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                lblSignUp.setText("Chưa có tài khoản? Đăng ký");
-            }
-        });
-
-        // mt-6 (24px) handled by glue and preferred layout spacing, but we can set
-        // explicit rigid
-        JPanel pnlFooter = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        pnlFooter.setBackground(AppColors.WHITE);
-        pnlFooter.setBorder(new EmptyBorder(24, 0, 0, 0)); // mt-6
-        pnlFooter.add(lblSignUp);
-
-        card.add(pnlFooter);
-        txtEmail.setText("quan12344@gmail.com");
-        txtPass.setText("0150102003Az@");
         return card;
     }
 }
