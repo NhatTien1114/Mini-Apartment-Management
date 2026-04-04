@@ -1,9 +1,13 @@
 package ui.main;
 
+import dao.ChiSoDienNuocDAO;
+import dao.DichVuDAO;
 import dao.GiaDetailDAO;
 import dao.GiaHeaderDAO;
 import dao.QuanLyPhongDAO;
 import dao.TangDAO;
+import entity.ChiSoDienNuoc;
+import entity.DichVu;
 import entity.GiaDetail;
 import entity.GiaHeader;
 import entity.Phong;
@@ -13,6 +17,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -33,23 +38,16 @@ public class QuanLyPhongUI {
 
     private GiaHeaderDAO giaHeaderDAO = new GiaHeaderDAO();
     private GiaDetailDAO giaDetailDAO = new GiaDetailDAO();
+    private DichVuDAO dichVuDAO = new DichVuDAO();
+    private ChiSoDienNuocDAO chiSoDAO = new ChiSoDienNuocDAO();
     private Tang tang = new Tang();
-
-    private static final String[] DICH_VU_LIST = {
-            "Điện - 3,500đ/kWh",
-            "Nước - 15,000đ/m³",
-            "Internet - 100,000đ/tháng",
-            "Rác - 50,000đ/tháng",
-            "Giữ xe máy - 100,000đ/tháng",
-            "Giữ ô tô - 500,000đ/tháng"
-    };
 
     private final QuanLyPhongDAO dao = new QuanLyPhongDAO();
     private final PrimaryButton primaryButtonHelper = new PrimaryButton();
     private JPanel floorsPanel;
     private JScrollPane scrollPane;
     private TangDAO tangDAO = new TangDAO();
-    // ── Callback để bên ngoài (TrangChu) gọi refresh ──
+
     private Runnable onStatusChanged;
 
     public void setOnStatusChanged(Runnable callback) {
@@ -163,7 +161,7 @@ public class QuanLyPhongUI {
     private void showAddDialog() {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
         JDialog dlg = new JDialog(owner, "Thêm phòng mới", Dialog.ModalityType.APPLICATION_MODAL);
-        dlg.setSize(480, 660);
+        dlg.setSize(480, 700);
         dlg.setLocationRelativeTo(owner);
         dlg.setResizable(false);
 
@@ -196,36 +194,39 @@ public class QuanLyPhongUI {
         txtGia.setMaximumSize(new Dimension(420, 40));
         txtGia.setPlaceholder("Tự động điền theo loại phòng");
 
-        // FIX: flag để biết user đã sửa tay hay chưa
         boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                userEdited[0] = true;
-            }
-
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                userEdited[0] = true;
-            }
-
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-            }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
         });
 
-        // fill lần đầu (chưa có user edit nào)
         fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
 
-        // FIX: chỉ auto-fill khi user chủ động đổi loại, reset flag sau khi fill
         cLoai.addActionListener(e -> {
             userEdited[0] = false;
             fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
-            userEdited[0] = false; // fillGia setText sẽ kích listener, reset lại
+            userEdited[0] = false;
         });
 
         JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đã thuê", "Đang sửa" });
 
-        JCheckBox[] checks = new JCheckBox[DICH_VU_LIST.length];
-        for (int i = 0; i < DICH_VU_LIST.length; i++) {
-            checks[i] = new JCheckBox(DICH_VU_LIST[i], false);
+        // ── Label tiêu đề dịch vụ ──
+        JLabel lblDv = new JLabel("Dịch vụ sử dụng");
+        lblDv.setFont(FONT_SMALL);
+        lblDv.setForeground(AppColors.SLATE_500);
+
+        // ── Điện + Nước: tick sẵn, disabled, giá từ DB ──
+        JCheckBox cbDien = makeDichVuMacDinhCheckBox("điện");
+        JCheckBox cbNuoc = makeDichVuMacDinhCheckBox("nước");
+
+        // ── Dịch vụ tùy chọn (đã bỏ Điện/Nước) ──
+        List<DichVu> dvTuyChon = layDichVuTuyChon();
+        JCheckBox[] checks = new JCheckBox[dvTuyChon.size()];
+        for (int i = 0; i < dvTuyChon.size(); i++) {
+            DichVu dv = dvTuyChon.get(i);
+            checks[i] = new JCheckBox(formatDichVuLabel(dv), false);
+            checks[i].putClientProperty("maDichVu", dv.getMaDichVu());
             checks[i].setFont(FONT_PLAIN);
             checks[i].setForeground(AppColors.SLATE_900);
             checks[i].setOpaque(false);
@@ -240,12 +241,10 @@ public class QuanLyPhongUI {
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Trạng thái", cTT));
         form.add(Box.createVerticalStrut(12));
-
-        JLabel lblDv = new JLabel("Dịch vụ sử dụng");
-        lblDv.setFont(FONT_SMALL);
-        lblDv.setForeground(AppColors.SLATE_500);
         form.add(lblDv);
         form.add(Box.createVerticalStrut(6));
+        form.add(cbDien);
+        form.add(cbNuoc);
         for (JCheckBox cb : checks)
             form.add(cb);
 
@@ -255,15 +254,11 @@ public class QuanLyPhongUI {
         btnSave.addActionListener(e -> {
             String ma = txtMa.getText().trim().toUpperCase();
 
-            // 1. Kiểm tra định dạng
             if (!dao.isValidFormat(ma)) {
                 errMa.setText("Sai định dạng, nhập dạng P1.01");
                 errMa.setVisible(true);
-                // shakeFocus(txtMa); // Nếu ông có hàm này thì giữ, không thì xóa
                 return;
             }
-
-            // 2. Kiểm tra tồn tại
             if (dao.tonTai(ma)) {
                 errMa.setText("Phòng \"" + ma + "\" đã tồn tại");
                 errMa.setVisible(true);
@@ -271,39 +266,24 @@ public class QuanLyPhongUI {
             }
             errMa.setVisible(false);
 
-            // 3. Logic lấy maGiaDetail tương ứng với Loại phòng đang chọn
             Phong.LoaiPhong loaiChon = (Phong.LoaiPhong) cLoai.getSelectedItem();
             String maGiaDetail = timMaGiaDetailPhuHop(loaiChon.ordinal());
-
             if (maGiaDetail == null) {
                 JOptionPane.showMessageDialog(dlg,
-                        "Chưa có bảng giá cho " + loaiChon.getTen() + ". Vui lòng kiểm tra lại thiết lập giá!", "Lỗi",
-                        JOptionPane.WARNING_MESSAGE);
+                        "Chưa có bảng giá cho " + loaiChon.getTen() + ". Vui lòng kiểm tra lại thiết lập giá!",
+                        "Lỗi", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // 4. Xác định mã tầng ngầm (P2.01 -> T2)
             String maTang = "T" + ma.substring(1, ma.indexOf('.'));
-
-            // 5. Lấy danh sách dịch vụ
-            List<String> dvChon = new ArrayList<>();
-            for (JCheckBox cb : checks) {
-                if (cb.isSelected())
-                    dvChon.add(cb.getText().split(" - ")[0]);
-            }
-
-            // 6. Gọi hàm thêm với đầy đủ tham số mới
-            // Thứ tự: maPhong, maTang, loaiPhong(int), maGiaDetail, trangThai(int), dichVu
-            int trangThaiInt = cTT.getSelectedIndex(); // Lấy index enum hoặc dùng hàm toTrangThai của ông
-
+            int trangThaiInt = cTT.getSelectedIndex();
             String err = dao.them(ma, maTang, loaiChon.ordinal(), maGiaDetail, trangThaiInt);
-
             if (err != null) {
                 JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            rebuildFloors(); // Load lại giao diện
+            rebuildFloors();
             dlg.dispose();
         });
 
@@ -322,7 +302,7 @@ public class QuanLyPhongUI {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
         JDialog dlg = new JDialog(owner, "Cài đặt phòng " + phong.getMaPhong(),
                 Dialog.ModalityType.APPLICATION_MODAL);
-        dlg.setSize(420, 560);
+        dlg.setSize(440, 600);
         dlg.setLocationRelativeTo(owner);
         dlg.setResizable(false);
 
@@ -340,73 +320,183 @@ public class QuanLyPhongUI {
         form.setBackground(AppColors.WHITE);
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
 
-        // FIX: loaiPhong lấy đúng từ entity (đã được load từ DB)
+        // ── Loại phòng ──
         LoaiPhong currentLoai = phong.getLoaiPhong();
         JComboBox<LoaiPhong> cLoai = new JComboBox<>(LoaiPhong.values());
         cLoai.setFont(FONT_PLAIN);
         cLoai.setBackground(AppColors.WHITE);
         cLoai.setForeground(AppColors.SLATE_900);
         cLoai.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        // FIX: setSelectedItem đúng loại phòng hiện tại (không còn null nữa)
-        if (currentLoai != null)
-            cLoai.setSelectedItem(currentLoai);
+        if (currentLoai != null) cLoai.setSelectedItem(currentLoai);
 
+        // ── Giá thuê ──
         RoundedTextField txtGia = new RoundedTextField(6);
         txtGia.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-
-        //
         boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                userEdited[0] = true;
-            }
-
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                userEdited[0] = true;
-            }
-
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-            }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
         });
-
-        // fill lần đầu theo loại phòng hiện tại
         fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
-
-        // FIX: chỉ auto-fill khi user chủ động đổi loại
         cLoai.addActionListener(e -> {
             userEdited[0] = false;
             fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
             userEdited[0] = false;
         });
 
+        // ── Trạng thái ──
         JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đã thuê", "Đang sửa" });
         cTT.setSelectedItem(phong.getTrangThai().getTen());
 
-        JCheckBox[] checks = new JCheckBox[DICH_VU_LIST.length];
-        for (int i = 0; i < DICH_VU_LIST.length; i++) {
-            checks[i] = new JCheckBox(DICH_VU_LIST[i], false);
+        // ── Panel dịch vụ tùy chọn (ẩn/hiện theo trạng thái) ──
+        JLabel lblDv = new JLabel("Dịch vụ sử dụng");
+        lblDv.setFont(FONT_SMALL);
+        lblDv.setForeground(AppColors.SLATE_500);
+        lblDv.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Điện + Nước: tick sẵn, disabled
+        JCheckBox cbDien = makeDichVuMacDinhCheckBox("điện");
+        JCheckBox cbNuoc = makeDichVuMacDinhCheckBox("nước");
+
+        List<DichVu> dvTuyChon = layDichVuTuyChon();
+        JCheckBox[] checks = new JCheckBox[dvTuyChon.size()];
+        for (int i = 0; i < dvTuyChon.size(); i++) {
+            DichVu dv = dvTuyChon.get(i);
+            checks[i] = new JCheckBox(formatDichVuLabel(dv), false);
+            checks[i].putClientProperty("maDichVu", dv.getMaDichVu());
             checks[i].setFont(FONT_PLAIN);
             checks[i].setForeground(AppColors.SLATE_900);
             checks[i].setOpaque(false);
         }
 
+        JPanel pnlDichVu = new JPanel();
+        pnlDichVu.setBackground(AppColors.WHITE);
+        pnlDichVu.setLayout(new BoxLayout(pnlDichVu, BoxLayout.Y_AXIS));
+        pnlDichVu.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pnlDichVu.add(lblDv);
+        pnlDichVu.add(Box.createVerticalStrut(6));
+        pnlDichVu.add(cbDien);
+        pnlDichVu.add(cbNuoc);
+        for (JCheckBox cb : checks) pnlDichVu.add(cb);
+
+        // ── Panel chỉ số điện/nước (chỉ hiện khi "Đã thuê") ──
+        LocalDate now = LocalDate.now();
+        int[] chiSoCu = chiSoDAO.layChiSoThangTruoc(phong.getMaPhong(), now.getMonthValue(), now.getYear());
+
+        JPanel pnlChiSo = new JPanel();
+        pnlChiSo.setBackground(AppColors.WHITE);
+        pnlChiSo.setLayout(new BoxLayout(pnlChiSo, BoxLayout.Y_AXIS));
+        pnlChiSo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel lblChiSo = new JLabel("Chỉ số điện - nước tháng " + now.getMonthValue() + "/" + now.getYear());
+        lblChiSo.setFont(FONT_SMALL);
+        lblChiSo.setForeground(AppColors.SLATE_500);
+        lblChiSo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel rowDien = new JPanel(new GridLayout(1, 2, 10, 0));
+        rowDien.setBackground(AppColors.WHITE);
+        rowDien.setAlignmentX(Component.LEFT_ALIGNMENT);
+        rowDien.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+
+        RoundedTextField txtDienCu = new RoundedTextField(6);
+        txtDienCu.setText(String.valueOf(chiSoCu[0]));
+        txtDienCu.setEditable(false);
+        txtDienCu.setBackground(AppColors.SLATE_100);
+
+        RoundedTextField txtDienMoi = new RoundedTextField(6);
+        txtDienMoi.setPlaceholder("Nhập số mới");
+
+        rowDien.add(wrapField("Số điện cũ (kWh)", txtDienCu));
+        rowDien.add(wrapField("Số điện mới (kWh)", txtDienMoi));
+
+        JPanel rowNuoc = new JPanel(new GridLayout(1, 2, 10, 0));
+        rowNuoc.setBackground(AppColors.WHITE);
+        rowNuoc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        rowNuoc.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+
+        RoundedTextField txtNuocCu = new RoundedTextField(6);
+        txtNuocCu.setText(String.valueOf(chiSoCu[1]));
+        txtNuocCu.setEditable(false);
+        txtNuocCu.setBackground(AppColors.SLATE_100);
+
+        RoundedTextField txtNuocMoi = new RoundedTextField(6);
+        txtNuocMoi.setPlaceholder("Nhập số mới");
+
+        rowNuoc.add(wrapField("Số nước cũ (m³)", txtNuocCu));
+        rowNuoc.add(wrapField("Số nước mới (m³)", txtNuocMoi));
+
+        pnlChiSo.add(lblChiSo);
+        pnlChiSo.add(Box.createVerticalStrut(8));
+        pnlChiSo.add(rowDien);
+        pnlChiSo.add(Box.createVerticalStrut(8));
+        pnlChiSo.add(rowNuoc);
+
+        // ── Panel dịch vụ đang sử dụng — hiện bên dưới chỉ số khi "Đã thuê" ──
+        JPanel pnlDvDaChon = new JPanel();
+        pnlDvDaChon.setBackground(AppColors.WHITE);
+        pnlDvDaChon.setLayout(new BoxLayout(pnlDvDaChon, BoxLayout.Y_AXIS));
+        pnlDvDaChon.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel lblDvDaChon = new JLabel("Dịch vụ đang sử dụng");
+        lblDvDaChon.setFont(FONT_SMALL);
+        lblDvDaChon.setForeground(AppColors.SLATE_500);
+        lblDvDaChon.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        pnlDvDaChon.add(lblDvDaChon);
+        pnlDvDaChon.add(Box.createVerticalStrut(6));
+        // Điện + Nước luôn hiện
+        pnlDvDaChon.add(makeDvInfoLabel(layLabelDichVuMacDinh("điện")));
+        pnlDvDaChon.add(makeDvInfoLabel(layLabelDichVuMacDinh("nước")));
+
+        // Dịch vụ tùy chọn: tạo label tương ứng với từng checkbox trong checks,
+        // visible = trạng thái checked của checkbox đó, sync real-time
+        JLabel[] dvDaChonLabels = new JLabel[dvTuyChon.size()];
+        for (int i = 0; i < dvTuyChon.size(); i++) {
+            dvDaChonLabels[i] = makeDvInfoLabel(formatDichVuLabel(dvTuyChon.get(i)));
+            dvDaChonLabels[i].setVisible(checks[i].isSelected());
+            pnlDvDaChon.add(dvDaChonLabels[i]);
+        }
+        for (int i = 0; i < checks.length; i++) {
+            final int idx = i;
+            checks[i].addItemListener(ev ->
+                    dvDaChonLabels[idx].setVisible(checks[idx].isSelected())
+            );
+        }
+
+        // ── Thêm tất cả vào form ──
         form.add(wrapField("Loại phòng", cLoai));
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Giá thuê (VNĐ/tháng)", txtGia));
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Trạng thái", cTT));
         form.add(Box.createVerticalStrut(12));
+        form.add(pnlDichVu);
+        form.add(Box.createVerticalStrut(12));
+        form.add(pnlChiSo);
+        form.add(Box.createVerticalStrut(12));
+        form.add(pnlDvDaChon);
 
-        JLabel lblDv = new JLabel("Dịch vụ sử dụng");
-        lblDv.setFont(FONT_SMALL);
-        lblDv.setForeground(AppColors.SLATE_500);
-        form.add(lblDv);
-        form.add(Box.createVerticalStrut(6));
-        for (JCheckBox cb : checks)
-            form.add(cb);
+        // ── Ẩn/hiện theo trạng thái hiện tại ──
+        boolean isDaThue = "Đã thuê".equals(phong.getTrangThai().getTen());
+        pnlDichVu.setVisible(!isDaThue);
+        pnlChiSo.setVisible(isDaThue);
+        pnlDvDaChon.setVisible(isDaThue);
+        dlg.setSize(440, isDaThue ? 660 : 580);
+
+        // ── Listener khi đổi trạng thái ──
+        cTT.addActionListener(e -> {
+            boolean isThue = "Đã thuê".equals(cTT.getSelectedItem());
+            pnlDichVu.setVisible(!isThue);
+            pnlChiSo.setVisible(isThue);
+            pnlDvDaChon.setVisible(isThue);
+            dlg.setSize(440, isThue ? 660 : 580);
+            dlg.revalidate();
+        });
 
         root.add(form, BorderLayout.CENTER);
 
+        // ── Nút Lưu ──
         JButton btnSave = primaryButtonHelper.makePrimaryButton("Lưu thay đổi");
         btnSave.addActionListener(e -> {
             String giaStr = txtGia.getText().trim().replaceAll("[,. ]", "");
@@ -419,18 +509,62 @@ public class QuanLyPhongUI {
                 return;
             }
 
-            List<String> dvChon = new ArrayList<>();
-            for (JCheckBox cb : checks)
-                if (cb.isSelected())
-                    dvChon.add(cb.getText().split(" - ")[0]);
+            String trangThaiChon = (String) cTT.getSelectedItem();
 
-            // FIX: dùng overload mới để lưu cả loaiPhong vào DB
+            // Nếu đang là "Đã thuê" → lưu chỉ số điện/nước
+            if ("Đã thuê".equals(trangThaiChon)) {
+                int dienMoi, nuocMoi;
+                try {
+                    dienMoi = Integer.parseInt(txtDienMoi.getText().trim());
+                    nuocMoi = Integer.parseInt(txtNuocMoi.getText().trim());
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(dlg,
+                            "Số điện / số nước mới phải là số nguyên!", "Lỗi",
+                            JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (dienMoi < chiSoCu[0]) {
+                    JOptionPane.showMessageDialog(dlg,
+                            "Số điện mới không thể nhỏ hơn số điện cũ (" + chiSoCu[0] + ")!", "Lỗi",
+                            JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (nuocMoi < chiSoCu[1]) {
+                    JOptionPane.showMessageDialog(dlg,
+                            "Số nước mới không thể nhỏ hơn số nước cũ (" + chiSoCu[1] + ")!", "Lỗi",
+                            JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                ChiSoDienNuoc cs = new ChiSoDienNuoc(
+                        phong.getMaPhong(),
+                        now.getMonthValue(),
+                        now.getYear(),
+                        dienMoi,
+                        nuocMoi
+                );
+                String errCs = chiSoDAO.luuHoacCapNhat(cs);
+                if (errCs != null) {
+                    JOptionPane.showMessageDialog(dlg, errCs, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+
+            // Lấy danh sách dịch vụ tùy chọn (chỉ khi không phải "Đã thuê")
+            List<String> dvChon = new ArrayList<>();
+            if (!"Đã thuê".equals(trangThaiChon)) {
+                for (JCheckBox cb : checks)
+                    if (cb.isSelected())
+                        dvChon.add(cb.getText().split(" - ")[0]);
+            }
+
             LoaiPhong loaiChon = (LoaiPhong) cLoai.getSelectedItem();
-            String err = dao.capNhat(phong.getMaPhong(), loaiChon, gia, (String) cTT.getSelectedItem(), dvChon);
+            String err = dao.capNhat(phong.getMaPhong(), loaiChon, gia, trangThaiChon, dvChon);
             if (err != null) {
                 JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+
             rebuildFloors();
             dlg.dispose();
         });
@@ -448,16 +582,62 @@ public class QuanLyPhongUI {
     // ── PRIVATE HELPERS ──────────────────────────────────────────────────────
 
     /**
-     * FIX: dùng SwingUtilities.invokeLater + flag để tránh vòng lặp
-     * DocumentListener → setText → DocumentListener
+     * Tạo checkbox Điện hoặc Nước: tick sẵn, disabled, giá lấy từ bảng giá DB active.
      */
+    private JCheckBox makeDichVuMacDinhCheckBox(String keyword) {
+        JCheckBox cb = new JCheckBox(layLabelDichVuMacDinh(keyword), true);
+        cb.setFont(FONT_PLAIN);
+        cb.setForeground(AppColors.SLATE_900);
+        cb.setOpaque(false);
+        cb.setEnabled(false);
+        cb.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return cb;
+    }
+
+    /**
+     * Lấy label "Điện - 1,500đ/kWh" hoặc "Nước - 3,000đ/m³" từ bảng giá active.
+     */
+    private String layLabelDichVuMacDinh(String keyword) {
+        List<GiaHeader> headers = giaHeaderDAO.layTheoLoai(1);
+        GiaHeader activeHeader = headers.stream()
+                .filter(h -> h.getTrangThai() == 1)
+                .findFirst().orElse(null);
+
+        if (activeHeader != null) {
+            List<GiaDetail> details = giaDetailDAO.layTheoHeader(activeHeader.getMaGiaHeader());
+            List<DichVu> tatCa = dichVuDAO.layTatCa();
+            for (GiaDetail d : details) {
+                if (d.getMaDichVu() == null) continue;
+                for (DichVu dv : tatCa) {
+                    if (dv.getMaDichVu().equals(d.getMaDichVu())) {
+                        String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
+                        if (ten.contains(keyword)) {
+                            dv.setDonGia(d.getDonGia());
+                            return formatDichVuLabel(dv);
+                        }
+                    }
+                }
+            }
+        }
+        // Fallback nếu chưa có bảng giá
+        return keyword.equals("điện") ? "Điện" : "Nước";
+    }
+
+    /** Label "• text" hiển thị dịch vụ đang dùng (read-only) */
+    private JLabel makeDvInfoLabel(String text) {
+        JLabel lbl = new JLabel("• " + text);
+        lbl.setFont(FONT_PLAIN);
+        lbl.setForeground(AppColors.SLATE_900);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return lbl;
+    }
+
     private void fillGia(RoundedTextField txtGia, LoaiPhong loaiPhong) {
         if (loaiPhong == null) {
             txtGia.setText("");
             return;
         }
         long gia = dao.layGiaThueMoiNhat(loaiPhong);
-        // Dùng invokeLater để setText không bị trigger DocumentListener chồng chéo
         SwingUtilities.invokeLater(() -> {
             if (gia > 0) {
                 txtGia.setText(String.valueOf(gia));
@@ -513,19 +693,16 @@ public class QuanLyPhongUI {
             java.net.URL url = getClass().getResource("/bin.png");
             if (url == null) {
                 java.io.File f = new java.io.File("bin.png");
-                if (f.exists())
-                    url = f.toURI().toURL();
+                if (f.exists()) url = f.toURI().toURL();
             }
             if (url != null) {
                 Image img = new ImageIcon(url).getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
                 icon = new ImageIcon(img);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
 
         JButton btn = icon != null ? new JButton(icon) : new JButton("🗑");
-        if (icon == null)
-            btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+        if (icon == null) btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
         btn.setOpaque(true);
         btn.setBackground(AppColors.RED_500);
         btn.setForeground(AppColors.WHITE);
@@ -536,15 +713,8 @@ public class QuanLyPhongUI {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(36, 30));
         btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btn.setBackground(AppColors.RED);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setBackground(AppColors.RED_500);
-            }
+            @Override public void mouseEntered(MouseEvent e) { btn.setBackground(AppColors.RED); }
+            @Override public void mouseExited(MouseEvent e) { btn.setBackground(AppColors.RED_500); }
         });
         return btn;
     }
@@ -599,39 +769,74 @@ public class QuanLyPhongUI {
     }
 
     private String timMaGiaDetailPhuHop(int loaiPhongEnum) {
-        // 1. Tìm bảng giá Phòng đang Active (loai = 0)
         List<GiaHeader> headers = giaHeaderDAO.layTheoLoai(0);
         GiaHeader activeHeader = headers.stream()
-                .filter(h -> h.getTrangThai() == 1) // 1 là đang áp dụng
+                .filter(h -> h.getTrangThai() == 1)
                 .findFirst().orElse(null);
-
         if (activeHeader != null) {
-            // 2. Tìm dòng chi tiết có loaiPhong khớp với ComboBox
             List<GiaDetail> details = giaDetailDAO.layTheoHeader(activeHeader.getMaGiaHeader());
             for (GiaDetail d : details) {
                 if (d.getLoaiPhong() != null && d.getLoaiPhong() == loaiPhongEnum) {
-                    return d.getMaGiaDetail(); // Trả về ID (VD: GD001)
+                    return d.getMaGiaDetail();
                 }
             }
         }
         return null;
     }
 
-    private void rebuildFloors() {
-        if (floorsPanel == null)
-            return;
+    /**
+     * Load dịch vụ tùy chọn từ bảng giá dịch vụ đang active (loai=1, trangThai=1).
+     * Loại bỏ Điện (DV02) và Nước (DV01) vì đó là mặc định bắt buộc.
+     */
+    private List<DichVu> layDichVuTuyChon() {
+        List<DichVu> result = new ArrayList<>();
+        List<GiaHeader> headers = giaHeaderDAO.layTheoLoai(1); // loai=1: DichVu
+        GiaHeader activeHeader = headers.stream()
+                .filter(h -> h.getTrangThai() == 1)
+                .findFirst().orElse(null);
+        if (activeHeader == null) return result;
 
+        List<GiaDetail> details = giaDetailDAO.layTheoHeader(activeHeader.getMaGiaHeader());
+        List<DichVu> tatCaDichVu = dichVuDAO.layTatCa();
+
+        for (GiaDetail d : details) {
+            if (d.getMaDichVu() == null) continue;
+            for (DichVu dv : tatCaDichVu) {
+                if (dv.getMaDichVu().equals(d.getMaDichVu())) {
+                    String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
+                    if (ten.contains("điện") || ten.contains("nước")) break;
+                    dv.setDonGia(d.getDonGia());
+                    result.add(dv);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Format label hiển thị cho checkbox dịch vụ:
+     * VD: "Internet - 100,000đ/tháng"
+     */
+    private String formatDichVuLabel(DichVu dv) {
+        String ten = dv.getTenDichVu() != null ? dv.getTenDichVu() : "";
+        String donVi = dv.getDonVi() != null ? dv.getDonVi() : "tháng";
+        if (dv.getDonGia() != null && dv.getDonGia() > 0) {
+            long gia = dv.getDonGia().longValue();
+            return ten + " - " + NF.format(gia) + "đ/" + donVi;
+        }
+        return ten;
+    }
+
+    private void rebuildFloors() {
+        if (floorsPanel == null) return;
         floorsPanel.removeAll();
         List<Tang> dsTang = tangDAO.layDanhSachTang();
-
         dsTang.sort((t1, t2) -> t2.getMaTang().compareTo(t1.getMaTang()));
-
         for (Tang tang : dsTang) {
             List<entity.Phong> dsPhong = dao.layTheoTang(tang.getMaTang());
-
             if (!dsPhong.isEmpty()) {
                 floorsPanel.add(createFloorSection(tang.getTenTang(), dsPhong));
-
                 floorsPanel.add(Box.createVerticalStrut(20));
             }
         }
