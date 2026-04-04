@@ -49,6 +49,16 @@ public class QuanLyPhongUI {
     private JPanel floorsPanel;
     private JScrollPane scrollPane;
     private TangDAO tangDAO = new TangDAO();
+    // ── Callback để bên ngoài (TrangChu) gọi refresh ──
+    private Runnable onStatusChanged;
+
+    public void setOnStatusChanged(Runnable callback) {
+        this.onStatusChanged = callback;
+    }
+
+    public void refresh() {
+        rebuildFloors();
+    }
 
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout());
@@ -273,7 +283,7 @@ public class QuanLyPhongUI {
             }
 
             // 4. Xác định mã tầng ngầm (P2.01 -> T2)
-            String maTang = "T" + ma.charAt(1);
+            String maTang = "T" + ma.substring(1, ma.indexOf('.'));
 
             // 5. Lấy danh sách dịch vụ
             List<String> dvChon = new ArrayList<>();
@@ -344,7 +354,7 @@ public class QuanLyPhongUI {
         RoundedTextField txtGia = new RoundedTextField(6);
         txtGia.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        // FIX: flag chống ghi đè khi user đang sửa tay
+        //
         boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
@@ -382,7 +392,7 @@ public class QuanLyPhongUI {
 
         form.add(wrapField("Loại phòng", cLoai));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Giá thuê (VNĐ/tháng) — có thể sửa tay", txtGia));
+        form.add(wrapField("Giá thuê (VNĐ/tháng)", txtGia));
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Trạng thái", cTT));
         form.add(Box.createVerticalStrut(12));
@@ -453,7 +463,7 @@ public class QuanLyPhongUI {
                 txtGia.setText(String.valueOf(gia));
             } else {
                 txtGia.setText("");
-                txtGia.setPlaceholder("Chưa có giá trong hệ thống, nhập tay");
+                txtGia.setPlaceholder("Chưa có giá trong hệ thống ");
             }
         });
     }

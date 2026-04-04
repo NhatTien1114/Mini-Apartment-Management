@@ -449,9 +449,8 @@ public class HopDongUI {
 
         ActionListener roomListener = e -> {
             String selected = (String) cboPhong.getSelectedItem();
-            txtThue.setText(selected.substring(8, 15));
-
-            txtCoc.setText(selected.substring(8, 15));
+            txtThue.setText(extractRoomPriceRaw(selected));
+            txtCoc.setText(extractRoomPriceRaw(selected));
 
         };
         cboPhong.addActionListener(roomListener);

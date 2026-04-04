@@ -13,7 +13,8 @@ import java.util.regex.Pattern;
 
 public class QuanLyPhongDAO {
 
-    private static final Pattern ROOM_PATTERN = Pattern.compile("^P[1-6]\\.(0[1-9]|[1-9]\\d)$");
+    private static final Pattern ROOM_PATTERN =
+            Pattern.compile("^P([1-9]\\d*)\\.(0[1-9]|[1-9]\\d)$");
 
     private final Map<String, List<String>> serviceCache = new HashMap<>();
     private static final List<String> DEFAULT_SERVICES = List.of("Điện", "Nước", "Internet", "Rác");
@@ -126,20 +127,46 @@ public class QuanLyPhongDAO {
     public String them(String maPhong, String maTang, int loaiPhong, String maGiaDetail, int trangThai) {
         String sql = "INSERT INTO Phong (maPhong, maTang, tenPhong, loaiPhong, maGiaDetail, trangThaiPhong, soNguoiHienTai) "
                 + "VALUES (?, ?, ?, ?, ?, ?, 0)";
-        try (Connection con = connectDB.getConnection();
-                PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, maPhong);
-            ps.setString(2, maTang);
-            ps.setString(3, maPhong);
-            ps.setInt(4, loaiPhong);
-            ps.setString(5, maGiaDetail); // Lưu mã giá vào đây
-            ps.setInt(6, trangThai);
+        try (Connection con = connectDB.getConnection()) {
+            // Tự động tạo Toa + Tang nếu chưa tồn tại (VD: P7.01 → tạo T7 "Tầng 7")
+            ensureToaTang(con, maTang);
 
-            return ps.executeUpdate() > 0 ? null : "Lỗi thêm phòng";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, maPhong);
+                ps.setString(2, maTang);
+                ps.setString(3, maPhong);
+                ps.setInt(4, loaiPhong);
+                if (maGiaDetail != null) ps.setString(5, maGiaDetail);
+                else ps.setNull(5, Types.NVARCHAR);
+                ps.setInt(6, trangThai);
+                return ps.executeUpdate() > 0 ? null : "Lỗi thêm phòng";
+            }
         } catch (SQLException e) {
             return e.getMessage();
         }
     }
+    private void ensureToaTang(Connection con, String maTang) throws SQLException {
+        String ownerId = findChuSoHuuMacDinh(con);
+        if (ownerId == null || ownerId.isBlank()) return;
+
+        try (PreparedStatement ps = con.prepareStatement(
+                "IF NOT EXISTS (SELECT 1 FROM Toa WHERE maToa = 'TOA1') "
+                        + "INSERT INTO Toa(maToa, tenToa, chuSoHuu) VALUES ('TOA_A', N'Tòa A', ?)")) {
+            ps.setString(1, ownerId);
+            ps.executeUpdate();
+        }
+
+        if (!tonTaiTang(con, maTang)) {
+            String soTang = maTang.startsWith("T") ? maTang.substring(1) : maTang;
+            try (PreparedStatement ps = con.prepareStatement(
+                    "INSERT INTO Tang(maTang, tenTang, maToa) VALUES (?, N'Tầng ' + ?, 'TOA1')")) {
+                ps.setString(1, maTang);
+                ps.setString(2, soTang);
+                ps.executeUpdate();
+            }
+        }
+    }
+
 
     // ── READ ──
     public List<Phong> layTatCa() {
