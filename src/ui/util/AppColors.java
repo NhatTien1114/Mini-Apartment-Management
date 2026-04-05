@@ -37,6 +37,7 @@ public final class AppColors {
 
     public static final Color RED = new Color(220, 40, 40);
     public static final Color RED_500 = new Color(239, 68, 68);
+    public static final Color RED_500_HOVER = new Color(220, 40, 40);
     public static final Color ORANGE_500 = new Color(249, 115, 22);
     public static final Color YELLOW_500 = new Color(234, 179, 8);
     public static final Color LIME_500 = new Color(132, 204, 22);

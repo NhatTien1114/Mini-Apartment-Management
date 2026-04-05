@@ -271,14 +271,14 @@ public class TrangChu extends JFrame {
             pnlRightButtons.add(btnTaoTaiKhoan);
         }
 
-        JButton btnDangXuat = new JButton("Đăng xuất");
+        JButton btnDangXuat = new ui.util.PrimaryButton().makeErrorButton("Đăng xuất");
         btnDangXuat.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
         btnDangXuat.setBackground(Color.WHITE);
         btnDangXuat.addActionListener(e -> {
             new LoginUI().setVisible(true);
             this.dispose();
         });
-        
+
         pnlRightButtons.add(btnDangXuat);
         pnlHeader.add(pnlRightButtons, BorderLayout.EAST);
 
