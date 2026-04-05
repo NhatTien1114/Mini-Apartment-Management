@@ -13,12 +13,7 @@
         {
             "label": "Run TrangChu",
             "type": "shell",
-            "command": "java",
-            "args": [
-                "-cp",
-                "bin;lib\\mssql-jdbc-13.2.1.jre11.jar",
-                "ui.main.TrangChu"
-            ],
+            "command": "java -cp \"bin;lib\\mssql-jdbc-13.2.1.jre11.jar\" ui.main.TrangChu",
             "dependsOn": "Rebuild Java Project",
             "problemMatcher": []
         }
