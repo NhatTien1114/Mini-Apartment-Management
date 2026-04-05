@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DichVuDAO {
+    public GiaDetailDAO giaDetailDAO = new GiaDetailDAO();
 
     public List<DichVu> layTatCa() {
         String sql = "SELECT d.maDichVu, d.tenDichVu, d.donVi, d.maGiaDetail, gd.donGia " +
@@ -100,6 +101,39 @@ public class DichVuDAO {
             System.err.println("Lỗi delete DichVu: " + e.getMessage());
             return false;
         }
+    }
+    // Đổi kiểu trả về từ boolean sang đối tượng DichVu
+    public DichVu getDichVuByTen(String tenDichVu) {
+        DichVu dv = null; // Mặc định là null nếu không tìm thấy
+
+        // Lấy toàn bộ cột của dịch vụ
+        String sql = "SELECT * FROM DichVu WHERE tenDichVu = ?";
+
+        try (Connection con = connectDB.getConnection();
+             PreparedStatement stmt = con.prepareStatement(sql)) {
+
+            stmt.setString(1, tenDichVu);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    // Lấy dữ liệu từ các cột
+                    String maDichVu = rs.getString("maDichVu");
+                    String tenDV = rs.getString("tenDichVu");
+                    String donVi = rs.getString("donVi");
+                    String maGiaDetail = rs.getString("maGiaDetail");
+
+                    double donGia = giaDetailDAO.getDonGiaByMa(maGiaDetail).getDonGia();
+
+                    // Khởi tạo đối tượng (Đảm bảo class DichVu có constructor này)
+                    dv = new DichVu(maDichVu, tenDV, donVi, maGiaDetail,donGia);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // Trả về đối tượng tìm được (hoặc null nếu không có)
+        return dv;
     }
 
 }
