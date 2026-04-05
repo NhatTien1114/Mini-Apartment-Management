@@ -19,6 +19,7 @@ import dao.HopDongKhachHangDAO;
 import dao.QuanLyPhongDAO;
 import entity.GiaDetail;
 import entity.HopDong;
+import entity.KhachHang;
 import entity.Phong;
 import ui.util.*;
 
@@ -60,7 +61,7 @@ public class HopDongUI {
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         model.setRowCount(0);
 
-        ArrayList<HopDong> listHD = HopDongDao.getAllHopDong();
+        ArrayList<HopDong> listHD = HopDongDao.getAllHopDongDangHieuLuc();
 
         for (HopDong row : listHD) {
             String tenNguoiDaiDien = "";
@@ -75,12 +76,37 @@ public class HopDongUI {
                     tenNguoiDaiDien,
                     row.getNgayBatDau(),
                     row.getNgayKetThuc(),
-                    row.getTienCoc(),
-                    row.getTienThueThang(),
+                    formatMoneyDisplay(row.getTienCoc()),
+                    formatMoneyDisplay(row.getTienThueThang()),
                     row.getTrangThai()
 
             });
 
+        }
+    }
+
+    private String formatToDDMMYYYY(Object dateObj) {
+        if (dateObj == null || dateObj.toString().isBlank()) {
+            return "";
+        }
+        String dateStr = dateObj.toString().trim();
+
+        // Nếu đã đúng chuẩn dd/MM/yyyy thì trả về luôn
+        if (dateStr.matches("\\d{2}/\\d{2}/\\d{4}")) {
+            return dateStr;
+        }
+
+        // Nếu là chuẩn SQL yyyy-MM-dd thì convert lại
+        try {
+            // Cắt lấy phần ngày (nếu có kèm giờ phút giây yyyy-MM-dd HH:mm:ss)
+            if (dateStr.length() > 10) {
+                dateStr = dateStr.substring(0, 10);
+            }
+            java.time.LocalDate date = java.time.LocalDate.parse(dateStr);
+            java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            return date.format(formatter);
+        } catch (Exception e) {
+            return dateStr; // Trả về chuỗi gốc nếu không thể parse
         }
     }
 
@@ -409,8 +435,12 @@ public class HopDongUI {
         pnlHead.setBorder(new EmptyBorder(0, 0, 16, 0));
         pnlBg.add(pnlHead, BorderLayout.NORTH);
 
-        JPanel pnlContent = new JPanel(new GridLayout(0, 2, 14, 12));
+        JPanel pnlContent = new JPanel(new BorderLayout(0, 12));
         pnlContent.setOpaque(false);
+
+        JPanel pnlGrid = new JPanel(new GridLayout(0, 2, 14, 12));
+        pnlGrid.setOpaque(false);
+
 
         ArrayList<Phong> dsPhongTrong = PhongDAO.getAllPhongTrong();
         String[] roomOptions = new String[dsPhongTrong.size()];
@@ -426,6 +456,11 @@ public class HopDongUI {
                 new Font("Inter", Font.PLAIN, 14),
                 MAU_TEXT,
                 BORDER_COLOR);
+
+        RoundedTextField txtPhongEdit = createFocusableField();
+        txtPhongEdit.setEditable(false); // Không cho phép sửa mã phòng khi đang edit hợp đồng
+        txtPhongEdit.setBackground(new Color(241, 245, 249));
+
         RoundedTextField txtKhach = createFocusableField();
         RoundedTextField txtSoDienThoai = createFocusableField();
         RoundedTextField txtCccd = createFocusableField();
@@ -458,28 +493,57 @@ public class HopDongUI {
 
         if (isEdit && row != -1) {
             String roomCode = model.getValueAt(row, 1).toString();
-            selectRoomByCode(cboPhong, roomCode);
+            txtPhongEdit.setText(roomCode);
             txtKhach.setText(model.getValueAt(row, 2).toString());
-            txtSoDienThoai.setText("");
-            txtCccd.setText("");
-            txtDiaChi.setText("");
-            txtBatDau.setText(model.getValueAt(row, 3).toString());
-            txtKetThuc.setText(model.getValueAt(row, 4).toString());
+            KhachHang kh = HDKHdao.getNguoiDaiDienByMaPhong(roomCode);
+            if (kh != null) {
+                txtSoDienThoai.setText(kh.getSoDienThoai());
+                txtCccd.setText(kh.getSoCCCD());
+                txtDiaChi.setText(kh.getDiaChi());
+                // Lấy và format ngày sinh (Giả sử hàm getNgaySinh() trả về String, Date hoặc LocalDate)
+                if (kh.getNgaySinh() != null) {
+                    txtNgaySinh.setText(formatToDDMMYYYY(kh.getNgaySinh()));
+                }
+            }
+            // Lấy và format ngày bắt đầu, ngày kết thúc từ Table Model
+            Object objBatDau = model.getValueAt(row, 3);
+            Object objKetThuc = model.getValueAt(row, 4);
+
+            txtBatDau.setText(formatToDDMMYYYY(objBatDau));
+            txtKetThuc.setText(formatToDDMMYYYY(objKetThuc));
             txtCoc.setText(model.getValueAt(row, 5).toString().replaceAll("[^0-9]", ""));
             txtThue.setText(model.getValueAt(row, 6).toString().replaceAll("[^0-9]", ""));
         }
 
         Font labelFont = new Font("Inter", Font.PLAIN, 13);
-        pnlContent.add(FormFieldStyles.createLabeledField("Phòng", cboPhong, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Họ tên khách thuê", txtKhach, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Số điện thoại", txtSoDienThoai, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("CCCD/CMND", txtCccd, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Địa chỉ", txtDiaChi, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Ngày sinh", txtNgaySinh, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Ngày bắt đầu", txtBatDau, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Ngày kết thúc", txtKetThuc, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
+        if (isEdit) {
+            JPanel pnlPhong = FormFieldStyles.createLabeledField("Phòng", txtPhongEdit, MAU_TEXT, labelFont, 52);
+            pnlContent.add(pnlPhong, BorderLayout.NORTH);
+            pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê", txtKhach, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại", txtSoDienThoai, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND", txtCccd, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Địa chỉ", txtDiaChi, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày bắt đầu", txtBatDau, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc", txtKetThuc, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
+
+            pnlContent.add(pnlGrid, BorderLayout.CENTER);
+
+        } else {
+            pnlGrid.add(FormFieldStyles.createLabeledField("Phòng", cboPhong, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê", txtKhach, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại", txtSoDienThoai, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND", txtCccd, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Địa chỉ", txtDiaChi, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày sinh", txtNgaySinh, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày bắt đầu", txtBatDau, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc", txtKetThuc, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
+
+            pnlContent.add(pnlGrid, BorderLayout.CENTER);
+        }
 
         pnlBg.add(pnlContent, BorderLayout.CENTER);
 
@@ -499,11 +563,21 @@ public class HopDongUI {
         JButton btnSave = primaryButton.makePrimaryButton(isEdit ? "Cập Nhật" : "Tạo");
 
         btnSave.addActionListener(e -> {
-            String ngaySinhRaw = txtNgaySinh.getText().replace("_", "").trim();
+            String ngaySinhRaw = "";
+            if(!isEdit){
+                ngaySinhRaw = txtNgaySinh.getText().replace("_", "").trim();
+            }
             String bDau = txtBatDau.getText().replace("_", "").trim();
             String kThuc = txtKetThuc.getText().replace("_", "").trim();
-            String phongDisplay = (String) cboPhong.getSelectedItem();
-            String phongCode = extractRoomCode(phongDisplay);
+            String phongCode;
+            if (!isEdit) {
+                phongCode = txtPhongEdit.getText().trim();
+            } else {
+                String phongDisplay = (String) cboPhong.getSelectedItem();
+                phongCode = extractRoomCode(phongDisplay);
+            }
+
+            // ---------------------------
 
             if (phongCode.isEmpty() || txtKhach.getText().trim().isEmpty() || txtSoDienThoai.getText().trim().isEmpty()
                     ||
@@ -512,11 +586,20 @@ public class HopDongUI {
                 showToast("Vui lòng nhập đầy đủ thông tin");
                 return;
             }
+            String cccdValue = txtCccd.getText().trim();
+            String regexCMND = "^[0-9]{9}$";
+            String regexCCCD = "^[0-9]{12}$";
+
+            if (!cccdValue.matches(regexCMND) && !cccdValue.matches(regexCCCD)) {
+                showToast("CCCD/CMND không hợp lệ! Vui lòng nhập lại 9 số đối với CMND và 12 số đối với CCCD.");
+                txtCccd.requestFocus();
+                return;
+            }
 
             java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")
                     .withResolverStyle(java.time.format.ResolverStyle.STRICT);
             try {
-                if (!ngaySinhRaw.isEmpty()) {
+                if (!isEdit && !ngaySinhRaw.isEmpty()) {
                     java.time.LocalDate.parse(txtNgaySinh.getText(), fmt);
                 }
                 java.time.LocalDate start = java.time.LocalDate.parse(txtBatDau.getText(), fmt);
@@ -801,11 +884,17 @@ public class HopDongUI {
     }
 
     private void selectRoomByCode(JComboBox<String> combo, String roomCode) {
+        if (roomCode == null) return;
+
         for (int i = 0; i < combo.getItemCount(); i++) {
-            String item = combo.getItemAt(i);
-            if (extractRoomCode(item).equals(roomCode)) {
-                combo.setSelectedIndex(i);
-                return;
+            Object itemObj = combo.getItemAt(i);
+            if (itemObj != null) {
+                String item = itemObj.toString();
+                // Kiểm tra xem item có bắt đầu bằng mã phòng không
+                if (item.startsWith(roomCode)) {
+                    combo.setSelectedIndex(i);
+                    return; // Tìm thấy thì thoát vòng lặp ngay
+                }
             }
         }
     }
@@ -934,9 +1023,20 @@ public class HopDongUI {
         if (num.isEmpty())
             return "0đ";
         long v = Long.parseLong(num);
-        return String.format("%,d", v).replace(",", ".") + "đ";
+        return String.format("%,d", v).replace(",", ".");
     }
 
+    private String formatMoneyDisplay(Object moneyObj) {
+        if (moneyObj == null || moneyObj.toString().isEmpty()) return "0";
+        try {
+            // Chuyển sang double để xử lý trường hợp có số thập phân .0
+            double amount = Double.parseDouble(moneyObj.toString());
+            long value = Math.round(amount);
+            return String.format("%,d", value).replace(",", ".");
+        } catch (Exception e) {
+            return "0";
+        }
+    }
     private void showToast(String message) {
         Window parent = SwingUtilities.getWindowAncestor(pnlRoot);
         if (parent == null)
@@ -1161,14 +1261,30 @@ public class HopDongUI {
                 btnDelete.addActionListener(e -> {
                     if (table.isEditing())
                         table.getCellEditor().stopCellEditing();
+
                     int modelRow = table.convertRowIndexToModel(rowTarget);
                     String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
-                    boolean ok = HopDongDao.xoaHopDongVaKhachHangLienQuan(maHopDong);
-                    if (ok) {
-                        loadDataToTable();
-                        showToast("Đã xóa hợp đồng");
-                    } else {
-                        showToast("Xóa hợp đồng thất bại");
+                    String tenKhachHang = String.valueOf(model.getValueAt(modelRow, 2)); // Lấy thêm tên khách để hiển thị cho rõ ràng
+                    String maPhong = String.valueOf(model.getValueAt(modelRow, 1)); // Lấy mã phòng
+
+                    // Tạo hộp thoại xác nhận (Warning)
+                    int luaChon = JOptionPane.showConfirmDialog(
+                            pnlRoot, // Gắn hộp thoại vào panel gốc
+                            "Bạn có chắc chắn muốn xóa hợp đồng của khách hàng '" + tenKhachHang + "' (Phòng " + maPhong + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
+                            "Xác nhận xóa hợp đồng",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.WARNING_MESSAGE
+                    );
+
+                    // Nếu người dùng chọn YES (Đồng ý xóa)
+                    if (luaChon == JOptionPane.YES_OPTION) {
+                        boolean ok = HopDongDao.xoaHopDongVaKhachHangLienQuan(maHopDong);
+                        if (ok) {
+                            loadDataToTable();
+                            showToast("Đã xóa hợp đồng thành công");
+                        } else {
+                            showToast("Xóa hợp đồng thất bại");
+                        }
                     }
                 });
             }

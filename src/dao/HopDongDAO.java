@@ -20,23 +20,32 @@ public class HopDongDAO {
     public String trangThai;
 
     private String taoMaTheoThoiGian(String prefix) {
-        long millis = System.currentTimeMillis() % 1_000_000_000_000L;
+        long millis = System.currentTimeMillis() % 1_000_000L;
         int random = (int) (Math.random() * 1000);
         return prefix + String.format("%012d%03d", millis, random);
     }
 
     private String taoMaKhachHangMoi(Connection con) throws SQLException {
-        String sql = "SELECT MAX(CAST(SUBSTRING(maKhachHang, 3, LEN(maKhachHang) - 2) AS INT)) AS maxSo "
-                + "FROM KhachHang WHERE maKhachHang LIKE 'KH%'";
+        // Sử dụng TRY_CAST để nếu gặp mã lỗi (như timestamp) nó sẽ trả về NULL thay vì văng lỗi Overflow
+        // Lọc thêm điều kiện LEN < 10 để đảm bảo chỉ lấy các mã KH thực tế
+        String sql = "SELECT MAX(TRY_CAST(SUBSTRING(maKhachHang, 3, LEN(maKhachHang) - 2) AS BIGINT)) AS maxSo "
+                + "FROM KhachHang "
+                + "WHERE maKhachHang LIKE 'KH%' AND LEN(maKhachHang) < 10";
+
         try (PreparedStatement ps = con.prepareStatement(sql);
-                ResultSet rs = ps.executeQuery()) {
-            int soTiepTheo = 1;
+             ResultSet rs = ps.executeQuery()) {
+
+            long soTiepTheo = 1; // Khởi tạo mặc định là 1
+
             if (rs.next()) {
-                int maxSo = rs.getInt("maxSo");
+                long maxSo = rs.getLong("maxSo");
                 if (!rs.wasNull()) {
                     soTiepTheo = maxSo + 1;
                 }
             }
+
+            // %02d: Đảm bảo ít nhất 2 chữ số (01, 02...).
+            // Nếu số là 100, nó tự động thành 100 (3 chữ số) không cần sửa thêm.
             return "KH" + String.format("%02d", soTiepTheo);
         }
     }
@@ -52,8 +61,8 @@ public class HopDongDAO {
         return java.sql.Date.valueOf(p[2] + "-" + p[1] + "-" + p[0]);
     }
 
-    public ArrayList<HopDong> getAllHopDong() {
-        String sql = "SELECT maHopDong, maPhong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang, trangThai FROM HopDong ORDER BY maHopDong";
+    public ArrayList<HopDong> getAllHopDongDangHieuLuc() {
+        String sql = "SELECT maHopDong, maPhong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang FROM HopDong WHERE trangThai = 1 ORDER BY maHopDong";
         ArrayList<HopDong> listHD = new ArrayList<>();
 
         try {
@@ -68,7 +77,7 @@ public class HopDongDAO {
                     double tienCoc = rs.getDouble("tienCoc");
                     double tienThueThang = rs.getDouble("tienThueThang");
 
-                    int trangThaiInt = rs.getInt("trangThai");
+                    int trangThaiInt = 1;
                     HopDong.TrangThai trangThai = HopDong.TrangThai.fromInt(trangThaiInt);
 
                     entity.Phong phong = new Phong(maPhong);
