@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 public class ChiSoDienNuocDAO {
 
@@ -14,6 +15,74 @@ public class ChiSoDienNuocDAO {
      * Nếu chưa có dữ liệu nào → trả về [0, 0]
      * @return int[]{soDien, soNuoc}
      */
+    public ArrayList<ChiSoDienNuoc> getAllChiSoThang(String thangHienTai, String namHienTai) {
+        ArrayList<ChiSoDienNuoc> dsChiSo = new ArrayList<>();
+
+        String sql = "SELECT * FROM ChiSoDienNuoc WHERE thang = ? AND nam = ? ORDER BY maPhong ASC";
+
+        try (Connection con = connectDB.getConnection();
+             PreparedStatement stmt = con.prepareStatement(sql)) {
+
+            stmt.setString(1, thangHienTai);
+            stmt.setString(2, namHienTai);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String maPhong = rs.getString("maPhong");
+                    int thang = rs.getInt("thang");
+                    int nam = rs.getInt("nam");
+                    int soDien = rs.getInt("soDien");
+                    int soNuoc = rs.getInt("soNuoc");
+
+                    ChiSoDienNuoc csdn = new ChiSoDienNuoc(maPhong, thang, nam, soDien, soNuoc);
+
+                    dsChiSo.add(csdn);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return dsChiSo;
+    }
+    public ArrayList<ChiSoDienNuoc> getChiSoThangTruoc(String thangHienTai, String namHienTai) {
+        int thangTruoc = Integer.parseInt(thangHienTai) - 1;
+        int namTruoc = Integer.parseInt(namHienTai);
+
+        if (thangTruoc == 0) {
+            thangTruoc = 12;
+            namTruoc = Integer.parseInt(namHienTai) - 1;
+        }
+
+        ArrayList<ChiSoDienNuoc> dsChiSo = new ArrayList<>();
+
+        String sql = "SELECT * FROM ChiSoDienNuoc WHERE thang = ? AND nam = ? ORDER BY maPhong ASC";
+
+        try (Connection con = connectDB.getConnection();
+             PreparedStatement stmt = con.prepareStatement(sql)) {
+
+            stmt.setInt(1, thangTruoc);
+            stmt.setInt(2, namTruoc);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String maPhong = rs.getString("maPhong");
+                    int thang = rs.getInt("thang");
+                    int nam = rs.getInt("nam");
+                    int soDien = rs.getInt("soDien");
+                    int soNuoc = rs.getInt("soNuoc");
+
+                    ChiSoDienNuoc csdn = new ChiSoDienNuoc(maPhong, thang, nam, soDien, soNuoc);
+                    dsChiSo.add(csdn);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return dsChiSo;
+    }
+
     public int[] layChiSoThangTruoc(String maPhong, int thangHienTai, int namHienTai) {
         String sql = "SELECT TOP 1 soDien, soNuoc FROM ChiSoDienNuoc "
                 + "WHERE maPhong = ? "
@@ -83,4 +152,5 @@ public class ChiSoDienNuocDAO {
             return "Lỗi lưu chỉ số điện nước: " + e.getMessage();
         }
     }
+
 }

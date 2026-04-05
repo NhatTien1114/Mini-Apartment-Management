@@ -8,7 +8,7 @@ import java.sql.Statement;
 
 public class connectDB {
 	private static final String USERNAME = "sa";
-	private static final String PASSWORD = "sapassword";
+	private static final String PASSWORD = "123";
 
 	private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=ChungCuMini"
 			+ ";encrypt=true;trustServerCertificate=true";
