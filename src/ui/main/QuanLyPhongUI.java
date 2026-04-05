@@ -535,7 +535,12 @@ public class QuanLyPhongUI {
             checks[i].setOpaque(false);
         }
 
-        Set<String> maDvDaChon = new HashSet<>(dao.layMaDichVuDaChon(phong.getMaPhong()));
+        boolean isDaThueTrangThai = phong.getTrangThai() == Phong.TrangThai.THUE;
+        if (isDaThueTrangThai) {
+            dichVuDAO.ganTatCaDichVuChoPhongNeuChuaCo(phong.getMaPhong());
+        }
+
+        Set<String> maDvDaChon = new HashSet<>(dichVuDAO.layMaDichVuTheoPhong(phong.getMaPhong()));
         for (JCheckBox cb : checks) {
             Object maDv = cb.getClientProperty("maDichVu");
             if (maDv != null && maDvDaChon.contains(maDv.toString())) {
@@ -556,7 +561,8 @@ public class QuanLyPhongUI {
 
         // ── Panel chỉ số điện/nước (chỉ hiện khi "Đã thuê") ──
         LocalDate now = LocalDate.now();
-        int[] chiSoCu = chiSoDAO.layChiSoThangTruoc(phong.getMaPhong(), now.getMonthValue(), now.getYear());
+        int[] chiSoCu = chiSoDAO.layChiSoGanNhat(phong.getMaPhong());
+        int[] chiSoThangNay = chiSoDAO.layChiSoTheoThang(phong.getMaPhong(), now.getMonthValue(), now.getYear());
 
         JPanel pnlChiSo = new JPanel();
         pnlChiSo.setBackground(AppColors.WHITE);
@@ -580,6 +586,9 @@ public class QuanLyPhongUI {
 
         RoundedTextField txtDienMoi = new RoundedTextField(6);
         txtDienMoi.setPlaceholder("Nhập số mới");
+        if (chiSoThangNay != null) {
+            txtDienMoi.setText(String.valueOf(chiSoThangNay[0]));
+        }
 
         rowDien.add(wrapField("Số điện cũ (kWh)", txtDienCu));
         rowDien.add(wrapField("Số điện mới (kWh)", txtDienMoi));
@@ -596,6 +605,9 @@ public class QuanLyPhongUI {
 
         RoundedTextField txtNuocMoi = new RoundedTextField(6);
         txtNuocMoi.setPlaceholder("Nhập số mới");
+        if (chiSoThangNay != null) {
+            txtNuocMoi.setText(String.valueOf(chiSoThangNay[1]));
+        }
 
         rowNuoc.add(wrapField("Số nước cũ (m³)", txtNuocCu));
         rowNuoc.add(wrapField("Số nước mới (m³)", txtNuocMoi));

@@ -26,14 +26,15 @@ public class HopDongDAO {
     }
 
     private String taoMaKhachHangMoi(Connection con) throws SQLException {
-        // Sử dụng TRY_CAST để nếu gặp mã lỗi (như timestamp) nó sẽ trả về NULL thay vì văng lỗi Overflow
+        // Sử dụng TRY_CAST để nếu gặp mã lỗi (như timestamp) nó sẽ trả về NULL thay vì
+        // văng lỗi Overflow
         // Lọc thêm điều kiện LEN < 10 để đảm bảo chỉ lấy các mã KH thực tế
         String sql = "SELECT MAX(TRY_CAST(SUBSTRING(maKhachHang, 3, LEN(maKhachHang) - 2) AS BIGINT)) AS maxSo "
                 + "FROM KhachHang "
                 + "WHERE maKhachHang LIKE 'KH%' AND LEN(maKhachHang) < 10";
 
         try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery()) {
 
             long soTiepTheo = 1; // Khởi tạo mặc định là 1
 
@@ -120,8 +121,8 @@ public class HopDongDAO {
                 psHD.setString(2, draft.phong);
                 psHD.setDate(3, java.sql.Date.valueOf(convertToSqlDate(draft.ngayBatDau)));
                 psHD.setDate(4, java.sql.Date.valueOf(convertToSqlDate(draft.ngayKetThuc)));
-                psHD.setDouble(5, Double.parseDouble(draft.tienCocRaw));
-                psHD.setDouble(6, Double.parseDouble(draft.giaThueRaw));
+                psHD.setDouble(5, parseMoneyToDouble(draft.tienCocRaw));
+                psHD.setDouble(6, parseMoneyToDouble(draft.giaThueRaw));
                 if (psHD.executeUpdate() == 0) {
                     throw new SQLException("Khong the tao hop dong moi.");
                 }
@@ -144,6 +145,8 @@ public class HopDongDAO {
                     throw new SQLException("Khong tim thay phong de cap nhat thong tin cu tru.");
                 }
             }
+
+            new DichVuDAO().ganTatCaDichVuChoPhongNeuChuaCo(draft.phong);
 
             con.commit();
             return true;
@@ -285,7 +288,24 @@ public class HopDongDAO {
 
     // Hàm phụ chuyển định dạng ngày
     private String convertToSqlDate(String dateStr) {
-        String[] p = dateStr.split("/");
+        if (dateStr == null) {
+            throw new IllegalArgumentException("Ngay khong hop le");
+        }
+        String[] p = dateStr.trim().split("/");
+        if (p.length != 3) {
+            throw new IllegalArgumentException("Ngay khong dung dinh dang dd/MM/yyyy");
+        }
         return p[2] + "-" + p[1] + "-" + p[0];
+    }
+
+    private double parseMoneyToDouble(String rawMoney) {
+        if (rawMoney == null) {
+            throw new IllegalArgumentException("Tien khong hop le");
+        }
+        String digits = rawMoney.replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) {
+            throw new IllegalArgumentException("Tien khong hop le");
+        }
+        return Double.parseDouble(digits);
     }
 }
