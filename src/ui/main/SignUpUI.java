@@ -30,7 +30,7 @@ public class SignUpUI extends JFrame {
         setTitle("Đăng ký");
         setSize(1000, 750);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         JPanel pnlBackground = new JPanel(new BorderLayout());
         pnlBackground.setBackground(AppColors.SLATE_50);
@@ -103,36 +103,6 @@ public class SignUpUI extends JFrame {
 
         Dimension inputSize = new Dimension(420, 40);
 
-        // --- ROLE SELECTION ---
-        JLabel lblRole = new JLabel("<html>Vai trò <font color='#ef4444'>*</font></html>");
-        lblRole.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
-        lblRole.setForeground(AppColors.SLATE_900);
-        lblRole.setAlignmentX(Component.LEFT_ALIGNMENT);
-        pnlForm.add(lblRole);
-        pnlForm.add(Box.createRigidArea(new Dimension(0, 8)));
-
-        JPanel pnlRole = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
-        pnlRole.setBackground(AppColors.WHITE);
-        pnlRole.setAlignmentX(Component.LEFT_ALIGNMENT);
-        pnlRole.setMaximumSize(new Dimension(420, 30));
-
-        JRadioButton radChu = new JRadioButton("Chủ");
-        radChu.setBackground(AppColors.WHITE);
-        radChu.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        radChu.setSelected(true);
-
-        JRadioButton radQuanLy = new JRadioButton("Quản lý");
-        radQuanLy.setBackground(AppColors.WHITE);
-        radQuanLy.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-
-        ButtonGroup roleGroup = new ButtonGroup();
-        roleGroup.add(radChu);
-        roleGroup.add(radQuanLy);
-
-        pnlRole.add(radChu);
-        pnlRole.add(radQuanLy);
-        pnlForm.add(pnlRole);
-        pnlForm.add(Box.createRigidArea(new Dimension(0, 16)));
 
         // --- NAME FIELD ---
         JLabel lblName = new JLabel("<html>Họ và tên <font color='#ef4444'>*</font></html>");
@@ -336,7 +306,6 @@ public class SignUpUI extends JFrame {
             String address = txtAddress.getText().trim();
             String email = txtEmail.getText().trim();
             String pass = new String(txtPass.getPassword());
-            boolean isChu = radChu.isSelected();
 
             if (name.isEmpty()) {
                 ValidationPopup.show(txtName, "Vui lòng nhập họ và tên.");
@@ -405,18 +374,13 @@ public class SignUpUI extends JFrame {
             String generatedId = dao.phatSinhMaTaiKhoan(email);
             TaiKhoan taiKhoan;
 
-            if (isChu) {
-                taiKhoan = new Chu(generatedId, email, pass, name, phone, dob, address);
-            } else {
-                taiKhoan = new QuanLy(generatedId, email, pass, name, phone, dob, address);
-            }
+            taiKhoan = new QuanLy(generatedId, email, pass, name, phone, dob, address);
 
             boolean success = dao.insertTaiKhoan(taiKhoan);
 
             if (success) {
-                ui.util.MessageDialog.show(this, "Đăng ký thành công!", "Tài khoản của bạn đã được khởi tạo.",
+                ui.util.MessageDialog.show(this, "Tạo thành công!", "Tài khoản quản lý đã được khởi tạo.",
                         ui.util.MessageDialog.MessageType.SUCCESS);
-                new LoginUI().setVisible(true);
                 this.dispose();
             } else {
                 ui.util.MessageDialog.show(this, "Lỗi hệ thống", "Có lỗi xảy ra khi lưu vào CSDL. Vui lòng thử lại.",
@@ -435,38 +399,6 @@ public class SignUpUI extends JFrame {
 
         pnlForm.add(btnSignUp);
         card.add(pnlForm);
-        card.add(Box.createVerticalGlue()); // Push link to bottom
-
-        // Link Log in
-        JLabel lblLogin = new JLabel("Đã có tài khoản? Đăng nhập");
-        lblLogin.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14)); // text-sm
-        lblLogin.setForeground(AppColors.PRIMARY);
-        lblLogin.setAlignmentX(Component.CENTER_ALIGNMENT);
-        lblLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        lblLogin.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                new LoginUI().setVisible(true);
-                dispose();
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                lblLogin.setText("<html><u>Đã có tài khoản? Đăng nhập</u></html>");
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                lblLogin.setText("Đã có tài khoản? Đăng nhập");
-            }
-        });
-
-        JPanel pnlFooter = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        pnlFooter.setBackground(AppColors.WHITE);
-        pnlFooter.setBorder(new EmptyBorder(24, 0, 0, 0)); // mt-6
-        pnlFooter.add(lblLogin);
-
-        card.add(pnlFooter);
 
         return card;
     }

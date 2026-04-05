@@ -435,8 +435,12 @@ public class HopDongUI {
         pnlHead.setBorder(new EmptyBorder(0, 0, 16, 0));
         pnlBg.add(pnlHead, BorderLayout.NORTH);
 
-        JPanel pnlContent = new JPanel(new GridLayout(0, 2, 14, 12));
+        JPanel pnlContent = new JPanel(new BorderLayout(0, 12));
         pnlContent.setOpaque(false);
+
+        JPanel pnlGrid = new JPanel(new GridLayout(0, 2, 14, 12));
+        pnlGrid.setOpaque(false);
+
 
         ArrayList<Phong> dsPhongTrong = PhongDAO.getAllPhongTrong();
         String[] roomOptions = new String[dsPhongTrong.size()];
@@ -480,9 +484,8 @@ public class HopDongUI {
 
         ActionListener roomListener = e -> {
             String selected = (String) cboPhong.getSelectedItem();
-            txtThue.setText(selected.substring(8, 15));
-
-            txtCoc.setText(selected.substring(8, 15));
+            txtThue.setText(extractRoomPriceRaw(selected));
+            txtCoc.setText(extractRoomPriceRaw(selected));
 
         };
         cboPhong.addActionListener(roomListener);
@@ -514,19 +517,33 @@ public class HopDongUI {
 
         Font labelFont = new Font("Inter", Font.PLAIN, 13);
         if (isEdit) {
-            pnlContent.add(FormFieldStyles.createLabeledField("Phòng", txtPhongEdit, MAU_TEXT, labelFont, 52));
+            JPanel pnlPhong = FormFieldStyles.createLabeledField("Phòng", txtPhongEdit, MAU_TEXT, labelFont, 52);
+            pnlContent.add(pnlPhong, BorderLayout.NORTH);
+            pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê", txtKhach, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại", txtSoDienThoai, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND", txtCccd, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Địa chỉ", txtDiaChi, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày bắt đầu", txtBatDau, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc", txtKetThuc, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
+
+            pnlContent.add(pnlGrid, BorderLayout.CENTER);
+
         } else {
-            pnlContent.add(FormFieldStyles.createLabeledField("Phòng", cboPhong, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Phòng", cboPhong, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê", txtKhach, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại", txtSoDienThoai, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND", txtCccd, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Địa chỉ", txtDiaChi, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày sinh", txtNgaySinh, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày bắt đầu", txtBatDau, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc", txtKetThuc, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
+
+            pnlContent.add(pnlGrid, BorderLayout.CENTER);
         }
-        pnlContent.add(FormFieldStyles.createLabeledField("Họ tên khách thuê", txtKhach, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Số điện thoại", txtSoDienThoai, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("CCCD/CMND", txtCccd, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Địa chỉ", txtDiaChi, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Ngày sinh", txtNgaySinh, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Ngày bắt đầu", txtBatDau, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Ngày kết thúc", txtKetThuc, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
-        pnlContent.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
 
         pnlBg.add(pnlContent, BorderLayout.CENTER);
 
@@ -546,16 +563,20 @@ public class HopDongUI {
         JButton btnSave = primaryButton.makePrimaryButton(isEdit ? "Cập Nhật" : "Tạo");
 
         btnSave.addActionListener(e -> {
-            String ngaySinhRaw = txtNgaySinh.getText().replace("_", "").trim();
+            String ngaySinhRaw = "";
+            if(!isEdit){
+                ngaySinhRaw = txtNgaySinh.getText().replace("_", "").trim();
+            }
             String bDau = txtBatDau.getText().replace("_", "").trim();
             String kThuc = txtKetThuc.getText().replace("_", "").trim();
             String phongCode;
-            if (isEdit) {
+            if (!isEdit) {
                 phongCode = txtPhongEdit.getText().trim();
             } else {
                 String phongDisplay = (String) cboPhong.getSelectedItem();
                 phongCode = extractRoomCode(phongDisplay);
             }
+
             // ---------------------------
 
             if (phongCode.isEmpty() || txtKhach.getText().trim().isEmpty() || txtSoDienThoai.getText().trim().isEmpty()
@@ -578,7 +599,7 @@ public class HopDongUI {
             java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")
                     .withResolverStyle(java.time.format.ResolverStyle.STRICT);
             try {
-                if (!ngaySinhRaw.isEmpty()) {
+                if (!isEdit && !ngaySinhRaw.isEmpty()) {
                     java.time.LocalDate.parse(txtNgaySinh.getText(), fmt);
                 }
                 java.time.LocalDate start = java.time.LocalDate.parse(txtBatDau.getText(), fmt);
