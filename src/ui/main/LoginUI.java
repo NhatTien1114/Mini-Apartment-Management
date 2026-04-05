@@ -20,16 +20,23 @@ public class LoginUI extends JFrame {
 
     private void initUI() {
         setTitle("Đăng nhập");
-        setSize(1000, 750);
-        setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+        // 1. Phóng to toàn màn hình (giữ lại Taskbar và nút tắt X)
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // Đảm bảo không có dòng setResizable(false) nào ở đây nhé!
 
         JPanel pnlBackground = new JPanel(new GridBagLayout());
         pnlBackground.setBackground(AppColors.SLATE_50);
 
+        // Form đăng nhập sẽ tự động được đẩy ra chính giữa màn hình
         pnlBackground.add(createLoginCard());
 
         add(pnlBackground);
+
+        // 2. Gọi lệnh hiển thị ở cuối cùng
+        setVisible(true);
     }
 
     private JPanel createLoginCard() {
@@ -132,18 +139,18 @@ public class LoginUI extends JFrame {
             String pass = new String(txtPass.getPassword());
 
             if (email.isEmpty()) {
-                ValidationPopup.show(txtEmail, "Please fill out this field.");
+                ValidationPopup.show(txtEmail, "Trường này phải được lấp đầy.");
                 return;
             }
             if (pass.isEmpty()) {
-                ValidationPopup.show(txtPass, "Please fill out this field.");
+                ValidationPopup.show(txtPass, "Trường này phải được lấp đầy.");
                 return;
             }
 
             // Validate email format
             if (!email.contains("@")) {
                 ValidationPopup.show(txtEmail,
-                        "Please include an '@' in the email address. '" + email + "' is missing an '@'.");
+                        "Phải có '@' trong địa chỉ email" + email + "' is missing an '@'.");
                 return;
             }
             if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
@@ -221,7 +228,8 @@ public class LoginUI extends JFrame {
         pnlFooter.add(lblSignUp);
 
         card.add(pnlFooter);
-
+        txtEmail.setText("admin@gmail.com");
+        txtPass.setText("Admin@123");
         return card;
     }
 }

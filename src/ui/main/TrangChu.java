@@ -57,13 +57,22 @@ public class TrangChu extends JFrame {
     private void initUI() {
         setTitle("Mini Apartment - Trang Chủ");
         setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        setSize(1200, 750);
-        setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
+        // 1. Gắn các component vào trước
         add(createMenuPanel(), BorderLayout.WEST);
         add(createMainPanel(), BorderLayout.CENTER);
+
+        // --- ĐẢM BẢO BẠN ĐÃ XÓA/COMMENT 3 LỆNH NÀY NẾU CÓ ---
+        // setSize(1200, 750);
+        // setLocationRelativeTo(null);
+        // setResizable(false);
+
+        // 2. Gọi lệnh phóng to sau khi đã gắn xong mọi thứ
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // 3. Cuối cùng mới hiển thị lên
         setVisible(true);
     }
 
@@ -370,7 +379,6 @@ public class TrangChu extends JFrame {
 
             btnPhong.addActionListener(e -> {
                 new PhongInfo(p.getMaPhong()).showDialog();
-                refreshTrangChuTab();
             });
             pnlTang.add(btnPhong);
         }
