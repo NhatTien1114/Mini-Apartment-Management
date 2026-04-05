@@ -18,6 +18,11 @@ public class HopDongDAO {
     public double tienCoc;
     public double tienThueThang;
     public String trangThai;
+    private String lastError;
+
+    public String getLastError() {
+        return lastError;
+    }
 
     private String taoMaTheoThoiGian(String prefix) {
         long millis = System.currentTimeMillis() % 1_000_000L;
@@ -62,6 +67,34 @@ public class HopDongDAO {
         return java.sql.Date.valueOf(p[2] + "-" + p[1] + "-" + p[0]);
     }
 
+    private String timMaKhachHangTheoCCCD(Connection con, String cccd) throws SQLException {
+        if (cccd == null || cccd.trim().isEmpty()) {
+            return null;
+        }
+        String sql = "SELECT TOP 1 maKhachHang FROM KhachHang WHERE soCCCD = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, cccd.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("maKhachHang");
+                }
+            }
+        }
+        return null;
+    }
+
+    private void capNhatKhachHang(Connection con, String maKH, HopDongUI.ContractDraft draft) throws SQLException {
+        String sql = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, ngaySinh = ?, diaChiThuongTru = ? WHERE maKhachHang = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, draft.hoTen);
+            ps.setString(2, draft.soDienThoai);
+            ps.setDate(3, parseNgaySinhNullable(draft.ngaySinh));
+            ps.setString(4, draft.diaChi);
+            ps.setString(5, maKH);
+            ps.executeUpdate();
+        }
+    }
+
     public ArrayList<HopDong> getAllHopDongDangHieuLuc() {
         String sql = "SELECT maHopDong, maPhong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang FROM HopDong WHERE trangThai = 1 ORDER BY maHopDong";
         ArrayList<HopDong> listHD = new ArrayList<>();
@@ -95,22 +128,28 @@ public class HopDongDAO {
 
     public boolean luuHopDongMoi(HopDongUI.ContractDraft draft) {
         Connection con = null;
+        lastError = null;
         try {
             con = connectDB.getConnection();
             con.setAutoCommit(false);
 
-            String maKH = taoMaKhachHangMoi(con);
-            String sqlKH = "INSERT INTO KhachHang (maKhachHang, hoTen, soDienThoai, ngaySinh, soCCCD, diaChiThuongTru) VALUES (?,?,?,?,?,?)";
-            try (PreparedStatement psKH = con.prepareStatement(sqlKH)) {
-                psKH.setString(1, maKH);
-                psKH.setString(2, draft.hoTen);
-                psKH.setString(3, draft.soDienThoai);
-                psKH.setDate(4, parseNgaySinhNullable(draft.ngaySinh));
-                psKH.setString(5, draft.cccd);
-                psKH.setString(6, draft.diaChi);
-                if (psKH.executeUpdate() == 0) {
-                    throw new SQLException("Khong the tao khach hang dai dien.");
+            String maKH = timMaKhachHangTheoCCCD(con, draft.cccd);
+            if (maKH == null) {
+                maKH = taoMaKhachHangMoi(con);
+                String sqlKH = "INSERT INTO KhachHang (maKhachHang, hoTen, soDienThoai, ngaySinh, soCCCD, diaChiThuongTru) VALUES (?,?,?,?,?,?)";
+                try (PreparedStatement psKH = con.prepareStatement(sqlKH)) {
+                    psKH.setString(1, maKH);
+                    psKH.setString(2, draft.hoTen);
+                    psKH.setString(3, draft.soDienThoai);
+                    psKH.setDate(4, parseNgaySinhNullable(draft.ngaySinh));
+                    psKH.setString(5, draft.cccd);
+                    psKH.setString(6, draft.diaChi);
+                    if (psKH.executeUpdate() == 0) {
+                        throw new SQLException("Khong the tao khach hang dai dien.");
+                    }
                 }
+            } else {
+                capNhatKhachHang(con, maKH, draft);
             }
 
             String maHD = taoMaTheoThoiGian("HD");
@@ -146,9 +185,16 @@ public class HopDongDAO {
                 }
             }
 
-            new DichVuDAO().ganTatCaDichVuChoPhongNeuChuaCo(draft.phong);
-
             con.commit();
+
+            // Gọi sau commit để tránh đóng nhầm connection transaction hiện tại
+            // (connectDB đang dùng singleton connection toàn cục).
+            try {
+                new DichVuDAO().ganTatCaDichVuChoPhongNeuChuaCo(draft.phong);
+            } catch (RuntimeException ex) {
+                System.err.println("Canh bao gan dich vu mac dinh that bai: " + ex.getMessage());
+            }
+
             return true;
         } catch (SQLException | RuntimeException e) {
             if (con != null) {
@@ -157,6 +203,7 @@ public class HopDongDAO {
                 } catch (SQLException ignored) {
                 }
             }
+            lastError = e.getMessage();
             System.err.println("Loi luu hop dong moi: " + e.getMessage());
             return false;
         } finally {

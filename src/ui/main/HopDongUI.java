@@ -680,7 +680,12 @@ public class HopDongUI {
                         showToast("Lưu vào cơ sở dữ liệu thành công!");
                         dialog.dispose();
                     } else {
-                        showToast("Lỗi: Không thể lưu vào cơ sở dữ liệu!");
+                        String err = dao.getLastError();
+                        if (err == null || err.isBlank()) {
+                            showToast("Lỗi: Không thể lưu vào cơ sở dữ liệu!");
+                        } else {
+                            showToast("Lỗi lưu hợp đồng: " + err);
+                        }
                     }
                 }
             }
