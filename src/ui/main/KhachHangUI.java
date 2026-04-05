@@ -82,6 +82,10 @@ public class KhachHangUI {
         return root;
     }
 
+    public void refresh() {
+        loadKhachHangData();
+    }
+
     private JPanel createTopBar() {
         JPanel top = new JPanel(new BorderLayout());
         top.setBackground(AppColors.APP_BACKGROUND);

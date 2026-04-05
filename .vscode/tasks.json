@@ -4,7 +4,7 @@
         {
             "label": "Rebuild Java Project",
             "type": "shell",
-            "command": "$ErrorActionPreference='Stop'; if (Test-Path bin) { Remove-Item -Recurse -Force bin }; New-Item -ItemType Directory -Path bin | Out-Null; $sources=Get-ChildItem -Recurse -File src -Filter *.java | ForEach-Object { $_.FullName.Substring($_.FullName.IndexOf('src\\')) }; javac -encoding UTF-8 -cp 'lib\\mssql-jdbc-13.2.1.jre11.jar' -d bin $sources",
+            "command": "$ErrorActionPreference='Stop'; if (Test-Path bin) { Remove-Item -Recurse -Force bin }; New-Item -ItemType Directory -Path bin | Out-Null; $sources = Get-ChildItem -Recurse -File src -Filter *.java | ForEach-Object { ($_.FullName -replace '^.*?\\\\src\\\\','src/') -replace '\\\\','/' }; & javac -encoding UTF-8 -cp 'lib\\mssql-jdbc-13.2.1.jre11.jar' -d bin $sources; if ($LASTEXITCODE -ne 0) { throw \"javac failed with exit code $LASTEXITCODE\" }",
             "group": "build",
             "problemMatcher": [
                 "$javac"
@@ -13,12 +13,7 @@
         {
             "label": "Run TrangChu",
             "type": "shell",
-            "command": "java",
-            "args": [
-                "-cp",
-                "bin;lib\\mssql-jdbc-13.2.1.jre11.jar",
-                "ui.main.TrangChu"
-            ],
+            "command": "& java -cp 'bin;lib\\mssql-jdbc-13.2.1.jre11.jar' ui.main.TrangChu",
             "dependsOn": "Rebuild Java Project",
             "problemMatcher": []
         }

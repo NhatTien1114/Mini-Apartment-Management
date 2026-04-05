@@ -13,8 +13,7 @@ import java.util.regex.Pattern;
 
 public class QuanLyPhongDAO {
 
-    private static final Pattern ROOM_PATTERN =
-            Pattern.compile("^P([1-9]\\d*)\\.(0[1-9]|[1-9]\\d)$");
+    private static final Pattern ROOM_PATTERN = Pattern.compile("^P([1-9]\\d*)\\.(0[1-9]|[1-9]\\d)$");
 
     private final Map<String, List<String>> serviceCache = new HashMap<>();
     private static final List<String> DEFAULT_SERVICES = List.of("Điện", "Nước", "Internet", "Rác");
@@ -136,8 +135,10 @@ public class QuanLyPhongDAO {
                 ps.setString(2, maTang);
                 ps.setString(3, maPhong);
                 ps.setInt(4, loaiPhong);
-                if (maGiaDetail != null) ps.setString(5, maGiaDetail);
-                else ps.setNull(5, Types.NVARCHAR);
+                if (maGiaDetail != null)
+                    ps.setString(5, maGiaDetail);
+                else
+                    ps.setNull(5, Types.NVARCHAR);
                 ps.setInt(6, trangThai);
                 return ps.executeUpdate() > 0 ? null : "Lỗi thêm phòng";
             }
@@ -145,9 +146,11 @@ public class QuanLyPhongDAO {
             return e.getMessage();
         }
     }
+
     private void ensureToaTang(Connection con, String maTang) throws SQLException {
         String ownerId = findChuSoHuuMacDinh(con);
-        if (ownerId == null || ownerId.isBlank()) return;
+        if (ownerId == null || ownerId.isBlank())
+            return;
 
         try (PreparedStatement ps = con.prepareStatement(
                 "IF NOT EXISTS (SELECT 1 FROM Toa WHERE maToa = 'TOA1') "
@@ -166,7 +169,6 @@ public class QuanLyPhongDAO {
             }
         }
     }
-
 
     // ── READ ──
     public List<Phong> layTatCa() {
@@ -460,5 +462,51 @@ public class QuanLyPhongDAO {
             System.err.println("Lỗi khi thay đổi trạng thái phòng " + e.getMessage());
         }
         return false;
+    }
+
+    /**
+     * Lấy danh sách mã dịch vụ đã có của phòng từ DB (hóa đơn gần nhất),
+     * nếu chưa có dữ liệu thì fallback về cache runtime.
+     */
+    public List<String> layMaDichVuDaChon(String maPhong) {
+        String ma = normalise(maPhong);
+        List<String> fromDb = layMaDichVuTuHoaDonGanNhat(ma);
+        if (!fromDb.isEmpty()) {
+            return fromDb;
+        }
+
+        List<String> fromCache = serviceCache.get(ma);
+        if (fromCache == null || fromCache.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return new ArrayList<>(fromCache);
+    }
+
+    private List<String> layMaDichVuTuHoaDonGanNhat(String maPhong) {
+        String sql = "SELECT hd.maDichVu "
+                + "FROM HoaDonDetail hd "
+                + "JOIN ( "
+                + "    SELECT TOP 1 maHoaDon "
+                + "    FROM HoaDon "
+                + "    WHERE maPhong = ? "
+                + "    ORDER BY createdAt DESC "
+                + ") latest ON latest.maHoaDon = hd.maHoaDon";
+
+        List<String> result = new ArrayList<>();
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String maDv = rs.getString("maDichVu");
+                    if (maDv != null && !maDv.isBlank()) {
+                        result.add(maDv);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("layMaDichVuTuHoaDonGanNhat lỗi: " + e.getMessage());
+        }
+        return result;
     }
 }

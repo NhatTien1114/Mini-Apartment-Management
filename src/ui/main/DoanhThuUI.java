@@ -1,10 +1,14 @@
 package ui.main;
 
+import dao.HoaDonDAO;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -12,37 +16,32 @@ import javax.swing.border.EmptyBorder;
 public class DoanhThuUI {
 
     // ── Màu sắc ──────────────────────────────────────────────────────────────
-    private static final Color MAU_NEN         = new Color(229, 231, 235);
-    private static final Color MAU_TRANG       = Color.WHITE;
-    private static final Color MAU_XANH_LA     = new Color(34, 197, 94);
-    private static final Color MAU_XANH_DUONG  = new Color(59, 130, 246);
-    private static final Color MAU_VANG        = new Color(234, 179, 8);
-    private static final Color MAU_CHU_PHU     = new Color(107, 114, 128);
-    private static final Color MAU_CHU_CHINH   = new Color(17, 24, 39);
-    private static final Color MAU_COT         = new Color(156, 163, 175);
-    private static final Color MAU_COT_HOVER   = new Color(99, 102, 241);
-    private static final Color MAU_LUOI        = new Color(229, 231, 235);
+    private static final Color MAU_NEN = new Color(229, 231, 235);
+    private static final Color MAU_TRANG = Color.WHITE;
+    private static final Color MAU_XANH_LA = new Color(34, 197, 94);
+    private static final Color MAU_XANH_DUONG = new Color(59, 130, 246);
+    private static final Color MAU_VANG = new Color(234, 179, 8);
+    private static final Color MAU_CHU_PHU = new Color(107, 114, 128);
+    private static final Color MAU_CHU_CHINH = new Color(17, 24, 39);
+    private static final Color MAU_COT = new Color(30, 58, 138);
+    private static final Color MAU_COT_HOVER = new Color(37, 99, 235);
+    private static final Color MAU_LUOI = new Color(229, 231, 235);
 
     // ── Font ─────────────────────────────────────────────────────────────────
     private static final String FONT = "Be Vietnam Pro";
 
     // ── Tháng ────────────────────────────────────────────────────────────────
     private static final String[] THANG = {
-            "T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12"
+            "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"
     };
-
-    // ── Mock data theo năm (index 0=2024, 1=2025, 2=2026, 3=2027) ───────────
-    private static final long[][] DATA = {
-            {5_000_000, 8_200_000, 6_100_000, 9_500_000, 11_000_000, 7_300_000,
-                    12_400_000, 10_800_000, 9_200_000, 13_100_000, 14_500_000, 18_000_000},
-            {3_500_000, 4_200_000, 6_800_000, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    };
-    private static final int[] YEARS = {2024, 2025, 2026, 2027};
 
     // ── State ────────────────────────────────────────────────────────────────
-    private int selectedYearIndex = 2; // mặc định 2026
+    private final HoaDonDAO hoaDonDAO = new HoaDonDAO();
+    private final List<Integer> years = new ArrayList<>();
+    private int selectedYearIndex = 0;
+    private long[] doanhThuTheoThang = new long[12];
+    private long tongDoanhThu = 0;
+    private int soHoaDon = 0;
 
     // ── Components cần refresh ───────────────────────────────────────────────
     private JLabel lblTitleTong;
@@ -51,6 +50,10 @@ public class DoanhThuUI {
     private JLabel lblTBThang;
     private BarChartPanel barChartPanel;
 
+    public DoanhThuUI() {
+        initData();
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     public JPanel getPanel() {
         JPanel pnl = new JPanel(new BorderLayout(0, 16));
@@ -58,9 +61,39 @@ public class DoanhThuUI {
         pnl.setBackground(MAU_NEN);
 
         pnl.add(buildHeader(), BorderLayout.NORTH);
-        pnl.add(buildBody(),   BorderLayout.CENTER);
+        pnl.add(buildBody(), BorderLayout.CENTER);
 
         return pnl;
+    }
+
+    private void initData() {
+        years.clear();
+        years.addAll(hoaDonDAO.getDanhSachNamHoaDon());
+        int currentYear = LocalDate.now().getYear();
+        if (years.isEmpty()) {
+            years.add(currentYear);
+        }
+
+        int foundIdx = years.indexOf(currentYear);
+        selectedYearIndex = foundIdx >= 0 ? foundIdx : years.size() - 1;
+        loadThongKeTheoNam(getSelectedYear());
+    }
+
+    private int getSelectedYear() {
+        if (years.isEmpty()) {
+            return LocalDate.now().getYear();
+        }
+        if (selectedYearIndex < 0 || selectedYearIndex >= years.size()) {
+            selectedYearIndex = years.size() - 1;
+        }
+        return years.get(selectedYearIndex);
+    }
+
+    private void loadThongKeTheoNam(int year) {
+        Object[] rs = hoaDonDAO.getThongKeDoanhThuTheoNam(year);
+        doanhThuTheoThang = (long[]) rs[0];
+        tongDoanhThu = (long) rs[1];
+        soHoaDon = (int) rs[2];
     }
 
     // ── Header ────────────────────────────────────────────────────────────────
@@ -81,8 +114,10 @@ public class DoanhThuUI {
         lblNam.setForeground(MAU_CHU_PHU);
         lblNam.setBorder(new EmptyBorder(0, 0, 0, 6));
 
-        String[] yearStrs = new String[YEARS.length];
-        for (int i = 0; i < YEARS.length; i++) yearStrs[i] = String.valueOf(YEARS[i]);
+        String[] yearStrs = new String[years.size()];
+        for (int i = 0; i < years.size(); i++) {
+            yearStrs[i] = String.valueOf(years.get(i));
+        }
 
         JComboBox<String> cboNam = new JComboBox<>(yearStrs);
         cboNam.setSelectedIndex(selectedYearIndex);
@@ -105,7 +140,7 @@ public class DoanhThuUI {
     private JPanel buildBody() {
         JPanel pnl = new JPanel(new BorderLayout(0, 16));
         pnl.setOpaque(false);
-        pnl.add(buildCards(),        BorderLayout.NORTH);
+        pnl.add(buildCards(), BorderLayout.NORTH);
         pnl.add(buildChartWrapper(), BorderLayout.CENTER);
         return pnl;
     }
@@ -115,20 +150,17 @@ public class DoanhThuUI {
         JPanel pnl = new JPanel(new GridLayout(1, 3, 12, 0));
         pnl.setOpaque(false);
 
-        int year    = YEARS[selectedYearIndex];
-        long[] data = DATA[selectedYearIndex];
-        long tong   = tinhTong(data);
-        long soHD   = tinhSoHoaDon(data);
-        long tb     = tong / 12;
+        int year = getSelectedYear();
+        long tb = tongDoanhThu / 12;
 
-        lblTitleTong    = new JLabel("Tổng doanh thu " + year);
-        lblTongDoanhThu = new JLabel(formatTien(tong));
-        lblSoHoaDon     = new JLabel(String.valueOf(soHD));
-        lblTBThang      = new JLabel(formatTien(tb));
+        lblTitleTong = new JLabel("Tổng doanh thu " + year);
+        lblTongDoanhThu = new JLabel(formatTien(tongDoanhThu));
+        lblSoHoaDon = new JLabel(String.valueOf(soHoaDon));
+        lblTBThang = new JLabel(formatTien(tb));
 
-        pnl.add(buildCard(MAU_XANH_LA,    "đ",  lblTitleTong,              lblTongDoanhThu));
+        pnl.add(buildCard(MAU_XANH_LA, "đ", lblTitleTong, lblTongDoanhThu));
         pnl.add(buildCard(MAU_XANH_DUONG, "\uD83D\uDCCA", new JLabel("Số hóa đơn"), lblSoHoaDon));
-        pnl.add(buildCard(MAU_VANG,       "\uD83D\uDCC9", new JLabel("TB/tháng"),   lblTBThang));
+        pnl.add(buildCard(MAU_VANG, "\uD83D\uDCC9", new JLabel("TB/tháng"), lblTBThang));
 
         return pnl;
     }
@@ -210,7 +242,7 @@ public class DoanhThuUI {
         lblChartTitle.setBorder(new EmptyBorder(0, 0, 10, 0));
         wrapper.add(lblChartTitle, BorderLayout.NORTH);
 
-        barChartPanel = new BarChartPanel(DATA[selectedYearIndex]);
+        barChartPanel = new BarChartPanel(doanhThuTheoThang);
         wrapper.add(barChartPanel, BorderLayout.CENTER);
 
         return wrapper;
@@ -218,34 +250,27 @@ public class DoanhThuUI {
 
     // ── Refresh khi đổi năm ───────────────────────────────────────────────────
     private void refreshData() {
-        int year    = YEARS[selectedYearIndex];
-        long[] data = DATA[selectedYearIndex];
-        long tong   = tinhTong(data);
-        long soHD   = tinhSoHoaDon(data);
-        long tb     = tong / 12;
+        int year = getSelectedYear();
+        loadThongKeTheoNam(year);
+        long tb = tongDoanhThu / 12;
 
         lblTitleTong.setText("Tổng doanh thu " + year);
-        lblTongDoanhThu.setText(formatTien(tong));
-        lblSoHoaDon.setText(String.valueOf(soHD));
+        lblTongDoanhThu.setText(formatTien(tongDoanhThu));
+        lblSoHoaDon.setText(String.valueOf(soHoaDon));
         lblTBThang.setText(formatTien(tb));
 
-        barChartPanel.setData(data);
+        barChartPanel.setData(doanhThuTheoThang);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    private long tinhTong(long[] data) {
-        long s = 0; for (long v : data) s += v; return s;
-    }
-    private long tinhSoHoaDon(long[] data) {
-        int c = 0; for (long v : data) if (v > 0) c++; return c;
-    }
     private String formatTien(long value) {
-        if (value == 0) return "0đ";
+        if (value == 0)
+            return "0đ";
         return NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(value) + "đ";
     }
 
     // =========================================================================
-    //  BarChartPanel — tự vẽ bằng Graphics2D, KHÔNG dùng thư viện ngoài
+    // BarChartPanel — tự vẽ bằng Graphics2D, KHÔNG dùng thư viện ngoài
     // =========================================================================
     private class BarChartPanel extends JPanel {
 
@@ -269,7 +294,7 @@ public class DoanhThuUI {
                 @Override
                 public void mouseExited(MouseEvent e) {
                     hoveredIndex = -1;
-                    tooltipText  = null;
+                    tooltipText = null;
                     repaint();
                 }
             });
@@ -278,7 +303,7 @@ public class DoanhThuUI {
         void setData(long[] data) {
             this.data = data;
             hoveredIndex = -1;
-            tooltipText  = null;
+            tooltipText = null;
             repaint();
         }
 
@@ -286,15 +311,15 @@ public class DoanhThuUI {
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
             int w = getWidth();
             int h = getHeight();
 
-            int marginLeft   = 55;
-            int marginRight  = 16;
-            int marginTop    = 16;
+            int marginLeft = 55;
+            int marginRight = 16;
+            int marginTop = 16;
             int marginBottom = 30;
 
             int chartW = w - marginLeft - marginRight;
@@ -302,8 +327,11 @@ public class DoanhThuUI {
 
             // Max value
             long maxVal = 0;
-            for (long v : data) if (v > maxVal) maxVal = v;
-            if (maxVal == 0) maxVal = 1_000_000;
+            for (long v : data)
+                if (v > maxVal)
+                    maxVal = v;
+            if (maxVal == 0)
+                maxVal = 1_000_000;
 
             // Làm tròn maxVal lên bội số đẹp
             maxVal = roundUpNice(maxVal);
@@ -313,12 +341,12 @@ public class DoanhThuUI {
             g2.setFont(new Font(FONT, Font.PLAIN, 10));
 
             for (int i = 0; i <= gridLines; i++) {
-                int yPos = marginTop + chartH - (int)((double) i / gridLines * chartH);
-                long labelVal = (long)((double) i / gridLines * maxVal);
+                int yPos = marginTop + chartH - (int) ((double) i / gridLines * chartH);
+                long labelVal = (long) ((double) i / gridLines * maxVal);
 
                 g2.setColor(MAU_LUOI);
                 g2.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
-                        1f, new float[]{4f}, 0f));
+                        1f, new float[] { 4f }, 0f));
                 g2.drawLine(marginLeft, yPos, marginLeft + chartW, yPos);
 
                 g2.setColor(MAU_CHU_PHU);
@@ -330,14 +358,14 @@ public class DoanhThuUI {
             }
 
             // ── Vẽ cột ────────────────────────────────────────────────────
-            int n       = data.length;
+            int n = data.length;
             float slotW = (float) chartW / n;
-            float barW  = slotW * 0.45f;
+            float barW = slotW * 0.45f;
 
             for (int i = 0; i < n; i++) {
-                int barH = (int)((double) data[i] / maxVal * chartH);
-                int x    = marginLeft + (int)(i * slotW + (slotW - barW) / 2);
-                int y    = marginTop + chartH - barH;
+                int barH = (int) ((double) data[i] / maxVal * chartH);
+                int x = marginLeft + (int) (i * slotW + (slotW - barW) / 2);
+                int y = marginTop + chartH - barH;
 
                 if (barH > 0) {
                     g2.setColor(i == hoveredIndex ? MAU_COT_HOVER : MAU_COT);
@@ -350,7 +378,7 @@ public class DoanhThuUI {
                 g2.setColor(MAU_CHU_PHU);
                 FontMetrics fm = g2.getFontMetrics();
                 String lbl = THANG[i];
-                int lx = x + (int)(barW / 2) - fm.stringWidth(lbl) / 2;
+                int lx = x + (int) (barW / 2) - fm.stringWidth(lbl) / 2;
                 int ly = marginTop + chartH + marginBottom - 8;
                 g2.drawString(lbl, lx, ly);
             }
@@ -373,16 +401,16 @@ public class DoanhThuUI {
             float slotW = (float) chartW / n;
 
             hoveredIndex = -1;
-            tooltipText  = null;
+            tooltipText = null;
 
             for (int i = 0; i < n; i++) {
-                int slotX = marginLeft + (int)(i * slotW);
+                int slotX = marginLeft + (int) (i * slotW);
                 if (mx >= slotX && mx < slotX + (int) slotW
                         && my >= marginTop && my <= marginTop + chartH) {
                     hoveredIndex = i;
-                    tooltipText  = THANG[i] + "\nrevenue : " + formatTien(data[i]);
-                    tooltipX     = mx;
-                    tooltipY     = my - 10;
+                    tooltipText = THANG[i] + "\nrevenue : " + formatTien(data[i]);
+                    tooltipX = mx;
+                    tooltipY = my - 10;
                     break;
                 }
             }
@@ -395,14 +423,15 @@ public class DoanhThuUI {
             g2.setFont(f);
             FontMetrics fm = g2.getFontMetrics();
 
-            int pad   = 8;
+            int pad = 8;
             int lineH = fm.getHeight();
-            int bw    = 0;
-            for (String l : lines) bw = Math.max(bw, fm.stringWidth(l));
+            int bw = 0;
+            for (String l : lines)
+                bw = Math.max(bw, fm.stringWidth(l));
             bw += pad * 2;
             int bh = lineH * lines.length + pad * 2;
 
-            int tx = Math.min(x + 10, getWidth()  - bw - 4);
+            int tx = Math.min(x + 10, getWidth() - bw - 4);
             int ty = Math.max(y - bh - 4, 4);
 
             // Shadow nhẹ
@@ -425,13 +454,15 @@ public class DoanhThuUI {
 
         // Làm tròn lên bội số đẹp để trục Y không bị lẻ
         private long roundUpNice(long val) {
-            if (val <= 0) return 1_000_000;
+            if (val <= 0)
+                return 1_000_000;
             long magnitude = (long) Math.pow(10, (long) Math.log10(val));
             return ((val / magnitude) + 1) * magnitude;
         }
 
         private String formatTrieu(long value) {
-            if (value == 0) return "0M";
+            if (value == 0)
+                return "0M";
             return (value / 1_000_000) + "M";
         }
     }

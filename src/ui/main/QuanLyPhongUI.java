@@ -19,8 +19,12 @@ import java.awt.event.MouseEvent;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -47,6 +51,13 @@ public class QuanLyPhongUI {
     private JPanel floorsPanel;
     private JScrollPane scrollPane;
     private TangDAO tangDAO = new TangDAO();
+    private RoundedTextField txtSearch;
+
+    private String currentKeyword = "";
+    private String selectedStatusFilter;
+    private final Map<String, JButton> statusFilterButtons = new LinkedHashMap<>();
+    private final Map<String, Color> statusFilterColors = new LinkedHashMap<>();
+    private final Map<String, Color> statusFilterActiveText = new LinkedHashMap<>();
 
     private Runnable onStatusChanged;
 
@@ -76,7 +87,12 @@ public class QuanLyPhongUI {
         btnAdd.addActionListener(e -> showAddDialog());
         topBar.add(btnAdd, BorderLayout.EAST);
 
-        root.add(topBar, BorderLayout.NORTH);
+        JPanel northWrap = new JPanel(new BorderLayout(0, 12));
+        northWrap.setOpaque(false);
+        northWrap.add(topBar, BorderLayout.NORTH);
+        northWrap.add(createSearchAndFilterBar(), BorderLayout.SOUTH);
+
+        root.add(northWrap, BorderLayout.NORTH);
 
         JPanel contentCard = new JPanel(new BorderLayout());
         contentCard.setBackground(AppColors.WHITE);
@@ -96,6 +112,140 @@ public class QuanLyPhongUI {
         root.add(contentCard, BorderLayout.CENTER);
         rebuildFloors();
         return root;
+    }
+
+    private JPanel createSearchAndFilterBar() {
+        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 2));
+        controls.setOpaque(false);
+        controls.setBorder(new EmptyBorder(2, 0, 12, 0));
+
+        txtSearch = new RoundedTextField(6);
+        txtSearch.setFont(FONT_PLAIN);
+        txtSearch.setPlaceholder("Tìm theo mã phòng...");
+        txtSearch.setPreferredSize(new Dimension(220, 36));
+
+        JButton btnSearch = new JButton("Tìm kiếm");
+        btnSearch.setFont(FONT_PLAIN);
+        btnSearch.setFocusPainted(false);
+        btnSearch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnSearch.setContentAreaFilled(true);
+        btnSearch.setOpaque(true);
+        btnSearch.setBackground(AppColors.SLATE_900);
+        btnSearch.setForeground(AppColors.WHITE);
+        btnSearch.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(AppColors.SLATE_900, 1, true),
+                new EmptyBorder(7, 14, 7, 14)));
+        btnSearch.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btnSearch.setBackground(AppColors.SLATE_600);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btnSearch.setBackground(AppColors.SLATE_900);
+            }
+        });
+
+        Runnable applySearch = () -> {
+            currentKeyword = txtSearch.getText() == null ? "" : txtSearch.getText().trim().toLowerCase();
+            rebuildFloors();
+        };
+        btnSearch.addActionListener(e -> applySearch.run());
+        txtSearch.addActionListener(e -> applySearch.run());
+
+        controls.add(txtSearch);
+        controls.add(btnSearch);
+
+        controls.add(createStatusFilterButton("Trống", AppColors.GREEN_600, AppColors.WHITE));
+        controls.add(createStatusFilterButton("Đã cọc", AppColors.BLUE, AppColors.WHITE));
+        controls.add(createStatusFilterButton("Đã thuê", AppColors.RED_500, AppColors.WHITE));
+        controls.add(createStatusFilterButton("Đang sửa", AppColors.AMBER_FG, AppColors.WHITE));
+
+        return controls;
+    }
+
+    private JButton createStatusFilterButton(String status, Color chipColor, Color activeTextColor) {
+        statusFilterColors.put(status, chipColor);
+        statusFilterActiveText.put(status, activeTextColor);
+
+        JButton btn = new JButton(status);
+        btn.setFont(FONT_SMALL);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setContentAreaFilled(true);
+        btn.setOpaque(true);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(chipColor, 1, true),
+                new EmptyBorder(7, 12, 7, 12)));
+        btn.addActionListener(e -> {
+            if (status.equals(selectedStatusFilter)) {
+                selectedStatusFilter = null;
+            } else {
+                selectedStatusFilter = status;
+            }
+            updateFilterButtonStyles();
+            rebuildFloors();
+        });
+        btn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (!status.equals(selectedStatusFilter)) {
+                    btn.setBackground(new Color(248, 250, 252));
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!status.equals(selectedStatusFilter)) {
+                    btn.setBackground(AppColors.WHITE);
+                }
+            }
+        });
+
+        statusFilterButtons.put(status, btn);
+        updateFilterButtonStyles();
+        return btn;
+    }
+
+    private void updateFilterButtonStyles() {
+        for (Map.Entry<String, JButton> entry : statusFilterButtons.entrySet()) {
+            String status = entry.getKey();
+            JButton btn = entry.getValue();
+            Color chipColor = statusFilterColors.get(status);
+            Color activeText = statusFilterActiveText.get(status);
+
+            if (status.equals(selectedStatusFilter)) {
+                btn.setBackground(chipColor);
+                btn.setForeground(activeText);
+                btn.setBorder(BorderFactory.createCompoundBorder(
+                        new LineBorder(chipColor, 1, true),
+                        new EmptyBorder(7, 12, 7, 12)));
+            } else {
+                btn.setBackground(AppColors.WHITE);
+                btn.setForeground(chipColor);
+                btn.setBorder(BorderFactory.createCompoundBorder(
+                        new LineBorder(chipColor, 1, true),
+                        new EmptyBorder(7, 12, 7, 12)));
+            }
+        }
+    }
+
+    private boolean matchesCurrentFilter(Phong phong) {
+        if (phong == null)
+            return false;
+
+        if (selectedStatusFilter != null) {
+            String status = phong.getTrangThai() == null ? "" : phong.getTrangThai().getTen();
+            if (!selectedStatusFilter.equals(status))
+                return false;
+        }
+
+        if (currentKeyword != null && !currentKeyword.isEmpty()) {
+            String maPhong = phong.getMaPhong() == null ? "" : phong.getMaPhong().toLowerCase();
+            return maPhong.contains(currentKeyword);
+        }
+        return true;
     }
 
     private JPanel createFloorSection(String floorName, List<Phong> phongs) {
@@ -196,9 +346,16 @@ public class QuanLyPhongUI {
 
         boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+            }
         });
 
         fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
@@ -327,16 +484,24 @@ public class QuanLyPhongUI {
         cLoai.setBackground(AppColors.WHITE);
         cLoai.setForeground(AppColors.SLATE_900);
         cLoai.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        if (currentLoai != null) cLoai.setSelectedItem(currentLoai);
+        if (currentLoai != null)
+            cLoai.setSelectedItem(currentLoai);
 
         // ── Giá thuê ──
         RoundedTextField txtGia = new RoundedTextField(6);
         txtGia.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+            }
         });
         fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
         cLoai.addActionListener(e -> {
@@ -370,6 +535,19 @@ public class QuanLyPhongUI {
             checks[i].setOpaque(false);
         }
 
+        boolean isDaThueTrangThai = phong.getTrangThai() == Phong.TrangThai.THUE;
+        if (isDaThueTrangThai) {
+            dichVuDAO.ganTatCaDichVuChoPhongNeuChuaCo(phong.getMaPhong());
+        }
+
+        Set<String> maDvDaChon = new HashSet<>(dichVuDAO.layMaDichVuTheoPhong(phong.getMaPhong()));
+        for (JCheckBox cb : checks) {
+            Object maDv = cb.getClientProperty("maDichVu");
+            if (maDv != null && maDvDaChon.contains(maDv.toString())) {
+                cb.setSelected(true);
+            }
+        }
+
         JPanel pnlDichVu = new JPanel();
         pnlDichVu.setBackground(AppColors.WHITE);
         pnlDichVu.setLayout(new BoxLayout(pnlDichVu, BoxLayout.Y_AXIS));
@@ -378,11 +556,13 @@ public class QuanLyPhongUI {
         pnlDichVu.add(Box.createVerticalStrut(6));
         pnlDichVu.add(cbDien);
         pnlDichVu.add(cbNuoc);
-        for (JCheckBox cb : checks) pnlDichVu.add(cb);
+        for (JCheckBox cb : checks)
+            pnlDichVu.add(cb);
 
         // ── Panel chỉ số điện/nước (chỉ hiện khi "Đã thuê") ──
         LocalDate now = LocalDate.now();
-        int[] chiSoCu = chiSoDAO.layChiSoThangTruoc(phong.getMaPhong(), now.getMonthValue(), now.getYear());
+        int[] chiSoCu = chiSoDAO.layChiSoGanNhat(phong.getMaPhong());
+        int[] chiSoThangNay = chiSoDAO.layChiSoTheoThang(phong.getMaPhong(), now.getMonthValue(), now.getYear());
 
         JPanel pnlChiSo = new JPanel();
         pnlChiSo.setBackground(AppColors.WHITE);
@@ -406,6 +586,9 @@ public class QuanLyPhongUI {
 
         RoundedTextField txtDienMoi = new RoundedTextField(6);
         txtDienMoi.setPlaceholder("Nhập số mới");
+        if (chiSoThangNay != null) {
+            txtDienMoi.setText(String.valueOf(chiSoThangNay[0]));
+        }
 
         rowDien.add(wrapField("Số điện cũ (kWh)", txtDienCu));
         rowDien.add(wrapField("Số điện mới (kWh)", txtDienMoi));
@@ -422,6 +605,9 @@ public class QuanLyPhongUI {
 
         RoundedTextField txtNuocMoi = new RoundedTextField(6);
         txtNuocMoi.setPlaceholder("Nhập số mới");
+        if (chiSoThangNay != null) {
+            txtNuocMoi.setText(String.valueOf(chiSoThangNay[1]));
+        }
 
         rowNuoc.add(wrapField("Số nước cũ (m³)", txtNuocCu));
         rowNuoc.add(wrapField("Số nước mới (m³)", txtNuocMoi));
@@ -459,9 +645,7 @@ public class QuanLyPhongUI {
         }
         for (int i = 0; i < checks.length; i++) {
             final int idx = i;
-            checks[i].addItemListener(ev ->
-                    dvDaChonLabels[idx].setVisible(checks[idx].isSelected())
-            );
+            checks[i].addItemListener(ev -> dvDaChonLabels[idx].setVisible(checks[idx].isSelected()));
         }
 
         // ── Thêm tất cả vào form ──
@@ -541,8 +725,7 @@ public class QuanLyPhongUI {
                         now.getMonthValue(),
                         now.getYear(),
                         dienMoi,
-                        nuocMoi
-                );
+                        nuocMoi);
                 String errCs = chiSoDAO.luuHoacCapNhat(cs);
                 if (errCs != null) {
                     JOptionPane.showMessageDialog(dlg, errCs, "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -554,8 +737,12 @@ public class QuanLyPhongUI {
             List<String> dvChon = new ArrayList<>();
             if (!"Đã thuê".equals(trangThaiChon)) {
                 for (JCheckBox cb : checks)
-                    if (cb.isSelected())
-                        dvChon.add(cb.getText().split(" - ")[0]);
+                    if (cb.isSelected()) {
+                        Object maDv = cb.getClientProperty("maDichVu");
+                        if (maDv != null) {
+                            dvChon.add(maDv.toString());
+                        }
+                    }
             }
 
             LoaiPhong loaiChon = (LoaiPhong) cLoai.getSelectedItem();
@@ -582,7 +769,8 @@ public class QuanLyPhongUI {
     // ── PRIVATE HELPERS ──────────────────────────────────────────────────────
 
     /**
-     * Tạo checkbox Điện hoặc Nước: tick sẵn, disabled, giá lấy từ bảng giá DB active.
+     * Tạo checkbox Điện hoặc Nước: tick sẵn, disabled, giá lấy từ bảng giá DB
+     * active.
      */
     private JCheckBox makeDichVuMacDinhCheckBox(String keyword) {
         JCheckBox cb = new JCheckBox(layLabelDichVuMacDinh(keyword), true);
@@ -607,7 +795,8 @@ public class QuanLyPhongUI {
             List<GiaDetail> details = giaDetailDAO.layTheoHeader(activeHeader.getMaGiaHeader());
             List<DichVu> tatCa = dichVuDAO.layTatCa();
             for (GiaDetail d : details) {
-                if (d.getMaDichVu() == null) continue;
+                if (d.getMaDichVu() == null)
+                    continue;
                 for (DichVu dv : tatCa) {
                     if (dv.getMaDichVu().equals(d.getMaDichVu())) {
                         String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
@@ -693,16 +882,19 @@ public class QuanLyPhongUI {
             java.net.URL url = getClass().getResource("/bin.png");
             if (url == null) {
                 java.io.File f = new java.io.File("bin.png");
-                if (f.exists()) url = f.toURI().toURL();
+                if (f.exists())
+                    url = f.toURI().toURL();
             }
             if (url != null) {
                 Image img = new ImageIcon(url).getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
                 icon = new ImageIcon(img);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         JButton btn = icon != null ? new JButton(icon) : new JButton("🗑");
-        if (icon == null) btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+        if (icon == null)
+            btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
         btn.setOpaque(true);
         btn.setBackground(AppColors.RED_500);
         btn.setForeground(AppColors.WHITE);
@@ -713,8 +905,15 @@ public class QuanLyPhongUI {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(36, 30));
         btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btn.setBackground(AppColors.RED); }
-            @Override public void mouseExited(MouseEvent e) { btn.setBackground(AppColors.RED_500); }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(AppColors.RED);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(AppColors.RED_500);
+            }
         });
         return btn;
     }
@@ -794,17 +993,20 @@ public class QuanLyPhongUI {
         GiaHeader activeHeader = headers.stream()
                 .filter(h -> h.getTrangThai() == 1)
                 .findFirst().orElse(null);
-        if (activeHeader == null) return result;
+        if (activeHeader == null)
+            return result;
 
         List<GiaDetail> details = giaDetailDAO.layTheoHeader(activeHeader.getMaGiaHeader());
         List<DichVu> tatCaDichVu = dichVuDAO.layTatCa();
 
         for (GiaDetail d : details) {
-            if (d.getMaDichVu() == null) continue;
+            if (d.getMaDichVu() == null)
+                continue;
             for (DichVu dv : tatCaDichVu) {
                 if (dv.getMaDichVu().equals(d.getMaDichVu())) {
                     String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
-                    if (ten.contains("điện") || ten.contains("nước")) break;
+                    if (ten.contains("điện") || ten.contains("nước"))
+                        break;
                     dv.setDonGia(d.getDonGia());
                     result.add(dv);
                     break;
@@ -829,17 +1031,36 @@ public class QuanLyPhongUI {
     }
 
     private void rebuildFloors() {
-        if (floorsPanel == null) return;
+        if (floorsPanel == null)
+            return;
         floorsPanel.removeAll();
         List<Tang> dsTang = tangDAO.layDanhSachTang();
         dsTang.sort((t1, t2) -> t2.getMaTang().compareTo(t1.getMaTang()));
+
+        boolean hasAnyRoom = false;
         for (Tang tang : dsTang) {
             List<entity.Phong> dsPhong = dao.layTheoTang(tang.getMaTang());
-            if (!dsPhong.isEmpty()) {
-                floorsPanel.add(createFloorSection(tang.getTenTang(), dsPhong));
+            List<entity.Phong> dsPhongDaLoc = new ArrayList<>();
+            for (entity.Phong phong : dsPhong) {
+                if (matchesCurrentFilter(phong)) {
+                    dsPhongDaLoc.add(phong);
+                }
+            }
+
+            if (!dsPhongDaLoc.isEmpty()) {
+                hasAnyRoom = true;
+                floorsPanel.add(createFloorSection(tang.getTenTang(), dsPhongDaLoc));
                 floorsPanel.add(Box.createVerticalStrut(20));
             }
         }
+
+        if (!hasAnyRoom) {
+            JLabel emptyLabel = new JLabel("Không có phòng phù hợp với bộ lọc hiện tại", SwingConstants.CENTER);
+            emptyLabel.setFont(FONT_PLAIN);
+            emptyLabel.setForeground(AppColors.SLATE_500);
+            floorsPanel.add(emptyLabel);
+        }
+
         floorsPanel.revalidate();
         floorsPanel.repaint();
     }

@@ -74,6 +74,7 @@ public class TrangChu extends JFrame {
 
         setVisible(true);
     }
+
     // ================= MENU BÊN TRÁI =================
     private JPanel createMenuPanel() {
         JPanel pnlMenu = new JPanel();
@@ -172,12 +173,18 @@ public class TrangChu extends JFrame {
         if (index == 2) {
             refreshQuanLyPhongTab();
         }
+        if (index == 3) {
+            refreshKhachHangTab();
+        }
 
         cardLayout.show(pnlContent, String.valueOf(index));
     }
 
     // ================= PANEL CHÍNH =================
     private QuanLyPhongUI quanLyPhongUI;
+    private HopDongUI hopDongUI;
+    private KhachHangUI khachHangUI;
+
     private JPanel createMainPanel() {
         JPanel pnlMain = new JPanel(new BorderLayout());
         pnlMain.setBackground(AppColors.APP_BACKGROUND);
@@ -190,15 +197,24 @@ public class TrangChu extends JFrame {
 
         pnlTrangChuContent = createTrangChuContent();
         pnlContent.add(pnlTrangChuContent, "0");
-        pnlContent.add(new HopDongUI().getPanel(), "1");
+        hopDongUI = new HopDongUI();
+        pnlContent.add(hopDongUI.getPanel(), "1");
         quanLyPhongUI = new QuanLyPhongUI();
         pnlContent.add(quanLyPhongUI.getPanel(), "2");
-        pnlContent.add(new KhachHangUI().getPanel(), "3");
+        khachHangUI = new KhachHangUI();
+        pnlContent.add(khachHangUI.getPanel(), "3");
         pnlContent.add(new PhuongTienUI().getPanel(), "4");
         pnlContent.add(new DoanhThuUI().getPanel(), "5");
         pnlContent.add(new DichVuUI().getPanel(), "6");
         pnlContent.add(new HoaDonUI().getPanel(), "7");
         pnlContent.add(new BangGiaUI(taiKhoan).getPanel(), "8");
+
+        if (hopDongUI != null) {
+            hopDongUI.setOnContractCreated(() -> {
+                refreshQuanLyPhongTab();
+                refreshKhachHangTab();
+            });
+        }
 
         pnlMain.add(pnlContent, BorderLayout.CENTER);
         return pnlMain;
@@ -218,9 +234,16 @@ public class TrangChu extends JFrame {
         pnlContent.revalidate();
         pnlContent.repaint();
     }
+
     private void refreshQuanLyPhongTab() {
         if (quanLyPhongUI != null) {
             quanLyPhongUI.refresh();
+        }
+    }
+
+    private void refreshKhachHangTab() {
+        if (khachHangUI != null) {
+            khachHangUI.refresh();
         }
     }
 
@@ -288,14 +311,14 @@ public class TrangChu extends JFrame {
             pnlRightButtons.add(btnTaoTaiKhoan);
         }
 
-        JButton btnDangXuat = new JButton("Đăng xuất");
+        JButton btnDangXuat = new ui.util.PrimaryButton().makeErrorButton("Đăng xuất");
         btnDangXuat.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
         btnDangXuat.setBackground(Color.WHITE);
         btnDangXuat.addActionListener(e -> {
             new LoginUI().setVisible(true);
             this.dispose();
         });
-        
+
         pnlRightButtons.add(btnDangXuat);
         pnlHeader.add(pnlRightButtons, BorderLayout.EAST);
 

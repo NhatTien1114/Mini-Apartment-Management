@@ -5,6 +5,9 @@ import java.awt.event.*;
 import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.*;
@@ -24,6 +27,9 @@ import entity.Phong;
 import ui.util.*;
 
 public class HopDongUI {
+    private static final java.text.NumberFormat VN_MONEY = java.text.NumberFormat
+            .getNumberInstance(new Locale("vi", "VN"));
+
     private final Color MAU_NEN = AppColors.SLATE_50;
     private final Color MAU_CARD = AppColors.WHITE;
     private final Color MAU_TEXT = AppColors.SLATE_900;
@@ -43,6 +49,11 @@ public class HopDongUI {
     GiaDetailDAO giaDetailDAO = new GiaDetailDAO();
 
     private PrimaryButton primaryButton = new PrimaryButton();
+    private Runnable onContractCreated;
+
+    public void setOnContractCreated(Runnable callback) {
+        this.onContractCreated = callback;
+    }
 
     public static class ContractDraft {
         public String phong;
@@ -441,15 +452,19 @@ public class HopDongUI {
         JPanel pnlGrid = new JPanel(new GridLayout(0, 2, 14, 12));
         pnlGrid.setOpaque(false);
 
-
         ArrayList<Phong> dsPhongTrong = PhongDAO.getAllPhongTrong();
         String[] roomOptions = new String[dsPhongTrong.size()];
+        Map<String, Long> roomPriceByCode = new HashMap<>();
 
         for (int i = 0; i < dsPhongTrong.size(); i++) {
-            GiaDetail gd = giaDetailDAO.getDonGiaByMa(dsPhongTrong.get(i).getMaGiaDetail());
+            Phong room = dsPhongTrong.get(i);
+            GiaDetail gd = giaDetailDAO.getDonGiaByMa(room.getMaGiaDetail());
             double donGia = (gd != null) ? gd.getDonGia() : 0.0;
+            long giaLamTron = Math.max(0L, Math.round(donGia));
 
-            roomOptions[i] = dsPhongTrong.get(i).getMaPhong() + " - " + donGia;
+            roomPriceByCode.put(room.getMaPhong(), giaLamTron);
+
+            roomOptions[i] = room.getMaPhong() + " - " + formatCurrencyValue(giaLamTron) + " đ";
         }
         JComboBox<String> cboPhong = FormFieldStyles.createRoomCombo(
                 roomOptions,
@@ -476,16 +491,17 @@ public class HopDongUI {
 
         applyNumberFilter(txtSoDienThoai);
         applyNumberFilter(txtCccd);
-        applyNumberFilter(txtCoc);
-        applyNumberFilter(txtThue);
 
         txtThue.setEditable(false);
         txtCoc.setEditable(false);
 
         ActionListener roomListener = e -> {
             String selected = (String) cboPhong.getSelectedItem();
-            txtThue.setText(extractRoomPriceRaw(selected));
-            txtCoc.setText(extractRoomPriceRaw(selected));
+            String roomCode = extractRoomCode(selected);
+            long selectedPrice = roomPriceByCode.getOrDefault(roomCode, 0L);
+            String rawPrice = String.valueOf(selectedPrice);
+            txtThue.setText(formatCurrency(rawPrice));
+            txtCoc.setText(formatCurrency(rawPrice));
 
         };
         cboPhong.addActionListener(roomListener);
@@ -500,7 +516,8 @@ public class HopDongUI {
                 txtSoDienThoai.setText(kh.getSoDienThoai());
                 txtCccd.setText(kh.getSoCCCD());
                 txtDiaChi.setText(kh.getDiaChi());
-                // Lấy và format ngày sinh (Giả sử hàm getNgaySinh() trả về String, Date hoặc LocalDate)
+                // Lấy và format ngày sinh (Giả sử hàm getNgaySinh() trả về String, Date hoặc
+                // LocalDate)
                 if (kh.getNgaySinh() != null) {
                     txtNgaySinh.setText(formatToDDMMYYYY(kh.getNgaySinh()));
                 }
@@ -511,8 +528,8 @@ public class HopDongUI {
 
             txtBatDau.setText(formatToDDMMYYYY(objBatDau));
             txtKetThuc.setText(formatToDDMMYYYY(objKetThuc));
-            txtCoc.setText(model.getValueAt(row, 5).toString().replaceAll("[^0-9]", ""));
-            txtThue.setText(model.getValueAt(row, 6).toString().replaceAll("[^0-9]", ""));
+            txtCoc.setText(formatCurrency(model.getValueAt(row, 5).toString()));
+            txtThue.setText(formatCurrency(model.getValueAt(row, 6).toString()));
         }
 
         Font labelFont = new Font("Inter", Font.PLAIN, 13);
@@ -564,13 +581,13 @@ public class HopDongUI {
 
         btnSave.addActionListener(e -> {
             String ngaySinhRaw = "";
-            if(!isEdit){
+            if (!isEdit) {
                 ngaySinhRaw = txtNgaySinh.getText().replace("_", "").trim();
             }
             String bDau = txtBatDau.getText().replace("_", "").trim();
             String kThuc = txtKetThuc.getText().replace("_", "").trim();
             String phongCode;
-            if (!isEdit) {
+            if (isEdit) {
                 phongCode = txtPhongEdit.getText().trim();
             } else {
                 String phongDisplay = (String) cboPhong.getSelectedItem();
@@ -635,8 +652,19 @@ public class HopDongUI {
                 draft.ngaySinh = txtNgaySinh.getText().replace("_", "").trim();
                 draft.ngayBatDau = txtBatDau.getText().trim();
                 draft.ngayKetThuc = txtKetThuc.getText().trim();
-                draft.tienCocRaw = txtCoc.getText().trim();
-                draft.giaThueRaw = txtThue.getText().trim();
+                long selectedPrice = roomPriceByCode.getOrDefault(phongCode, 0L);
+                if (selectedPrice > 0) {
+                    draft.tienCocRaw = String.valueOf(selectedPrice);
+                    draft.giaThueRaw = String.valueOf(selectedPrice);
+                } else {
+                    draft.tienCocRaw = sanitizeMoneyRaw(txtCoc.getText().trim());
+                    draft.giaThueRaw = sanitizeMoneyRaw(txtThue.getText().trim());
+                }
+
+                if (draft.tienCocRaw.isEmpty() || draft.giaThueRaw.isEmpty()) {
+                    showToast("Tiền cọc / tiền thuê không hợp lệ");
+                    return;
+                }
 
                 dialog.setVisible(false);
                 boolean accepted = showContractPreviewDialog(draft);
@@ -646,6 +674,9 @@ public class HopDongUI {
 
                     if (success) {
                         loadDataToTable();
+                        if (onContractCreated != null) {
+                            onContractCreated.run();
+                        }
                         showToast("Lưu vào cơ sở dữ liệu thành công!");
                         dialog.dispose();
                     } else {
@@ -879,12 +910,15 @@ public class HopDongUI {
         if (roomDisplay == null) {
             return "0";
         }
-        String digits = roomDisplay.replaceAll("[^0-9]", "");
+        int idx = roomDisplay.indexOf('-');
+        String pricePart = idx >= 0 ? roomDisplay.substring(idx + 1) : roomDisplay;
+        String digits = pricePart.replaceAll("[^0-9]", "");
         return digits.isEmpty() ? "0" : digits;
     }
 
     private void selectRoomByCode(JComboBox<String> combo, String roomCode) {
-        if (roomCode == null) return;
+        if (roomCode == null)
+            return;
 
         for (int i = 0; i < combo.getItemCount(); i++) {
             Object itemObj = combo.getItemAt(i);
@@ -1020,23 +1054,39 @@ public class HopDongUI {
     }
 
     private String formatCurrency(String num) {
-        if (num.isEmpty())
-            return "0đ";
-        long v = Long.parseLong(num);
-        return String.format("%,d", v).replace(",", ".");
-    }
-
-    private String formatMoneyDisplay(Object moneyObj) {
-        if (moneyObj == null || moneyObj.toString().isEmpty()) return "0";
+        String digits = sanitizeMoneyRaw(num);
+        if (digits.isEmpty())
+            return "0";
         try {
-            // Chuyển sang double để xử lý trường hợp có số thập phân .0
-            double amount = Double.parseDouble(moneyObj.toString());
-            long value = Math.round(amount);
-            return String.format("%,d", value).replace(",", ".");
-        } catch (Exception e) {
+            long v = Long.parseLong(digits);
+            return VN_MONEY.format(v);
+        } catch (NumberFormatException e) {
             return "0";
         }
     }
+
+    private String formatMoneyDisplay(Object moneyObj) {
+        if (moneyObj == null || moneyObj.toString().isEmpty())
+            return "0 đ";
+        try {
+            double amount = Double.parseDouble(moneyObj.toString());
+            long value = Math.round(amount);
+            return VN_MONEY.format(value) + " đ";
+        } catch (Exception e) {
+            return "0 đ";
+        }
+    }
+
+    private String sanitizeMoneyRaw(String text) {
+        if (text == null)
+            return "";
+        return text.replaceAll("[^0-9]", "");
+    }
+
+    private String formatCurrencyValue(long amount) {
+        return VN_MONEY.format(amount);
+    }
+
     private void showToast(String message) {
         Window parent = SwingUtilities.getWindowAncestor(pnlRoot);
         if (parent == null)
@@ -1264,17 +1314,18 @@ public class HopDongUI {
 
                     int modelRow = table.convertRowIndexToModel(rowTarget);
                     String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
-                    String tenKhachHang = String.valueOf(model.getValueAt(modelRow, 2)); // Lấy thêm tên khách để hiển thị cho rõ ràng
+                    String tenKhachHang = String.valueOf(model.getValueAt(modelRow, 2)); // Lấy thêm tên khách để hiển
+                                                                                         // thị cho rõ ràng
                     String maPhong = String.valueOf(model.getValueAt(modelRow, 1)); // Lấy mã phòng
 
                     // Tạo hộp thoại xác nhận (Warning)
                     int luaChon = JOptionPane.showConfirmDialog(
                             pnlRoot, // Gắn hộp thoại vào panel gốc
-                            "Bạn có chắc chắn muốn xóa hợp đồng của khách hàng '" + tenKhachHang + "' (Phòng " + maPhong + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
+                            "Bạn có chắc chắn muốn xóa hợp đồng của khách hàng '" + tenKhachHang + "' (Phòng " + maPhong
+                                    + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
                             "Xác nhận xóa hợp đồng",
                             JOptionPane.YES_NO_OPTION,
-                            JOptionPane.WARNING_MESSAGE
-                    );
+                            JOptionPane.WARNING_MESSAGE);
 
                     // Nếu người dùng chọn YES (Đồng ý xóa)
                     if (luaChon == JOptionPane.YES_OPTION) {
