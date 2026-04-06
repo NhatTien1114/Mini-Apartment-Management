@@ -238,7 +238,8 @@ public class PhongInfo {
         label.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        if (field instanceof JTextField jTextField) {
+        if (field instanceof JTextField) {
+            JTextField jTextField = (JTextField) field;
             jTextField.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
         } else if (field instanceof JComboBox) {
             ((JComboBox<?>) field).setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));

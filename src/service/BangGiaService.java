@@ -159,7 +159,7 @@ public class BangGiaService {
         List<GiaDetail> details = new ArrayList<>();
         for (LuuChiTietItem item : items) {
             String ma = item.getMaDinhDanh();
-            if (ma == null || ma.isBlank()) {
+            if (ma == null || ma.trim().isEmpty()) {
                 return "Thiếu thông tin loại ở một dòng chi tiết";
             }
             if (!seen.add(ma)) {
@@ -268,7 +268,7 @@ public class BangGiaService {
         List<GiaDetail> details = new ArrayList<>();
         for (LuuChiTietItem item : items) {
             String ma = item.getMaDinhDanh();
-            if (ma == null || ma.isBlank()) {
+            if (ma == null || ma.trim().isEmpty()) {
                 return "Thiếu thông tin loại ở một dòng chi tiết";
             }
             if (item.getDonGia() < 0) {

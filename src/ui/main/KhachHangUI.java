@@ -342,7 +342,7 @@ public class KhachHangUI {
         if (dsPhongDisplay.isEmpty()) {
             dsPhongDisplay.add("(Không có phòng đã thuê)");
         }
-        JComboBox<String> cboPhongDaThue = new JComboBox<>(dsPhongDisplay.toArray(String[]::new));
+        JComboBox<String> cboPhongDaThue = new JComboBox<>(dsPhongDisplay.toArray(new String[0]));
         cboPhongDaThue.setFont(FONT_PLAIN);
         cboPhongDaThue.setBackground(AppColors.WHITE);
         cboPhongDaThue.setForeground(AppColors.SLATE_900);

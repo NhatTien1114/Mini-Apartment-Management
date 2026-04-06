@@ -57,7 +57,7 @@ public class HopDongDAO {
     }
 
     private java.sql.Date parseNgaySinhNullable(String ngaySinh) {
-        if (ngaySinh == null || ngaySinh.isBlank()) {
+        if (ngaySinh == null || ngaySinh.trim().isEmpty()) {
             return null;
         }
         String[] p = ngaySinh.trim().split("/");

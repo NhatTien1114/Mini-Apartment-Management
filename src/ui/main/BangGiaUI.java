@@ -99,6 +99,10 @@ public class BangGiaUI {
     private final String tenNguoiCapNhat;
     private final ImageIcon penIcon = loadActionIcon("img/icons/pen.png");
     private final ImageIcon binIcon = loadActionIcon("img/icons/bin.png");
+    private final java.text.DecimalFormat numberFormat = new java.text.DecimalFormat("#,##0");
+
+    private List<BangGiaService.LoaiPhongItem> cachedLoaiPhongs = null;
+    private List<DichVu> cachedDichVus = null;
 
     private JTable tableTongHop;
     private DefaultTableModel modelTongHop;
@@ -167,21 +171,23 @@ public class BangGiaUI {
 
         tableTongHop.getColumnModel().getColumn(4).setMinWidth(90);
         tableTongHop.getColumnModel().getColumn(4).setMaxWidth(110);
-        tableTongHop.getColumnModel().getColumn(4)
-                .setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
-                    JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 2));
-                    actionPanel.setOpaque(true);
-                    actionPanel.setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
+        tableTongHop.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 2));
+                actionPanel.setOpaque(true);
+                actionPanel.setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
 
-                    JLabel editIcon = new JLabel(penIcon);
-                    editIcon.setToolTipText("Sửa");
-                    JLabel deleteIcon = new JLabel(binIcon);
-                    deleteIcon.setToolTipText("Xóa");
+                JLabel editIcon = new JLabel(penIcon);
+                editIcon.setToolTipText("Sửa");
+                JLabel deleteIcon = new JLabel(binIcon);
+                deleteIcon.setToolTipText("Xóa");
 
-                    actionPanel.add(editIcon);
-                    actionPanel.add(deleteIcon);
-                    return actionPanel;
-                });
+                actionPanel.add(editIcon);
+                actionPanel.add(deleteIcon);
+                return actionPanel;
+            }
+        });
 
         tableTongHop.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -269,7 +275,7 @@ public class BangGiaUI {
         table.setFont(FONT_PLAIN);
 
         for (GiaDetail d : bangGiaService.layDetailTheoHeader(header.getMaGiaHeader())) {
-            model.addRow(new Object[] { resolveTenLoai(header.getLoai(), d), d.getDonGia() });
+            model.addRow(new Object[] { resolveTenLoai(header.getLoai(), d), numberFormat.format(d.getDonGia()) });
         }
 
         root.add(new JScrollPane(table), BorderLayout.CENTER);
@@ -386,6 +392,17 @@ public class BangGiaUI {
         actionRow.add(btnDeleteRow);
         actionRow.add(btnUpdatePrice);
 
+        ctx.tableDetail.getColumnModel().getColumn(1).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            protected void setValue(Object value) {
+                if (value instanceof Number) {
+                    setText(numberFormat.format(value));
+                } else {
+                    super.setValue(value);
+                }
+            }
+        });
+
         detailSection.add(actionRow, BorderLayout.NORTH);
         detailSection.add(new JScrollPane(ctx.tableDetail), BorderLayout.CENTER);
 
@@ -407,15 +424,16 @@ public class BangGiaUI {
 
         ctx.comboItems = items;
         ctx.tableDetail.getColumnModel().getColumn(0).setCellEditor(
-                new DefaultCellEditor(new JComboBox<>(items.toArray(ComboItem[]::new))));
+                new DefaultCellEditor(new JComboBox<ComboItem>(items.toArray(new ComboItem[0]))));
         ctx.tableDetail.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             protected void setValue(Object value) {
-                if (value instanceof ComboItem item) {
+                if (value instanceof ComboItem) {
+                    ComboItem item = (ComboItem) value;
                     super.setValue(item.toString());
-                    return;
+                } else {
+                    super.setValue(value);
                 }
-                super.setValue(value);
             }
         });
     }
@@ -479,8 +497,8 @@ public class BangGiaUI {
     }
 
     private ComboItem toComboItem(AddContext ctx, Object value) {
-        if (value instanceof ComboItem item) {
-            return item;
+        if (value instanceof ComboItem) {
+            return (ComboItem) value;
         }
         if (value == null) {
             return null;
@@ -500,9 +518,11 @@ public class BangGiaUI {
             if (lp == null) {
                 return "";
             }
-            List<BangGiaService.LoaiPhongItem> ds = bangGiaService.layDanhSachLoaiPhong();
-            if (lp >= 0 && lp < ds.size()) {
-                return ds.get(lp).getTen();
+            if (cachedLoaiPhongs == null) {
+                cachedLoaiPhongs = bangGiaService.layDanhSachLoaiPhong();
+            }
+            if (lp >= 0 && lp < cachedLoaiPhongs.size()) {
+                return cachedLoaiPhongs.get(lp).getTen();
             }
             return String.valueOf(lp);
         }
@@ -511,7 +531,10 @@ public class BangGiaUI {
         if (maDichVu == null) {
             return "";
         }
-        for (DichVu d : bangGiaService.layDanhSachDichVu()) {
+        if (cachedDichVus == null) {
+            cachedDichVus = bangGiaService.layDanhSachDichVu();
+        }
+        for (DichVu d : cachedDichVus) {
             if (maDichVu.equals(d.getMaDichVu())) {
                 return d.toString();
             }
@@ -531,7 +554,7 @@ public class BangGiaUI {
     }
 
     private LocalDate parseDate(String text, boolean allowBlank) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             if (allowBlank) {
                 return null;
             }
@@ -552,8 +575,8 @@ public class BangGiaUI {
         if (value == null) {
             throw new NumberFormatException("Empty value");
         }
-        if (value instanceof Number n) {
-            return n.doubleValue();
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
         }
         return Double.parseDouble(value.toString().trim().replace(",", ""));
     }
@@ -562,10 +585,12 @@ public class BangGiaUI {
         if (taiKhoan == null) {
             return "Không xác định";
         }
-        if (taiKhoan instanceof Chu c) {
+        if (taiKhoan instanceof Chu) {
+            Chu c = (Chu) taiKhoan;
             return c.getHoTen() + " (" + c.getMaTaiKhoan() + ")";
         }
-        if (taiKhoan instanceof QuanLy ql) {
+        if (taiKhoan instanceof QuanLy) {
+            QuanLy ql = (QuanLy) taiKhoan;
             return ql.getHoTen() + " (" + ql.getMaTaiKhoan() + ")";
         }
         return taiKhoan.getEmail() + " (" + taiKhoan.getMaTaiKhoan() + ")";

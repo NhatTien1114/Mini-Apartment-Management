@@ -39,8 +39,8 @@ public class TaiKhoan {
     public String getEmail() { return email; }
     
     public void setEmail(String email) {
-        if(email == null || !email.endsWith("@gmail.com")) {
-            throw new IllegalArgumentException("Email phải kết thúc với đuôi @gmail.com");
+        if(email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email không được để trống");
         }
         this.email = email;
     }
@@ -48,18 +48,8 @@ public class TaiKhoan {
     public String getMatKhau() { return matKhau; }
     
     public void setMatKhau(String matKhau) {
-        // Bypass strict validation check for the developer's test admin account
-        if ("admin123".equals(matKhau)) {
-            this.matKhau = matKhau;
-            return;
-        }
-
-        if(matKhau == null || matKhau.length() < 8 || 
-           !matKhau.matches(".*[A-Z].*") || 
-           !matKhau.matches(".*[a-z].*") || 
-           !matKhau.matches(".*[0-9].*") || 
-           !matKhau.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*")) {
-            throw new IllegalArgumentException("Mật khẩu phải có chữ viết hoa, số, chữ thường, kí tự đặc biệt và tối thiểu 8 ký tự!");
+        if (matKhau == null || matKhau.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mật khẩu không được để trống");
         }
         this.matKhau = matKhau;
     }

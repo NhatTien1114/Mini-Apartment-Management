@@ -5,6 +5,7 @@ import entity.Phong;
 import entity.Phong.LoaiPhong;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -16,7 +17,7 @@ public class QuanLyPhongDAO {
     private static final Pattern ROOM_PATTERN = Pattern.compile("^P([1-9]\\d*)\\.(0[1-9]|[1-9]\\d)$");
 
     private final Map<String, List<String>> serviceCache = new HashMap<>();
-    private static final List<String> DEFAULT_SERVICES = List.of("Điện", "Nước", "Internet", "Rác");
+    private static final List<String> DEFAULT_SERVICES = Collections.unmodifiableList(Arrays.asList("Điện", "Nước", "Internet", "Rác"));
 
     public QuanLyPhongDAO() {
     }
@@ -48,12 +49,21 @@ public class QuanLyPhongDAO {
     // FIX: nhận thêm loaiPhong từ DB thay vì hardcode null
     private Phong buildPhong(String maPhong, int trangThaiCode, Integer loaiPhongCode, String maGiaDetail) {
         // 1. Chuyển đổi mã trạng thái (int -> Enum TrangThai)
-        Phong.TrangThai tt = switch (trangThaiCode) {
-            case 1 -> Phong.TrangThai.THUE;
-            case 2 -> Phong.TrangThai.SUA;
-            case 3 -> Phong.TrangThai.COC;
-            default -> Phong.TrangThai.TRONG;
-        };
+        Phong.TrangThai tt;
+        switch (trangThaiCode) {
+            case 1:
+                tt = Phong.TrangThai.THUE;
+                break;
+            case 2:
+                tt = Phong.TrangThai.SUA;
+                break;
+            case 3:
+                tt = Phong.TrangThai.COC;
+                break;
+            default:
+                tt = Phong.TrangThai.TRONG;
+                break;
+        }
 
         // 2. Chuyển đổi mã loại phòng (int -> Enum LoaiPhong)
         Phong.LoaiPhong lp = null;
@@ -89,7 +99,7 @@ public class QuanLyPhongDAO {
 
     private void ensureDefaultToaTang(Connection con) throws SQLException {
         String ownerId = findChuSoHuuMacDinh(con);
-        if (ownerId == null || ownerId.isBlank())
+        if (ownerId == null || ownerId.trim().isEmpty())
             return;
 
         String sqlInsertToa = "IF NOT EXISTS (SELECT 1 FROM Toa WHERE maToa = 'TOA1') "
@@ -149,7 +159,7 @@ public class QuanLyPhongDAO {
 
     private void ensureToaTang(Connection con, String maTang) throws SQLException {
         String ownerId = findChuSoHuuMacDinh(con);
-        if (ownerId == null || ownerId.isBlank())
+        if (ownerId == null || ownerId.trim().isEmpty())
             return;
 
         try (PreparedStatement ps = con.prepareStatement(
@@ -455,7 +465,6 @@ public class QuanLyPhongDAO {
             ps.setInt(1, toTrangThai(trangThai));
             ps.setString(2, maPhong);
             int rowAffected = ps.executeUpdate();
-            con.commit();
             return rowAffected > 0;
 
         } catch (SQLException e) {
@@ -499,7 +508,7 @@ public class QuanLyPhongDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     String maDv = rs.getString("maDichVu");
-                    if (maDv != null && !maDv.isBlank()) {
+                    if (maDv != null && !maDv.trim().isEmpty()) {
                         result.add(maDv);
                     }
                 }
