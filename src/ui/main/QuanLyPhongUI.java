@@ -279,14 +279,16 @@ public class QuanLyPhongUI {
         header.add(lblRoom, BorderLayout.WEST);
         header.add(createStatusBadge(phong.getTrangThai().getTen()), BorderLayout.EAST);
 
-        JPanel btnRow = new JPanel(new BorderLayout(6, 0));
-        btnRow.setOpaque(false);
+        // --- Right-click context menu ---
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miDelete = new JMenuItem("Xóa");
+        miDelete.setForeground(new Color(239, 68, 68));
+        contextMenu.add(miEdit);
+        contextMenu.add(miDelete);
 
-        JButton btnSetting = makeOutlineButton("⚙ Cài đặt");
-        btnSetting.addActionListener(e -> showSettingDialog(phong));
-
-        JButton btnDelete = makeDeleteButton();
-        btnDelete.addActionListener(e -> {
+        miEdit.addActionListener(ev -> showSettingDialog(phong));
+        miDelete.addActionListener(ev -> {
             int confirm = JOptionPane.showConfirmDialog(
                     SwingUtilities.getWindowAncestor(card),
                     "Xóa phòng \"" + phong.getMaPhong() + "\"?",
@@ -300,10 +302,9 @@ public class QuanLyPhongUI {
             }
         });
 
-        btnRow.add(btnSetting, BorderLayout.CENTER);
-        btnRow.add(btnDelete, BorderLayout.EAST);
+        card.setComponentPopupMenu(contextMenu);
+
         card.add(header, BorderLayout.NORTH);
-        card.add(btnRow, BorderLayout.SOUTH);
         return card;
     }
 

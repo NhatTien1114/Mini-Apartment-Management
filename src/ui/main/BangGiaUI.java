@@ -27,8 +27,10 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
@@ -153,7 +155,7 @@ public class BangGiaUI {
         section.setBorder(new LineBorder(AppColors.SLATE_200, 1, true));
 
         modelTongHop = new DefaultTableModel(
-                new String[] { "Mã bảng giá", "Người tạo", "Ngày bắt đầu", "Ngày kết thúc", "Thao tác" }, 0) {
+                new String[] { "Mã bảng giá", "Người tạo", "Ngày bắt đầu", "Ngày kết thúc" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -165,57 +167,38 @@ public class BangGiaUI {
         tableTongHop.setRowHeight(28);
         tableTongHop.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        tableTongHop.getColumnModel().getColumn(4).setMinWidth(90);
-        tableTongHop.getColumnModel().getColumn(4).setMaxWidth(110);
-        tableTongHop.getColumnModel().getColumn(4)
-                .setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
-                    JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 2));
-                    actionPanel.setOpaque(true);
-                    actionPanel.setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
+        // --- Right-click context menu ---
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miDelete = new JMenuItem("Xóa");
+        miDelete.setForeground(new java.awt.Color(239, 68, 68));
+        contextMenu.add(miEdit);
+        contextMenu.add(miDelete);
 
-                    JLabel editIcon = new JLabel(penIcon);
-                    editIcon.setToolTipText("Sửa");
-                    JLabel deleteIcon = new JLabel(binIcon);
-                    deleteIcon.setToolTipText("Xóa");
-
-                    actionPanel.add(editIcon);
-                    actionPanel.add(deleteIcon);
-                    return actionPanel;
-                });
-
-        tableTongHop.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                int row = tableTongHop.rowAtPoint(e.getPoint());
-                int col = tableTongHop.columnAtPoint(e.getPoint());
-                if (row < 0 || row >= headers.size()) {
+        miEdit.addActionListener(ev -> {
+            int row = tableTongHop.getSelectedRow();
+            if (row >= 0 && row < headers.size())
+                showDetailDialog(headers.get(row));
+        });
+        miDelete.addActionListener(ev -> {
+            int row = tableTongHop.getSelectedRow();
+            if (row < 0 || row >= headers.size())
+                return;
+            GiaHeader h = headers.get(row);
+            int confirm = JOptionPane.showConfirmDialog(null,
+                    "Xóa bảng giá " + h.getMaGiaHeader() + "?",
+                    "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                String err = bangGiaService.xoaHeader(h.getMaGiaHeader());
+                if (err != null) {
+                    JOptionPane.showMessageDialog(null, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                if (col != 4) {
-                    return;
-                }
-
-                GiaHeader h = headers.get(row);
-
-                int xInCell = e.getX() - tableTongHop.getCellRect(row, col, true).x;
-                int half = tableTongHop.getCellRect(row, col, true).width / 2;
-                if (xInCell < half) {
-                    showDetailDialog(h);
-                } else {
-                    int confirm = JOptionPane.showConfirmDialog(null,
-                            "Xóa bảng giá " + h.getMaGiaHeader() + "?",
-                            "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        String err = bangGiaService.xoaHeader(h.getMaGiaHeader());
-                        if (err != null) {
-                            JOptionPane.showMessageDialog(null, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
-                            return;
-                        }
-                        loadTongHop();
-                    }
-                }
+                loadTongHop();
             }
         });
+
+        tableTongHop.setComponentPopupMenu(contextMenu);
 
         JScrollPane scroll = new JScrollPane(tableTongHop);
         scroll.setBorder(null);
@@ -232,8 +215,7 @@ public class BangGiaUI {
                     h.getMaGiaHeader(),
                     h.getGhiChu(),
                     formatDate(h.getNgayBatDau()),
-                    formatDate(h.getNgayKetThuc()),
-                    ""
+                    formatDate(h.getNgayKetThuc())
             });
         }
     }

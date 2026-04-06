@@ -1,8 +1,11 @@
 package dao;
 
 import database.connectDB;
+import entity.Chu;
 import entity.Phong;
 import entity.Phong.LoaiPhong;
+import entity.Tang;
+import entity.Toa;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,7 +49,8 @@ public class QuanLyPhongDAO {
     }
 
     // FIX: nhận thêm loaiPhong từ DB thay vì hardcode null
-    private Phong buildPhong(String maPhong, int trangThaiCode, Integer loaiPhongCode, String maGiaDetail) {
+    private Phong buildPhong(String maPhong, int trangThaiCode, Integer loaiPhongCode, String maGiaDetail,
+            int soNguoiHienTai, Tang tang) {
         // 1. Chuyển đổi mã trạng thái (int -> Enum TrangThai)
         Phong.TrangThai tt = switch (trangThaiCode) {
             case 1 -> Phong.TrangThai.THUE;
@@ -65,16 +69,14 @@ public class QuanLyPhongDAO {
         }
 
         // 3. Tạo đối tượng Phong mới
-        // Giả sử Constructor của ông là: Phong(maPhong, maTang, tenPhong, dienTich,
-        // loaiPhong, trangThai, soNguoi, maGiaDetail)
-        // Nếu ông chưa cập nhật Constructor trong Entity Phong, hãy thêm field
-        // maGiaDetail vào đó.
         Phong p = new Phong();
         p.setMaPhong(maPhong);
         p.setTenPhong(maPhong);
         p.setLoaiPhong(lp);
         p.setTrangThai(tt);
-        p.setMaGiaDetail(maGiaDetail); // Cột mới ông vừa muốn thêm
+        p.setMaGiaDetail(maGiaDetail);
+        p.setSoNguoiHienTai(soNguoiHienTai);
+        p.setMaTang(tang); // Set the floor information
 
         return p;
     }
@@ -172,8 +174,13 @@ public class QuanLyPhongDAO {
 
     // ── READ ──
     public List<Phong> layTatCa() {
-        // 1. Cập nhật SQL: SELECT thêm cột maGiaDetail
-        String sql = "SELECT maPhong, loaiPhong, trangThaiPhong, maGiaDetail FROM Phong ORDER BY maPhong";
+        // 1. Cập nhật SQL: JOIN với bảng Tang và Toa để lấy thông tin tầng
+        String sql = "SELECT p.maPhong, p.loaiPhong, p.trangThaiPhong, p.maGiaDetail, p.soNguoiHienTai, " +
+                "t.maTang, t.tenTang, t.maToa, toa.tenToa, toa.chuSoHuu " +
+                "FROM Phong p " +
+                "LEFT JOIN Tang t ON p.maTang = t.maTang " +
+                "LEFT JOIN Toa toa ON t.maToa = toa.maToa " +
+                "ORDER BY p.maPhong";
         List<Phong> result = new ArrayList<>();
 
         try {
@@ -195,9 +202,26 @@ public class QuanLyPhongDAO {
                     // 4. Lấy maGiaDetail (khóa ngoại tới bảng giá)
                     String maGia = rs.getString("maGiaDetail");
 
-                    // 5. Gọi buildPhong với đủ 4 tham số:
-                    // (maPhong, trangThaiCode, loaiPhongCode, maGiaDetail)
-                    result.add(buildPhong(ma, tt, lp, maGia));
+                    // 5. Lấy soNguoiHienTai
+                    int soNguoi = rs.getInt("soNguoiHienTai");
+
+                    // 6. Tạo đối tượng Tang nếu có thông tin
+                    Tang tang = null;
+                    String maTang = rs.getString("maTang");
+                    if (maTang != null) {
+                        String tenTang = rs.getString("tenTang");
+                        String maToa = rs.getString("maToa");
+                        String tenToa = rs.getString("tenToa");
+                        String chuSoHuu = rs.getString("chuSoHuu");
+
+                        Chu chu = new Chu();
+                        chu.setMaChu(chuSoHuu);
+                        Toa toa = new Toa(maToa, tenToa, chu);
+                        tang = new Tang(maTang, tenTang, toa);
+                    }
+
+                    // 7. Gọi buildPhong với đủ tham số
+                    result.add(buildPhong(ma, tt, lp, maGia, soNguoi, tang));
                 }
             }
         } catch (SQLException e) {
@@ -208,8 +232,13 @@ public class QuanLyPhongDAO {
 
     public Phong layTheoMa(String maPhong) {
         String ma = normalise(maPhong);
-        // 1. Cập nhật SELECT: lấy thêm cột maGiaDetail
-        String sql = "SELECT maPhong, loaiPhong, trangThaiPhong, maGiaDetail FROM Phong WHERE maPhong = ?";
+        // 1. Cập nhật SELECT: JOIN với Tang và Toa để lấy thông tin tầng
+        String sql = "SELECT p.maPhong, p.loaiPhong, p.trangThaiPhong, p.maGiaDetail, p.soNguoiHienTai, " +
+                "t.maTang, t.tenTang, t.maToa, toa.tenToa, toa.chuSoHuu " +
+                "FROM Phong p " +
+                "LEFT JOIN Tang t ON p.maTang = t.maTang " +
+                "LEFT JOIN Toa toa ON t.maToa = toa.maToa " +
+                "WHERE p.maPhong = ?";
 
         try {
             Connection con = connectDB.getConnection();
@@ -228,9 +257,26 @@ public class QuanLyPhongDAO {
                     // 4. Lấy maGiaDetail mới thêm
                     String maGia = rs.getString("maGiaDetail");
 
-                    // 5. Gọi buildPhong với đủ 4 tham số: maPhong, trangThaiCode, loaiPhongCode,
-                    // maGiaDetail
-                    return buildPhong(ma, tt, lp, maGia);
+                    // 5. Lấy soNguoiHienTai
+                    int soNguoi = rs.getInt("soNguoiHienTai");
+
+                    // 6. Tạo đối tượng Tang nếu có thông tin
+                    Tang tang = null;
+                    String maTang = rs.getString("maTang");
+                    if (maTang != null) {
+                        String tenTang = rs.getString("tenTang");
+                        String maToa = rs.getString("maToa");
+                        String tenToa = rs.getString("tenToa");
+                        String chuSoHuu = rs.getString("chuSoHuu");
+
+                        Chu chu = new Chu();
+                        chu.setMaChu(chuSoHuu);
+                        Toa toa = new Toa(maToa, tenToa, chu);
+                        tang = new Tang(maTang, tenTang, toa);
+                    }
+
+                    // 7. Gọi buildPhong với đủ tham số
+                    return buildPhong(ma, tt, lp, maGia, soNguoi, tang);
                 }
             }
         } catch (SQLException e) {
@@ -256,8 +302,13 @@ public class QuanLyPhongDAO {
     }
 
     public List<Phong> layTheoTang(String tang) {
-        // 1. SELECT thêm maGiaDetail để đồng bộ với hàm buildPhong mới
-        String sql = "SELECT maPhong, loaiPhong, trangThaiPhong, maGiaDetail FROM Phong WHERE maTang = ? ORDER BY maPhong";
+        // 1. SELECT thêm thông tin Tang và Toa
+        String sql = "SELECT p.maPhong, p.loaiPhong, p.trangThaiPhong, p.maGiaDetail, p.soNguoiHienTai, " +
+                "t.maTang, t.tenTang, t.maToa, toa.tenToa, toa.chuSoHuu " +
+                "FROM Phong p " +
+                "LEFT JOIN Tang t ON p.maTang = t.maTang " +
+                "LEFT JOIN Toa toa ON t.maToa = toa.maToa " +
+                "WHERE p.maTang = ? ORDER BY p.maPhong";
         List<Phong> result = new ArrayList<>();
 
         try {
@@ -279,8 +330,26 @@ public class QuanLyPhongDAO {
                         // 4. Lấy maGiaDetail (cột mới ông vừa thêm vào DB)
                         String maGia = rs.getString("maGiaDetail");
 
-                        // 5. Gọi buildPhong với đầy đủ 4 tham số
-                        result.add(buildPhong(maPhong, tt, lp, maGia));
+                        // 5. Lấy soNguoiHienTai
+                        int soNguoi = rs.getInt("soNguoiHienTai");
+
+                        // 6. Tạo đối tượng Tang
+                        Tang tangObj = null;
+                        String maTang = rs.getString("maTang");
+                        if (maTang != null) {
+                            String tenTang = rs.getString("tenTang");
+                            String maToa = rs.getString("maToa");
+                            String tenToa = rs.getString("tenToa");
+                            String chuSoHuu = rs.getString("chuSoHuu");
+
+                            Chu chu = new Chu();
+                            chu.setMaChu(chuSoHuu);
+                            Toa toa = new Toa(maToa, tenToa, chu);
+                            tangObj = new Tang(maTang, tenTang, toa);
+                        }
+
+                        // 7. Gọi buildPhong với đầy đủ tham số
+                        result.add(buildPhong(maPhong, tt, lp, maGia, soNguoi, tangObj));
                     }
                 }
             }
@@ -412,7 +481,7 @@ public class QuanLyPhongDAO {
                         int soNguoiHienTai = rs.getInt("soNguoiHienTai");
                         String maGiaDetail = rs.getString("maGiaDetail");
 
-                        result.add(buildPhong(maPhong, trangThaiPhong, loaiPhong, maGiaDetail));
+                        result.add(buildPhong(maPhong, trangThaiPhong, loaiPhong, maGiaDetail, soNguoiHienTai, null));
                     }
                 }
             }
@@ -437,8 +506,9 @@ public class QuanLyPhongDAO {
                         String maPhong = rs.getString("maPhong");
                         Integer loaiPhong = rs.getObject("loaiPhong") == null ? null : rs.getInt("loaiPhong");
                         String maGiaDetail = rs.getString("maGiaDetail");
+                        int soNguoiHienTai = rs.getInt("soNguoiHienTai");
 
-                        result.add(buildPhong(maPhong, 1, loaiPhong, maGiaDetail));
+                        result.add(buildPhong(maPhong, 1, loaiPhong, maGiaDetail, soNguoiHienTai, null));
                     }
                 }
             }
