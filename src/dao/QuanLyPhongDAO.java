@@ -2,8 +2,8 @@ package dao;
 
 import database.connectDB;
 import entity.Chu;
+import entity.LoaiPhong;
 import entity.Phong;
-import entity.Phong.LoaiPhong;
 import entity.Tang;
 import entity.Toa;
 import java.sql.*;
@@ -59,13 +59,10 @@ public class QuanLyPhongDAO {
             default -> Phong.TrangThai.TRONG;
         };
 
-        // 2. Chuyển đổi mã loại phòng (int -> Enum LoaiPhong)
-        Phong.LoaiPhong lp = null;
+        // 2. Chuyển đổi mã loại phòng (int -> LoaiPhong từ DB)
+        LoaiPhong lp = null;
         if (loaiPhongCode != null) {
-            Phong.LoaiPhong[] vals = Phong.LoaiPhong.values();
-            if (loaiPhongCode >= 0 && loaiPhongCode < vals.length) {
-                lp = vals[loaiPhongCode];
-            }
+            lp = new LoaiPhongDAO().layTheoMa(loaiPhongCode);
         }
 
         // 3. Tạo đối tượng Phong mới

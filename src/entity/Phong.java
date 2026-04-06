@@ -10,56 +10,35 @@ public class Phong {
     private int soNguoiHienTai;
     private String maGiaDetail;
 
-    public enum LoaiPhong {
-		DON("Phòng Đơn"), DOI("Phòng Đôi"), STUDIO("Phòng Studio");
-
-		private String ten;
-
-		LoaiPhong(String ten) {
-			this.ten = ten;
-		}
-
-		public String getTen() {
-			return ten;
-		}
-
-		public void setTen(String ten) {
-			this.ten = ten;
-		}
-
-        @Override
-		public String toString() {
-			return ten;
-		}
-	}
-
     public enum TrangThai {
-		TRONG("Trống"), THUE("Đã thuê"), SUA("Đang sửa"), COC("Đã cọc");
+        TRONG("Trống"), THUE("Đã thuê"), SUA("Đang sửa"), COC("Đã cọc");
 
-		private String ten;
+        private String ten;
 
-		TrangThai(String ten) {
-			this.ten = ten;
-		}
+        TrangThai(String ten) {
+            this.ten = ten;
+        }
 
-		public String getTen() {
-			return ten;
-		}
+        public String getTen() {
+            return ten;
+        }
 
-		public void setTen(String ten) {
-			this.ten = ten;
-		}
+        public void setTen(String ten) {
+            this.ten = ten;
+        }
 
         @Override
         public String toString() {
             return ten;
         }
-	}
-    public Phong(String maPhong){
+    }
+
+    public Phong(String maPhong) {
         this.maPhong = maPhong;
     }
-    
-    public Phong(double dienTich, LoaiPhong loaiPhong, String maPhong, Tang maTang, int soNguoiHienTai, String tenPhong, TrangThai trangThai, String maGiaDetail) {
+
+    public Phong(double dienTich, LoaiPhong loaiPhong, String maPhong, Tang maTang, int soNguoiHienTai, String tenPhong,
+            TrangThai trangThai, String maGiaDetail) {
         this.dienTich = dienTich;
         this.loaiPhong = loaiPhong;
         this.maPhong = maPhong;
