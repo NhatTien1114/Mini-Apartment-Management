@@ -41,11 +41,19 @@ public class TrangChu extends JFrame {
         String name;
         String icon;
         int panelIndex;
+        boolean isSectionHeader;
 
         MenuItem(String name, String icon, int panelIndex) {
             this.name = name;
             this.icon = icon;
             this.panelIndex = panelIndex;
+            this.isSectionHeader = false;
+        }
+
+        static MenuItem sectionHeader(String name) {
+            MenuItem m = new MenuItem(name, null, -1);
+            m.isSectionHeader = true;
+            return m;
         }
     }
 
@@ -121,37 +129,54 @@ public class TrangChu extends JFrame {
 
         JPanel pnlDanhSach = new JPanel();
         pnlDanhSach.setBackground(AppColors.MENU_BG);
-        pnlDanhSach.setLayout(new GridLayout(9, 1, 0, 10));
+        pnlDanhSach.setLayout(new BoxLayout(pnlDanhSach, BoxLayout.Y_AXIS));
         pnlDanhSach.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        List<MenuItem> allMenuItems = Arrays.asList(
+        List<MenuItem> allMenuItems = new java.util.ArrayList<>(Arrays.asList(
                 new MenuItem("Trang chủ", "img/icons/home.png", 0),
                 new MenuItem("Hợp đồng", "img/icons/google-docs.png", 1),
                 new MenuItem("Quản lý phòng", "img/icons/settings.png", 2),
                 new MenuItem("Khách hàng", "img/icons/user.png", 3),
                 new MenuItem("Phương tiện", "img/icons/bike.png", 4),
-                new MenuItem("Doanh thu", "img/icons/bar-chart.png", 5),
                 new MenuItem("Dịch vụ", "img/icons/support.png", 6),
-                new MenuItem("Hóa đơn", "img/icons/bill.png", 7),
-                new MenuItem("Bảng giá", "img/icons/menu.png", 8));
+                new MenuItem("Hóa đơn", "img/icons/bill.png", 7)));
 
-        if ("Quản lý".equals(role)) {
-            menuItems = allMenuItems.stream()
-                    .filter(item -> item.panelIndex != 5 && item.panelIndex != 8)
-                    .collect(Collectors.toList());
-        } else {
-            menuItems = allMenuItems;
+        if (!"Quản lý".equals(role)) {
+            allMenuItems.add(MenuItem.sectionHeader("Chủ chung cư"));
+            allMenuItems.add(new MenuItem("Doanh thu", "img/icons/bar-chart.png", 5));
+            allMenuItems.add(new MenuItem("Bảng giá", "img/icons/menu.png", 8));
+            allMenuItems.add(new MenuItem("Loại phòng", "img/icons/settings.png", 9));
         }
 
-        pnlDanhSach.setLayout(new GridLayout(menuItems.size(), 1, 0, 10));
+        menuItems = allMenuItems;
 
-        menuButtons = new JButton[menuItems.size()];
+        // Count clickable items for buttons array
+        int clickableCount = 0;
+        for (MenuItem item : menuItems) {
+            if (!item.isSectionHeader)
+                clickableCount++;
+        }
+        menuButtons = new JButton[clickableCount];
 
+        int btnIndex = 0;
         for (int i = 0; i < menuItems.size(); i++) {
-            int index = i;
             MenuItem item = menuItems.get(i);
+
+            if (item.isSectionHeader) {
+                pnlDanhSach.add(Box.createVerticalStrut(16));
+                JLabel lblSection = new JLabel(item.name.toUpperCase());
+                lblSection.setFont(new Font("Be Vietnam Pro", Font.BOLD, 11));
+                lblSection.setForeground(new Color(255, 255, 255, 120));
+                lblSection.setBorder(new EmptyBorder(0, 4, 6, 0));
+                lblSection.setAlignmentX(Component.LEFT_ALIGNMENT);
+                lblSection.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+                pnlDanhSach.add(lblSection);
+                continue;
+            }
+
+            int currentBtnIndex = btnIndex;
             JButton btn = new JButton(item.name);
-            menuButtons[i] = btn;
+            menuButtons[btnIndex] = btn;
 
             ImageIcon iconGoc = new ImageIcon(item.icon);
             Image imgIcon = iconGoc.getImage();
@@ -165,20 +190,22 @@ public class TrangChu extends JFrame {
             btn.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
             btn.setHorizontalAlignment(SwingConstants.LEFT);
             btn.setIconTextGap(12);
+            btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+            btn.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            if (i == 0)
+            if (btnIndex == 0)
                 btn.setBackground(AppColors.MENU_HOVER);
 
             btn.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseEntered(MouseEvent e) {
-                    if (selectedMenuIndex != index)
+                    if (selectedMenuIndex != currentBtnIndex)
                         btn.setBackground(AppColors.MENU_HOVER);
                 }
 
                 @Override
                 public void mouseExited(MouseEvent e) {
-                    if (selectedMenuIndex != index)
+                    if (selectedMenuIndex != currentBtnIndex)
                         btn.setBackground(AppColors.MENU_BG);
                 }
             });
@@ -186,6 +213,8 @@ public class TrangChu extends JFrame {
             btn.addActionListener(e -> selectMenuTab(item.panelIndex));
 
             pnlDanhSach.add(btn);
+            pnlDanhSach.add(Box.createVerticalStrut(10));
+            btnIndex++;
         }
 
         pnlMenu.add(pnlDanhSach, BorderLayout.CENTER);
@@ -196,11 +225,16 @@ public class TrangChu extends JFrame {
     private void selectMenuTab(int panelIndex) {
         menuButtons[selectedMenuIndex].setBackground(AppColors.MENU_BG);
         selectedMenuIndex = -1;
-        for (int i = 0; i < menuButtons.length; i++) {
-            if (menuItems.get(i).panelIndex == panelIndex) {
-                selectedMenuIndex = i;
+        int btnIdx = 0;
+        for (int i = 0; i < menuItems.size(); i++) {
+            MenuItem item = menuItems.get(i);
+            if (item.isSectionHeader)
+                continue;
+            if (item.panelIndex == panelIndex) {
+                selectedMenuIndex = btnIdx;
                 break;
             }
+            btnIdx++;
         }
         if (selectedMenuIndex != -1) {
             menuButtons[selectedMenuIndex].setBackground(AppColors.MENU_HOVER);
@@ -247,6 +281,7 @@ public class TrangChu extends JFrame {
         pnlContent.add(new DichVuUI().getPanel(), "6");
         pnlContent.add(new HoaDonUI().getPanel(), "7");
         pnlContent.add(new BangGiaUI(taiKhoan).getPanel(), "8");
+        pnlContent.add(new LoaiPhongUI().getPanel(), "9");
 
         if (hopDongUI != null) {
             hopDongUI.setOnContractCreated(() -> {
@@ -709,16 +744,16 @@ public class TrangChu extends JFrame {
         popupMenu.show(card, x, y);
     }
 
-    private Color mauTheoLoaiPhong(Phong.LoaiPhong loaiPhong) {
+    private Color mauTheoLoaiPhong(entity.LoaiPhong loaiPhong) {
         if (loaiPhong == null) {
             return AppColors.SLATE_300;
         }
-        switch (loaiPhong) {
-            case DON:
+        switch (loaiPhong.ordinal()) {
+            case 0:
                 return AppColors.BLUE;
-            case DOI:
+            case 1:
                 return AppColors.GREEN;
-            case STUDIO:
+            case 2:
                 return AppColors.VIOLET_500;
             default:
                 return AppColors.SLATE_300;
