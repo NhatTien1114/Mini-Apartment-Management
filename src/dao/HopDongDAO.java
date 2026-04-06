@@ -187,8 +187,6 @@ public class HopDongDAO {
 
             con.commit();
 
-            // Gọi sau commit để tránh đóng nhầm connection transaction hiện tại
-            // (connectDB đang dùng singleton connection toàn cục).
             try {
                 new DichVuDAO().ganTatCaDichVuChoPhongNeuChuaCo(draft.phong);
             } catch (RuntimeException ex) {

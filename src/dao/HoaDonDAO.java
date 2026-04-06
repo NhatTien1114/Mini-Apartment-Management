@@ -339,4 +339,142 @@ public class HoaDonDAO {
 
         return new Object[] { doanhThuTheoThang, tongDoanhThu, soHoaDon };
     }
+
+    /**
+     * Thống kê doanh thu theo khoảng ngày, tách riêng phòng và dịch vụ.
+     * Returns Object[]: long doanhThuPhong, long doanhThuDichVu, long tongDoanhThu,
+     * int soHoaDon
+     */
+    public Object[] getThongKeDoanhThuTheoKhoangNgay(LocalDate from, LocalDate to) {
+        long doanhThuPhong = 0, doanhThuDichVu = 0;
+        int soHoaDon = 0;
+
+        String sql = "SELECT "
+                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan <> N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu, "
+                + "COUNT(DISTINCT hd.maHoaDon) AS soHD "
+                + "FROM HoaDon hd "
+                + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
+                + "WHERE hd.tuNgay >= ? AND hd.tuNgay <= ?";
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    doanhThuPhong = Math.round(rs.getDouble("dtPhong"));
+                    doanhThuDichVu = Math.round(rs.getDouble("dtDichVu"));
+                    soHoaDon = rs.getInt("soHD");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi thống kê doanh thu theo khoảng ngày: " + e.getMessage());
+        }
+        long tong = doanhThuPhong + doanhThuDichVu;
+        return new Object[] { doanhThuPhong, doanhThuDichVu, tong, soHoaDon };
+    }
+
+    /**
+     * Thống kê doanh thu theo tháng trong khoảng ngày, tách phòng/dịch vụ.
+     * Returns List<Object[]>: mỗi phần tử = {String label "T1/2025", long
+     * doanhThuPhong, long doanhThuDichVu}
+     */
+    public List<Object[]> getDoanhThuTheoThangTrongKhoang(LocalDate from, LocalDate to) {
+        List<Object[]> result = new ArrayList<>();
+        String sql = "SELECT MONTH(hd.tuNgay) AS thang, YEAR(hd.tuNgay) AS nam, "
+                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan <> N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
+                + "FROM HoaDon hd "
+                + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
+                + "WHERE hd.tuNgay >= ? AND hd.tuNgay <= ? "
+                + "GROUP BY MONTH(hd.tuNgay), YEAR(hd.tuNgay) "
+                + "ORDER BY nam, thang";
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int thang = rs.getInt("thang");
+                    int nam = rs.getInt("nam");
+                    long dtPhong = Math.round(rs.getDouble("dtPhong"));
+                    long dtDichVu = Math.round(rs.getDouble("dtDichVu"));
+                    String label = "T" + thang + "/" + nam;
+                    result.add(new Object[] { label, dtPhong, dtDichVu });
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi getDoanhThuTheoThangTrongKhoang: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Thống kê doanh thu theo quý trong khoảng ngày, tách phòng/dịch vụ.
+     */
+    public List<Object[]> getDoanhThuTheoQuyTrongKhoang(LocalDate from, LocalDate to) {
+        List<Object[]> result = new ArrayList<>();
+        String sql = "SELECT DATEPART(QUARTER, hd.tuNgay) AS quy, YEAR(hd.tuNgay) AS nam, "
+                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan <> N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
+                + "FROM HoaDon hd "
+                + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
+                + "WHERE hd.tuNgay >= ? AND hd.tuNgay <= ? "
+                + "GROUP BY DATEPART(QUARTER, hd.tuNgay), YEAR(hd.tuNgay) "
+                + "ORDER BY nam, quy";
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int quy = rs.getInt("quy");
+                    int nam = rs.getInt("nam");
+                    long dtPhong = Math.round(rs.getDouble("dtPhong"));
+                    long dtDichVu = Math.round(rs.getDouble("dtDichVu"));
+                    String label = "Q" + quy + "/" + nam;
+                    result.add(new Object[] { label, dtPhong, dtDichVu });
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi getDoanhThuTheoQuyTrongKhoang: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Thống kê doanh thu theo năm trong khoảng ngày, tách phòng/dịch vụ.
+     */
+    public List<Object[]> getDoanhThuTheoNamTrongKhoang(LocalDate from, LocalDate to) {
+        List<Object[]> result = new ArrayList<>();
+        String sql = "SELECT YEAR(hd.tuNgay) AS nam, "
+                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan <> N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
+                + "FROM HoaDon hd "
+                + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
+                + "WHERE hd.tuNgay >= ? AND hd.tuNgay <= ? "
+                + "GROUP BY YEAR(hd.tuNgay) "
+                + "ORDER BY nam";
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int nam = rs.getInt("nam");
+                    long dtPhong = Math.round(rs.getDouble("dtPhong"));
+                    long dtDichVu = Math.round(rs.getDouble("dtDichVu"));
+                    String label = String.valueOf(nam);
+                    result.add(new Object[] { label, dtPhong, dtDichVu });
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi getDoanhThuTheoNamTrongKhoang: " + e.getMessage());
+        }
+        return result;
+    }
 }

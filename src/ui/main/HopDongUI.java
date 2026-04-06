@@ -203,7 +203,7 @@ public class HopDongUI {
         cardMargin.setBorder(new EmptyBorder(4, 24, 24, 24));
 
         String[] columnNames = { "Mã HĐ", "Phòng", "Khách thuê", "Ngày bắt đầu", "Ngày kết thúc", "Tiền cọc",
-                "Tiền thuê/tháng", "Trạng thái", "" };
+                "Tiền thuê/tháng", "Trạng thái" };
 
         this.model = new DefaultTableModel(columnNames, 0);
         this.table = new JTable(this.model); // Sử dụng biến class
@@ -334,31 +334,46 @@ public class HopDongUI {
             }
         });
 
-        table.getColumnModel().getColumn(8).setCellRenderer(new TableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
-                    int c) {
-                ActionPanel pnl = new ActionPanel(true, r);
-                pnl.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
-                pnl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
-                return pnl;
+        // --- Right-click context menu ---
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miDelete = new JMenuItem("Xóa");
+        miDelete.setForeground(new Color(239, 68, 68));
+        contextMenu.add(miEdit);
+        contextMenu.add(miDelete);
+
+        miEdit.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0)
+                showContractForm(true, table.convertRowIndexToModel(row));
+        });
+        miDelete.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row < 0)
+                return;
+            int modelRow = table.convertRowIndexToModel(row);
+            String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
+            String tenKhachHang = String.valueOf(model.getValueAt(modelRow, 2));
+            String maPhong = String.valueOf(model.getValueAt(modelRow, 1));
+            int luaChon = JOptionPane.showConfirmDialog(
+                    pnlRoot,
+                    "Bạn có chắc chắn muốn xóa hợp đồng của khách hàng '" + tenKhachHang + "' (Phòng " + maPhong
+                            + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
+                    "Xác nhận xóa hợp đồng",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (luaChon == JOptionPane.YES_OPTION) {
+                boolean ok = HopDongDao.xoaHopDongVaKhachHangLienQuan(maHopDong);
+                if (ok) {
+                    loadDataToTable();
+                    showToast("Đã xóa hợp đồng thành công");
+                } else {
+                    showToast("Xóa hợp đồng thất bại");
+                }
             }
         });
-        table.getColumnModel().getColumn(8).setCellEditor(new DefaultCellEditor(new JCheckBox()) {
-            private ActionPanel currentPanel;
 
-            @Override
-            public Component getTableCellEditorComponent(JTable t, Object v, boolean isSel, int r, int c) {
-                currentPanel = new ActionPanel(false, r);
-                currentPanel.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
-                return currentPanel;
-            }
-
-            @Override
-            public Object getCellEditorValue() {
-                return "";
-            }
-        });
+        table.setComponentPopupMenu(contextMenu);
 
         table.getColumnModel().getColumn(0).setMinWidth(0);
         table.getColumnModel().getColumn(0).setMaxWidth(0);
@@ -370,7 +385,6 @@ public class HopDongUI {
         table.getColumnModel().getColumn(5).setPreferredWidth(100);
         table.getColumnModel().getColumn(6).setPreferredWidth(110);
         table.getColumnModel().getColumn(7).setPreferredWidth(125);
-        table.getColumnModel().getColumn(8).setPreferredWidth(90);
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -383,6 +397,10 @@ public class HopDongUI {
         pnlRoot.add(pnlMainContent, BorderLayout.CENTER);
 
         return pnlRoot;
+    }
+
+    public void showAddContractForm() {
+        showContractForm(false, -1);
     }
 
     private void showContractForm(boolean isEdit, int row) {
@@ -1294,129 +1312,4 @@ public class HopDongUI {
         }
     }
 
-    class ActionPanel extends JPanel {
-        private int rowTarget;
-
-        public ActionPanel(boolean isRenderer, int row) {
-            this.rowTarget = row;
-            setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 12));
-            setOpaque(true);
-
-            JButton btnEdit = createIconButton(false);
-            JButton btnDelete = createIconButton(true);
-            add(btnEdit);
-            add(btnDelete);
-
-            if (!isRenderer) {
-                btnEdit.addActionListener(e -> {
-                    if (table.isEditing())
-                        table.getCellEditor().stopCellEditing();
-                    showContractForm(true, table.convertRowIndexToModel(rowTarget));
-                });
-                btnDelete.addActionListener(e -> {
-                    if (table.isEditing())
-                        table.getCellEditor().stopCellEditing();
-
-                    int modelRow = table.convertRowIndexToModel(rowTarget);
-                    String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
-                    String tenKhachHang = String.valueOf(model.getValueAt(modelRow, 2)); // Lấy thêm tên khách để hiển
-                                                                                         // thị cho rõ ràng
-                    String maPhong = String.valueOf(model.getValueAt(modelRow, 1)); // Lấy mã phòng
-
-                    // Tạo hộp thoại xác nhận (Warning)
-                    int luaChon = JOptionPane.showConfirmDialog(
-                            pnlRoot, // Gắn hộp thoại vào panel gốc
-                            "Bạn có chắc chắn muốn xóa hợp đồng của khách hàng '" + tenKhachHang + "' (Phòng " + maPhong
-                                    + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
-                            "Xác nhận xóa hợp đồng",
-                            JOptionPane.YES_NO_OPTION,
-                            JOptionPane.WARNING_MESSAGE);
-
-                    // Nếu người dùng chọn YES (Đồng ý xóa)
-                    if (luaChon == JOptionPane.YES_OPTION) {
-                        boolean ok = HopDongDao.xoaHopDongVaKhachHangLienQuan(maHopDong);
-                        if (ok) {
-                            loadDataToTable();
-                            showToast("Đã xóa hợp đồng thành công");
-                        } else {
-                            showToast("Xóa hợp đồng thất bại");
-                        }
-                    }
-                });
-            }
-        }
-
-        private JButton createIconButton(boolean isDelete) {
-            JButton btn = new JButton() {
-                boolean isHovered = false;
-                {
-                    addMouseListener(new MouseAdapter() {
-                        public void mouseEntered(MouseEvent e) {
-                            isHovered = true;
-                            repaint();
-                        }
-
-                        public void mouseExited(MouseEvent e) {
-                            isHovered = false;
-                            repaint();
-                        }
-                    });
-                }
-
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    if (isHovered) {
-                        g2.setColor(new Color(241, 245, 249));
-                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                    }
-                    g2.setColor(isDelete ? new Color(239, 68, 68) : new Color(71, 85, 105));
-                    g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
-                    int cx = getWidth() / 2;
-                    int cy = getHeight() / 2;
-                    if (isDelete) {
-                        g2.drawLine(cx - 7, cy - 4, cx + 7, cy - 4);
-                        Path2D b = new Path2D.Double();
-                        b.moveTo(cx + 5, cy - 4);
-                        b.lineTo(cx + 5, cy + 5);
-                        b.quadTo(cx + 5, cy + 7, cx + 3, cy + 7);
-                        b.lineTo(cx - 3, cy + 7);
-                        b.quadTo(cx - 5, cy + 7, cx - 5, cy + 5);
-                        b.lineTo(cx - 5, cy - 4);
-                        g2.draw(b);
-                        Path2D top = new Path2D.Double();
-                        top.moveTo(cx - 3, cy - 4);
-                        top.lineTo(cx - 3, cy - 6);
-                        top.quadTo(cx - 3, cy - 7, cx - 2, cy - 7);
-                        top.lineTo(cx + 2, cy - 7);
-                        top.quadTo(cx + 3, cy - 7, cx + 3, cy - 6);
-                        top.lineTo(cx + 3, cy - 4);
-                        g2.draw(top);
-                        g2.drawLine(cx - 2, cy - 1, cx - 2, cy + 4);
-                        g2.drawLine(cx + 2, cy - 1, cx + 2, cy + 4);
-                    } else {
-                        Path2D p = new Path2D.Double();
-                        p.moveTo(cx - 5, cy + 5);
-                        p.lineTo(cx - 5, cy + 1);
-                        p.lineTo(cx + 3, cy - 7);
-                        p.quadTo(cx + 5, cy - 9, cx + 7, cy - 7);
-                        p.quadTo(cx + 9, cy - 5, cx + 7, cy - 3);
-                        p.lineTo(cx - 1, cy + 5);
-                        p.closePath();
-                        g2.draw(p);
-                        g2.drawLine(cx + 1, cy - 5, cx + 5, cy - 1);
-                    }
-                    g2.dispose();
-                }
-            };
-            btn.setPreferredSize(new Dimension(26, 26));
-            btn.setContentAreaFilled(false);
-            btn.setBorderPainted(false);
-            btn.setFocusPainted(false);
-            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            return btn;
-        }
-    }
 }

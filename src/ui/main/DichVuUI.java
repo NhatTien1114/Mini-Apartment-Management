@@ -219,11 +219,11 @@ public class DichVuUI {
         card.setBackground(MAU_CARD);
         card.setBorder(new LineBorder(MAU_BORDER, 1, true));
 
-        String[] cols = { "Mã DV", "Tên dịch vụ", "Đơn vị tính", "Đơn giá", "Thao tác" };
+        String[] cols = { "Mã DV", "Tên dịch vụ", "Đơn vị tính", "Đơn giá" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) {
-                return c == 4; // Cột thao tác
+                return false;
             }
         };
 
@@ -293,14 +293,47 @@ public class DichVuUI {
         table.getColumnModel().getColumn(1).setPreferredWidth(280);
         table.getColumnModel().getColumn(2).setPreferredWidth(160);
         table.getColumnModel().getColumn(3).setPreferredWidth(220);
-        table.getColumnModel().getColumn(4).setPreferredWidth(100);
 
         table.getColumnModel().getColumn(0).setCellRenderer(plainPaddedRenderer());
         table.getColumnModel().getColumn(1).setCellRenderer(boldPaddedRenderer());
         table.getColumnModel().getColumn(2).setCellRenderer(plainPaddedRenderer());
         table.getColumnModel().getColumn(3).setCellRenderer(new PriceBadgeRenderer());
-        table.getColumnModel().getColumn(4).setCellRenderer(new ActionRenderer());
-        table.getColumnModel().getColumn(4).setCellEditor(new ActionEditor());
+
+        // --- Right-click context menu ---
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miDelete = new JMenuItem("Xóa");
+        miDelete.setForeground(new Color(239, 68, 68));
+        contextMenu.add(miEdit);
+        contextMenu.add(miDelete);
+
+        miEdit.addActionListener(ev -> {
+            int row = table.getSelectedRow();
+            if (row >= 0 && row < dsDichVu.size())
+                showDialog(dsDichVu.get(row));
+        });
+        miDelete.addActionListener(ev -> {
+            int row = table.getSelectedRow();
+            if (row < 0 || row >= dsDichVu.size())
+                return;
+            DichVu target = dsDichVu.get(row);
+            int confirm = JOptionPane.showConfirmDialog(
+                    SwingUtilities.getWindowAncestor(table),
+                    "Bạn có chắc chắn muốn xóa dịch vụ: " + target.getTenDichVu() + " ?",
+                    "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                if (dao.deleteDichVu(target.getMaDichVu())) {
+                    MessageDialog.show(null, "Đã xóa", "Đã xóa dịch vụ thành công.",
+                            MessageDialog.MessageType.SUCCESS);
+                    loadTable();
+                } else {
+                    MessageDialog.show(null, "Báo lỗi", "Không thể xóa do ràng buộc dữ liệu.",
+                            MessageDialog.MessageType.ERROR);
+                }
+            }
+        });
+
+        table.setComponentPopupMenu(contextMenu);
 
         JScrollPane sp = new JScrollPane(table);
         sp.setBorder(BorderFactory.createEmptyBorder());
@@ -524,71 +557,6 @@ public class DichVuUI {
             }
             p.add(badge);
             return p;
-        }
-    }
-
-    class ActionRenderer implements TableCellRenderer {
-        @Override
-        public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int row, int col) {
-            JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 18));
-            p.setBackground(sel ? new Color(239, 246, 255) : MAU_CARD);
-            p.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
-            p.add(makeIconLabel("✏", MAU_MUTED));
-            p.add(makeIconLabel("🗑", MAU_RED));
-            return p;
-        }
-    }
-
-    class ActionEditor extends AbstractCellEditor implements TableCellEditor {
-        private final JPanel panel;
-        private int curRow;
-
-        ActionEditor() {
-            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 18));
-            panel.setBackground(MAU_CARD);
-            panel.setBorder(new MatteBorder(0, 0, 1, 0, MAU_BORDER));
-
-            JButton btnEdit = makeIconButton("✏", MAU_MUTED);
-            JButton btnDel = makeIconButton("🗑", MAU_RED);
-
-            btnEdit.addActionListener(e -> {
-                stopCellEditing();
-                showDialog(dsDichVu.get(curRow));
-            });
-            btnDel.addActionListener(e -> {
-                stopCellEditing();
-                DichVu target = dsDichVu.get(curRow);
-
-                // Show Custom MessageDialog
-                int confirm = JOptionPane.showConfirmDialog(
-                        panel.getTopLevelAncestor(),
-                        "Bạn có chắc chắn muốn xóa dịch vụ: " + target.getTenDichVu() + " ?",
-                        "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                if (confirm == JOptionPane.YES_OPTION) {
-                    if (dao.deleteDichVu(target.getMaDichVu())) {
-                        MessageDialog.show(null, "Đã xóa", "Đã xóa dịch vụ thành công.",
-                                MessageDialog.MessageType.SUCCESS);
-                        loadTable();
-                    } else {
-                        MessageDialog.show(null, "Báo lỗi", "Không thể xóa do ràng buộc dữ liệu.",
-                                MessageDialog.MessageType.ERROR);
-                    }
-                }
-            });
-
-            panel.add(btnEdit);
-            panel.add(btnDel);
-        }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable t, Object v, boolean sel, int row, int col) {
-            curRow = row;
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() {
-            return "ACT";
         }
     }
 

@@ -4,6 +4,7 @@ import dao.QuanLyPhongDAO;
 import entity.KhachHang;
 import entity.Phong;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -17,7 +18,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.AbstractCellEditor;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -27,10 +27,13 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.RowFilter;
 import javax.swing.SwingConstants;
@@ -43,7 +46,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
-import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableRowSorter;
 import service.KhachHangService;
@@ -123,11 +125,11 @@ public class KhachHangUI {
         bar.add(txtTimKiem, BorderLayout.WEST);
         card.add(bar, BorderLayout.NORTH);
 
-        String[] cols = { "Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Phòng", "Thao tác" };
+        String[] cols = { "Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Phòng" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 7;
+                return false;
             }
         };
 
@@ -204,8 +206,6 @@ public class KhachHangUI {
         table.getColumnModel().getColumn(4).setPreferredWidth(110);
         table.getColumnModel().getColumn(5).setPreferredWidth(220);
         table.getColumnModel().getColumn(6).setPreferredWidth(90);
-        table.getColumnModel().getColumn(7).setPreferredWidth(90);
-        table.getColumnModel().getColumn(7).setMaxWidth(100);
 
         DefaultTableCellRenderer paddedCell = new DefaultTableCellRenderer() {
             @Override
@@ -225,8 +225,56 @@ public class KhachHangUI {
             table.getColumnModel().getColumn(i).setCellRenderer(paddedCell);
         }
 
-        table.getColumnModel().getColumn(7).setCellRenderer(new ActionRenderer());
-        table.getColumnModel().getColumn(7).setCellEditor(new ActionEditor());
+        // --- Right-click context menu ---
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miDelete = new JMenuItem("Xóa");
+        miDelete.setForeground(new Color(239, 68, 68));
+        contextMenu.add(miEdit);
+        contextMenu.add(miDelete);
+
+        miEdit.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row < 0)
+                return;
+            int modelRow = table.convertRowIndexToModel(row);
+            String maKhachHang = String.valueOf(tableModel.getValueAt(modelRow, 0));
+            try {
+                KhachHang kh = khachHangService.timTheoMa(maKhachHang);
+                if (kh == null) {
+                    showError("Không tìm thấy khách hàng để sửa.");
+                    return;
+                }
+                showKhachHangDialog(kh);
+            } catch (RuntimeException ex) {
+                showError("Không thể tải dữ liệu khách hàng: " + ex.getMessage());
+            }
+        });
+        miDelete.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row < 0)
+                return;
+            int modelRow = table.convertRowIndexToModel(row);
+            String maKhachHang = String.valueOf(tableModel.getValueAt(modelRow, 0));
+            String hoTen = String.valueOf(tableModel.getValueAt(modelRow, 1));
+            int confirm = JOptionPane.showConfirmDialog(table,
+                    "Bạn có chắc muốn xóa khách hàng \"" + hoTen + "\" (" + maKhachHang + ")?",
+                    "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION)
+                return;
+            try {
+                boolean ok = khachHangService.xoaKhachHang(maKhachHang);
+                if (!ok) {
+                    showError("Xóa thất bại, khách hàng không tồn tại.");
+                    return;
+                }
+                loadKhachHangData();
+            } catch (RuntimeException ex) {
+                showError("Không thể xóa khách hàng: " + ex.getMessage());
+            }
+        });
+
+        table.setComponentPopupMenu(contextMenu);
 
         sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
@@ -263,7 +311,7 @@ public class KhachHangUI {
             return;
         }
 
-        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 0, 1, 2, 3, 6));
+        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 0, 1, 2, 3, 5, 6));
     }
 
     private void loadKhachHangData() {
@@ -312,7 +360,7 @@ public class KhachHangUI {
         Window owner = SwingUtilities.getWindowAncestor(table);
         JDialog dlg = new JDialog(owner instanceof Frame ? (Frame) owner : null,
                 isEdit ? "Sửa khách hàng" : "Thêm khách hàng", true);
-        dlg.setSize(680, 520);
+        dlg.setSize(680, 640);
         dlg.setLocationRelativeTo(owner);
         dlg.setResizable(false);
 
@@ -333,7 +381,7 @@ public class KhachHangUI {
         JTextField txtSdt = makeField(sdtValue);
         JTextField txtNgaySinh = makeField(ngaySinhValue);
         JTextField txtCccd = makeField(cccdValue);
-        JTextField txtDiaChi = makeField(diaChiValue);
+        JTextArea txtDiaChi = makeTextArea(diaChiValue);
 
         List<String> dsPhongDisplay = new ArrayList<>();
         for (Phong phong : phongDAO.getAllPhongDaThue()) {
@@ -354,7 +402,7 @@ public class KhachHangUI {
         txtSdt.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         txtNgaySinh.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         txtCccd.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
-        txtDiaChi.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        txtDiaChi.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
 
         JPanel form = new JPanel();
         form.setBackground(AppColors.WHITE);
@@ -369,7 +417,7 @@ public class KhachHangUI {
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("CCCD", txtCccd));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Địa chỉ", txtDiaChi));
+        form.add(wrapField("Địa chỉ", new JScrollPane(txtDiaChi)));
 
         card.add(form, BorderLayout.CENTER);
 
@@ -473,6 +521,19 @@ public class KhachHangUI {
         return field;
     }
 
+    private JTextArea makeTextArea(String value) {
+        JTextArea area = new JTextArea(value);
+        area.setFont(FONT_PLAIN);
+        area.setForeground(AppColors.SLATE_900);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(AppColors.SLATE_200, 1, true),
+                new EmptyBorder(7, 10, 7, 10)));
+        area.setPreferredSize(new Dimension(0, 90));
+        return area;
+    }
+
     private JComponent wrapField(String label, JComponent field) {
         JPanel p = new JPanel(new BorderLayout(0, 5));
         p.setBackground(AppColors.WHITE);
@@ -521,105 +582,4 @@ public class KhachHangUI {
         return label;
     }
 
-    class ActionRenderer implements TableCellRenderer {
-        @Override
-        public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus,
-                int row, int col) {
-            JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 15));
-            p.setBackground(isSelected ? AppColors.PRIMARY_TINT_HOVER : AppColors.WHITE);
-            p.setBorder(new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200));
-
-            JLabel lblSua = makeActionIconLabel(ICON_PEN);
-            JLabel lblXoa = makeActionIconLabel(ICON_BIN);
-
-            p.add(lblSua);
-            p.add(lblXoa);
-            return p;
-        }
-    }
-
-    class ActionEditor extends AbstractCellEditor implements TableCellEditor {
-        private final JPanel panel;
-        private int modelRow;
-
-        ActionEditor() {
-            panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 11));
-            panel.setBackground(AppColors.WHITE);
-            panel.setBorder(new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200));
-
-            JButton btnSua = makeIconButton(ICON_PEN, "Sửa");
-            JButton btnXoa = makeIconButton(ICON_BIN, "Xóa");
-
-            btnSua.addActionListener(e -> {
-                stopCellEditing();
-                String maKhachHang = String.valueOf(tableModel.getValueAt(modelRow, 0));
-                try {
-                    KhachHang kh = khachHangService.timTheoMa(maKhachHang);
-                    if (kh == null) {
-                        showError("Không tìm thấy khách hàng để sửa.");
-                        return;
-                    }
-                    showKhachHangDialog(kh);
-                } catch (RuntimeException ex) {
-                    showError("Không thể tải dữ liệu khách hàng: " + ex.getMessage());
-                }
-            });
-
-            btnXoa.addActionListener(e -> {
-                stopCellEditing();
-                String maKhachHang = String.valueOf(tableModel.getValueAt(modelRow, 0));
-                String hoTen = String.valueOf(tableModel.getValueAt(modelRow, 1));
-
-                int confirm = JOptionPane.showConfirmDialog(table,
-                        "Bạn có chắc muốn xóa khách hàng \"" + hoTen + "\" (" + maKhachHang + ")?",
-                        "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                if (confirm != JOptionPane.YES_OPTION) {
-                    return;
-                }
-
-                try {
-                    boolean ok = khachHangService.xoaKhachHang(maKhachHang);
-                    if (!ok) {
-                        showError("Xóa thất bại, khách hàng không tồn tại.");
-                        return;
-                    }
-                    loadKhachHangData();
-                } catch (RuntimeException ex) {
-                    showError("Không thể xóa khách hàng: " + ex.getMessage());
-                }
-            });
-
-            panel.add(btnSua);
-            panel.add(btnXoa);
-        }
-
-        private JButton makeIconButton(ImageIcon icon, String tooltip) {
-            JButton btn = new JButton();
-            if (icon != null) {
-                btn.setIcon(icon);
-            } else {
-                btn.setText(tooltip);
-                btn.setForeground(AppColors.SLATE_600);
-                btn.setFont(FONT_SMALL);
-            }
-            btn.setToolTipText(tooltip);
-            btn.setContentAreaFilled(false);
-            btn.setBorderPainted(false);
-            btn.setFocusPainted(false);
-            btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            btn.setBorder(new EmptyBorder(2, 4, 2, 4));
-            return btn;
-        }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable t, Object value, boolean isSelected, int row, int col) {
-            modelRow = table.convertRowIndexToModel(row);
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() {
-            return "ACT";
-        }
-    }
 }
