@@ -7,11 +7,10 @@ import dao.QuanLyPhongDAO;
 import entity.HopDong;
 import entity.KhachHang;
 import entity.Phong;
-import ui.main.HopDongUI;
-
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import ui.main.HopDongUI;
 
 public class PhongInfo {
 
@@ -37,108 +36,113 @@ public class PhongInfo {
         this.tenPhong = tenPhong;
     }
 
-
-
     public void showDialog() {
         Phong phong = phongDAO.layTheoMa(tenPhong);
 
         JDialog dialog = new JDialog();
         dialog.setTitle(tenPhong);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setSize(700, 400);
-        dialog.setLocationRelativeTo(null);
         dialog.setModal(true);
 
         JPanel pnlMain = new JPanel(new BorderLayout(10, 10));
         pnlMain.setBorder(new EmptyBorder(20, 20, 20, 20));
         pnlMain.setBackground(AppColors.WHITE);
 
-        JPanel pnlTop = createTopPanel();
-        pnlMain.add(pnlTop, BorderLayout.NORTH);
-        if(phong.getTrangThai() == Phong.TrangThai.TRONG){
-            JPanel pnlMiddle = createMiddlePanelForPhongTrong();
-            JScrollPane scrollPane = new JScrollPane(pnlMiddle);
-            scrollPane.setBorder(BorderFactory.createEmptyBorder());
-            pnlMain.add(scrollPane, BorderLayout.CENTER);
-
-        } else if (phong.getTrangThai() == Phong.TrangThai.THUE) {
-            JPanel pnlMiddle = createMiddlePanelForPhongDaThue();
-            JScrollPane scrollPane = new JScrollPane(pnlMiddle);
-            scrollPane.setBorder(BorderFactory.createEmptyBorder());
-            pnlMain.add(scrollPane, BorderLayout.CENTER);
+        JPanel pnlContent;
+        if (phong.getTrangThai() == Phong.TrangThai.THUE) {
+            pnlContent = createContentForPhongDaThue(phong);
+            dialog.setSize(700, 520);
+        } else {
+            pnlContent = createContentForPhongTrong(phong);
+            dialog.setSize(700, 520);
         }
+
+        JScrollPane scrollPane = new JScrollPane(pnlContent);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        pnlMain.add(scrollPane, BorderLayout.CENTER);
 
         JPanel pnlBottom = createBottomPanel(dialog);
         pnlMain.add(pnlBottom, BorderLayout.SOUTH);
 
         dialog.add(pnlMain);
+        dialog.setLocationRelativeTo(null);
         dialog.setVisible(true);
     }
 
-    // ================= TOP PANEL =================
-    private JPanel createTopPanel() {
-        Phong phong = phongDAO.layTheoMa(tenPhong);
-
-        JPanel pnlTop = new JPanel(new GridLayout(1, 3, 20, 0));
-        pnlTop.setBackground(Color.WHITE);
-
-        JPanel pnlName = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        pnlName.setBackground(Color.WHITE);
-        JLabel lblNameTitle = new JLabel("Tên phòng");
-        JLabel lblName = new JLabel(tenPhong);
-        lblName.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        pnlName.add(lblNameTitle);
-        pnlName.add(Box.createHorizontalStrut(30));
-        pnlName.add(lblName);
-
-        JPanel pnlArea = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        pnlArea.setBackground(Color.WHITE);
-        JLabel lblAreaTitle = new JLabel("Diện tích");
-        JLabel lblArea = new JLabel(String.valueOf(phong.getDienTich()));
-        lblArea.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        pnlArea.add(lblAreaTitle);
-        pnlArea.add(Box.createHorizontalStrut(30));
-        pnlArea.add(lblArea);
-
-        JPanel pnlPrice = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        pnlPrice.setBackground(Color.WHITE);
-        JLabel lblPriceTitle = new JLabel("Giá thuê");
-        JLabel lblPrice = new JLabel(String.valueOf(donGiaDAO.getDonGiaByMa(phong.getMaGiaDetail()).getDonGia()));
-        lblPrice.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        pnlPrice.add(lblPriceTitle);
-        pnlPrice.add(Box.createHorizontalStrut(30));
-        pnlPrice.add(lblPrice);
-
-        pnlTop.add(pnlName);
-        pnlTop.add(pnlArea);
-        pnlTop.add(pnlPrice);
-
-        return pnlTop;
-    }
-
-    // ================= MIDDLE PANEL =================
-    private JPanel createMiddlePanelForPhongTrong() {
-        Phong phong = phongDAO.layTheoMa(tenPhong);
-
+    // ================= CONTENT PANELS =================
+    private JPanel createContentForPhongTrong(Phong phong) {
         JPanel pnlContainer = new JPanel();
         pnlContainer.setLayout(new BoxLayout(pnlContainer, BoxLayout.Y_AXIS));
         pnlContainer.setBackground(Color.WHITE);
-        pnlContainer.setBorder(new EmptyBorder(10, 0, 0, 0));
+        pnlContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
 
+        // --- Thông tin phòng ---
+        String giaThue = String.valueOf(donGiaDAO.getDonGiaByMa(phong.getMaGiaDetail()).getDonGia());
+        String tang = phong.getMaTang() != null ? phong.getMaTang().getTenTang() : "";
+        String toa = (phong.getMaTang() != null && phong.getMaTang().getToa() != null)
+                ? phong.getMaTang().getToa().getTenToa()
+                : "";
+
+        JPanel pnlRoomRow1 = new JPanel(new GridLayout(1, 3, 15, 0));
+        pnlRoomRow1.setBackground(Color.WHITE);
+        JTextField txtTenPhong = new JTextField(tenPhong);
+        txtTenPhong.setEditable(false);
+        JTextField txtLoaiPhong = new JTextField(phong.getLoaiPhong() != null ? phong.getLoaiPhong().getTen() : "");
+        txtLoaiPhong.setEditable(false);
+        JTextField txtTrangThai = new JTextField(phong.getTrangThai() != null ? phong.getTrangThai().getTen() : "");
+        txtTrangThai.setEditable(false);
+        pnlRoomRow1.add(createFieldPanel(new JLabel("Tên phòng"), txtTenPhong));
+        pnlRoomRow1.add(createFieldPanel(new JLabel("Loại phòng"), txtLoaiPhong));
+        pnlRoomRow1.add(createFieldPanel(new JLabel("Trạng thái"), txtTrangThai));
+
+        JPanel pnlRoomRow2 = new JPanel(new GridLayout(1, 3, 15, 0));
+        pnlRoomRow2.setBackground(Color.WHITE);
+        JTextField txtToa = new JTextField(toa);
+        txtToa.setEditable(false);
+        JTextField txtTang = new JTextField(tang);
+        txtTang.setEditable(false);
+        JTextField txtSoNguoi = new JTextField(String.valueOf(phong.getSoNguoiHienTai()));
+        txtSoNguoi.setEditable(false);
+        pnlRoomRow2.add(createFieldPanel(new JLabel("Tòa"), txtToa));
+        pnlRoomRow2.add(createFieldPanel(new JLabel("Tầng"), txtTang));
+        pnlRoomRow2.add(createFieldPanel(new JLabel("Số người hiện tại"), txtSoNguoi));
+
+        JPanel pnlRoomRow3 = new JPanel(new GridLayout(1, 3, 15, 0));
+        pnlRoomRow3.setBackground(Color.WHITE);
+        JTextField txtGiaThue = new JTextField(giaThue);
+        txtGiaThue.setEditable(false);
+        pnlRoomRow3.add(createFieldPanel(new JLabel("Giá thuê"), txtGiaThue));
+        pnlRoomRow3.add(Box.createGlue());
+        pnlRoomRow3.add(Box.createGlue());
+
+        pnlContainer.add(pnlRoomRow1);
+        pnlContainer.add(Box.createVerticalStrut(10));
+        pnlContainer.add(pnlRoomRow2);
+        pnlContainer.add(Box.createVerticalStrut(10));
+        pnlContainer.add(pnlRoomRow3);
+
+        // --- Separator ---
+        pnlContainer.add(Box.createVerticalStrut(15));
+        JSeparator sep = new JSeparator();
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        pnlContainer.add(sep);
+        pnlContainer.add(Box.createVerticalStrut(15));
+
+        // --- Thông tin hợp đồng (editable) ---
         JPanel pnlRow1 = new JPanel(new GridLayout(1, 3, 15, 0));
         pnlRow1.setBackground(Color.WHITE);
-        
+
         txtTenKhachThue = new JTextField();
         txtPhone = new JTextField();
         txtCccd = new JTextField();
 
-        pnlRow1.add(createFieldPanel(new JLabel("Tên khách thuê"),txtTenKhachThue));
+        pnlRow1.add(createFieldPanel(new JLabel("Tên khách thuê"), txtTenKhachThue));
         pnlRow1.add(createFieldPanel(new JLabel("SĐT"), txtPhone));
         pnlRow1.add(createFieldPanel(new JLabel("CCCD"), txtCccd));
 
         JPanel pnlRow2 = new JPanel(new GridLayout(1, 3, 15, 0));
         pnlRow2.setBackground(Color.WHITE);
-        
+
         txtStartDate = new JTextField();
         txtEndDate = new JTextField();
         txtDeposit = new JTextField();
@@ -149,9 +153,9 @@ public class PhongInfo {
 
         JPanel pnlRow3 = new JPanel(new GridLayout(1, 2, 15, 0));
         pnlRow3.setBackground(Color.WHITE);
-        
+
         txtMonthlyRent = new JTextField();
-        JComboBox<String> cboCondition = new JComboBox<>(new String[] { "Đã cọc", "Đã thuê", "Trống" });
+        cboCondition = new JComboBox<>(new String[] { "Đã cọc", "Đã thuê", "Trống" });
         cboCondition.setSelectedIndex(2);
 
         pnlRow3.add(createFieldPanel(new JLabel("Tiền thuê/tháng"), txtMonthlyRent));
@@ -167,58 +171,105 @@ public class PhongInfo {
         return pnlContainer;
     }
 
-    private JPanel createMiddlePanelForPhongDaThue() {
-        Phong phong = phongDAO.layTheoMa(tenPhong);
-
+    private JPanel createContentForPhongDaThue(Phong phong) {
         JPanel pnlContainer = new JPanel();
         pnlContainer.setLayout(new BoxLayout(pnlContainer, BoxLayout.Y_AXIS));
         pnlContainer.setBackground(Color.WHITE);
-        pnlContainer.setBorder(new EmptyBorder(10, 0, 0, 0));
+        pnlContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
+
+        // --- Thông tin phòng ---
+        String giaThue = String.valueOf(donGiaDAO.getDonGiaByMa(phong.getMaGiaDetail()).getDonGia());
+        String tang = phong.getMaTang() != null ? phong.getMaTang().getTenTang() : "";
+        String toa = (phong.getMaTang() != null && phong.getMaTang().getToa() != null)
+                ? phong.getMaTang().getToa().getTenToa()
+                : "";
+
+        JPanel pnlRoomRow1 = new JPanel(new GridLayout(1, 3, 15, 0));
+        pnlRoomRow1.setBackground(Color.WHITE);
+        JTextField txtTenPhong = new JTextField(tenPhong);
+        txtTenPhong.setEditable(false);
+        JTextField txtLoaiPhong = new JTextField(phong.getLoaiPhong() != null ? phong.getLoaiPhong().getTen() : "");
+        txtLoaiPhong.setEditable(false);
+        JTextField txtTrangThai = new JTextField(phong.getTrangThai() != null ? phong.getTrangThai().getTen() : "");
+        txtTrangThai.setEditable(false);
+        pnlRoomRow1.add(createFieldPanel(new JLabel("Tên phòng"), txtTenPhong));
+        pnlRoomRow1.add(createFieldPanel(new JLabel("Loại phòng"), txtLoaiPhong));
+        pnlRoomRow1.add(createFieldPanel(new JLabel("Trạng thái"), txtTrangThai));
+
+        JPanel pnlRoomRow2 = new JPanel(new GridLayout(1, 3, 15, 0));
+        pnlRoomRow2.setBackground(Color.WHITE);
+        JTextField txtToa = new JTextField(toa);
+        txtToa.setEditable(false);
+        JTextField txtTang = new JTextField(tang);
+        txtTang.setEditable(false);
+        JTextField txtSoNguoi = new JTextField(String.valueOf(phong.getSoNguoiHienTai()));
+        txtSoNguoi.setEditable(false);
+        pnlRoomRow2.add(createFieldPanel(new JLabel("Tòa"), txtToa));
+        pnlRoomRow2.add(createFieldPanel(new JLabel("Tầng"), txtTang));
+        pnlRoomRow2.add(createFieldPanel(new JLabel("Số người hiện tại"), txtSoNguoi));
+
+        JPanel pnlRoomRow3 = new JPanel(new GridLayout(1, 3, 15, 0));
+        pnlRoomRow3.setBackground(Color.WHITE);
+        JTextField txtGiaThue = new JTextField(giaThue);
+        txtGiaThue.setEditable(false);
+        pnlRoomRow3.add(createFieldPanel(new JLabel("Giá thuê"), txtGiaThue));
+        pnlRoomRow3.add(Box.createGlue());
+        pnlRoomRow3.add(Box.createGlue());
+
+        pnlContainer.add(pnlRoomRow1);
+        pnlContainer.add(Box.createVerticalStrut(10));
+        pnlContainer.add(pnlRoomRow2);
+        pnlContainer.add(Box.createVerticalStrut(10));
+        pnlContainer.add(pnlRoomRow3);
+
+        // --- Separator ---
+        pnlContainer.add(Box.createVerticalStrut(15));
+        JSeparator sep = new JSeparator();
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        pnlContainer.add(sep);
+        pnlContainer.add(Box.createVerticalStrut(15));
+
+        // --- Thông tin hợp đồng (read-only) ---
+        KhachHang kh = HDKH_DAO.getNguoiDaiDienByMaPhong(phong.getMaPhong());
+        HopDong hd = hopDongDAO.getHopDongByMaPhong(phong.getMaPhong());
 
         JPanel pnlRow1 = new JPanel(new GridLayout(1, 3, 15, 0));
         pnlRow1.setBackground(Color.WHITE);
 
-        KhachHang kh = HDKH_DAO.getNguoiDaiDienByMaPhong(phong.getMaPhong());
+        JTextField txtTenKhachThueLocal = new JTextField(kh.getHoTen());
+        JTextField txtPhoneLocal = new JTextField(kh.getSoDienThoai());
+        JTextField txtCccdLocal = new JTextField(kh.getSoCCCD());
+        txtTenKhachThueLocal.setEditable(false);
+        txtPhoneLocal.setEditable(false);
+        txtCccdLocal.setEditable(false);
 
-        JTextField txtTenKhachThue = new JTextField(kh.getHoTen());
-        JTextField txtPhone = new JTextField(kh.getSoDienThoai());
-        JTextField txtCccd = new JTextField(kh.getSoCCCD());
-
-        pnlRow1.add(createFieldPanel(new JLabel("Tên khách thuê"), txtTenKhachThue));
-        pnlRow1.add(createFieldPanel(new JLabel("SĐT"), txtPhone));
-        pnlRow1.add(createFieldPanel(new JLabel("CCCD"), txtCccd));
-
-        txtTenKhachThue.setEditable(false);
-        txtPhone.setEditable(false);
-        txtCccd.setEditable(false);
+        pnlRow1.add(createFieldPanel(new JLabel("Tên khách thuê"), txtTenKhachThueLocal));
+        pnlRow1.add(createFieldPanel(new JLabel("SĐT"), txtPhoneLocal));
+        pnlRow1.add(createFieldPanel(new JLabel("CCCD"), txtCccdLocal));
 
         JPanel pnlRow2 = new JPanel(new GridLayout(1, 3, 15, 0));
         pnlRow2.setBackground(Color.WHITE);
 
-        HopDong hd = hopDongDAO.getHopDongByMaPhong(phong.getMaPhong());
+        JTextField txtStartDateLocal = new JTextField(String.valueOf(hd.getNgayBatDau()));
+        JTextField txtEndDateLocal = new JTextField(String.valueOf(hd.getNgayKetThuc()));
+        JTextField txtDepositLocal = new JTextField(String.valueOf(hd.getTienCoc()));
+        txtStartDateLocal.setEditable(false);
+        txtEndDateLocal.setEditable(false);
+        txtDepositLocal.setEditable(false);
 
-        JTextField txtStartDate = new JTextField(String.valueOf(hd.getNgayBatDau()));
-        JTextField txtEndDate = new JTextField(String.valueOf(hd.getNgayKetThuc()));
-        JTextField txtDeposit = new JTextField(String.valueOf(hd.getTienCoc()));
-
-        txtStartDate.setEditable(false);
-        txtEndDate.setEditable(false);
-        txtDeposit.setEditable(false);
-
-        pnlRow2.add(createFieldPanel(new JLabel("Ngày bắt đầu"), txtStartDate));
-        pnlRow2.add(createFieldPanel(new JLabel("Ngày kết thúc"), txtEndDate));
-        pnlRow2.add(createFieldPanel(new JLabel("Tiền cọc"), txtDeposit));
+        pnlRow2.add(createFieldPanel(new JLabel("Ngày bắt đầu"), txtStartDateLocal));
+        pnlRow2.add(createFieldPanel(new JLabel("Ngày kết thúc"), txtEndDateLocal));
+        pnlRow2.add(createFieldPanel(new JLabel("Tiền cọc"), txtDepositLocal));
 
         JPanel pnlRow3 = new JPanel(new GridLayout(1, 2, 15, 0));
         pnlRow3.setBackground(Color.WHITE);
 
-        JTextField txtMonthlyRent = new JTextField(String.valueOf(hd.getTienThueThang()));
-        JComboBox<String> cboCondition = new JComboBox<>(new String[] {"Đã thuê"});
+        JTextField txtMonthlyRentLocal = new JTextField(String.valueOf(hd.getTienThueThang()));
+        txtMonthlyRentLocal.setEditable(false);
+        JComboBox<String> cboConditionLocal = new JComboBox<>(new String[] { "Đã thuê" });
 
-        txtMonthlyRent.setEditable(false);
-
-        pnlRow3.add(createFieldPanel(new JLabel("Tiền thuê/tháng"), txtMonthlyRent));
-        pnlRow3.add(createFieldPanel(new JLabel("Trạng thái phòng sau khi tạo"), cboCondition));
+        pnlRow3.add(createFieldPanel(new JLabel("Tiền thuê/tháng"), txtMonthlyRentLocal));
+        pnlRow3.add(createFieldPanel(new JLabel("Trạng thái"), cboConditionLocal));
 
         pnlContainer.add(pnlRow1);
         pnlContainer.add(Box.createVerticalStrut(10));
@@ -234,24 +285,23 @@ public class PhongInfo {
         JPanel pnl = new JPanel();
         pnl.setLayout(new BoxLayout(pnl, BoxLayout.Y_AXIS));
         pnl.setBackground(Color.WHITE);
-        
+
         label.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        if (field instanceof JTextField) {
-            JTextField jTextField = (JTextField) field;
+
+        if (field instanceof JTextField jTextField) {
             jTextField.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
         } else if (field instanceof JComboBox) {
             ((JComboBox<?>) field).setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
         }
-        
+
         extracted(field);
         extracted2(field);
-        
+
         pnl.add(label);
         pnl.add(Box.createVerticalStrut(5));
         pnl.add(field);
-        
+
         return pnl;
     }
 
@@ -290,7 +340,6 @@ public class PhongInfo {
             draft.giaThueRaw = txtMonthlyRent.getText().trim();
             draft.diaChi = "NULL";
             draft.phong = tenPhong.trim();
-
 
             hopDongDAO.luuHopDongMoi(draft);
             phongDAO.updateTrangThaiPhong(tenPhong, "Đã thuê");

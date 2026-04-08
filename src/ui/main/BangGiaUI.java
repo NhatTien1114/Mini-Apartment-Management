@@ -7,13 +7,18 @@ import entity.GiaHeader;
 import entity.QuanLy;
 import entity.TaiKhoan;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dialog;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Image;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -27,20 +32,26 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import service.BangGiaService;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
+import ui.util.RoundedPanel;
 
 public class BangGiaUI {
 
@@ -85,12 +96,14 @@ public class BangGiaUI {
                 }
             };
             this.tableDetail = new JTable(modelDetail);
-            this.tableDetail.setRowHeight(26);
+            this.tableDetail.setRowHeight(36);
         }
     }
 
     private final java.awt.Font FONT_TITLE = new java.awt.Font("Be Vietnam Pro", java.awt.Font.BOLD, 22);
     private final java.awt.Font FONT_PLAIN = new java.awt.Font("Be Vietnam Pro", java.awt.Font.PLAIN, 13);
+    private final java.awt.Font FONT_BOLD = new java.awt.Font("Be Vietnam Pro", java.awt.Font.BOLD, 13);
+    private final java.awt.Font FONT_HEADER = new java.awt.Font("Be Vietnam Pro", java.awt.Font.PLAIN, 12);
     private final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final PrimaryButton primaryButtonHelper = new PrimaryButton();
@@ -99,10 +112,6 @@ public class BangGiaUI {
     private final String tenNguoiCapNhat;
     private final ImageIcon penIcon = loadActionIcon("img/icons/pen.png");
     private final ImageIcon binIcon = loadActionIcon("img/icons/bin.png");
-    private final java.text.DecimalFormat numberFormat = new java.text.DecimalFormat("#,##0");
-
-    private List<BangGiaService.LoaiPhongItem> cachedLoaiPhongs = null;
-    private List<DichVu> cachedDichVus = null;
 
     private JTable tableTongHop;
     private DefaultTableModel modelTongHop;
@@ -152,12 +161,12 @@ public class BangGiaUI {
     }
 
     private JPanel createTongHopSection() {
-        JPanel section = new JPanel(new BorderLayout());
+        RoundedPanel section = new RoundedPanel(12);
         section.setBackground(AppColors.WHITE);
-        section.setBorder(new LineBorder(AppColors.SLATE_200, 1, true));
+        section.setLayout(new BorderLayout());
 
         modelTongHop = new DefaultTableModel(
-                new String[] { "Mã bảng giá", "Người tạo", "Ngày bắt đầu", "Ngày kết thúc", "Thao tác" }, 0) {
+                new String[] { "Mã bảng giá", "Người tạo", "Ngày bắt đầu", "Ngày kết thúc" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -165,66 +174,89 @@ public class BangGiaUI {
         };
 
         tableTongHop = new JTable(modelTongHop);
-        tableTongHop.setFont(FONT_PLAIN);
-        tableTongHop.setRowHeight(28);
+        styleTable(tableTongHop, 46);
         tableTongHop.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        tableTongHop.getColumnModel().getColumn(4).setMinWidth(90);
-        tableTongHop.getColumnModel().getColumn(4).setMaxWidth(110);
-        tableTongHop.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+        // Hover effect
+        final int[] hoveredRow = { -1 };
+        tableTongHop.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
-            public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 2));
-                actionPanel.setOpaque(true);
-                actionPanel.setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
-
-                JLabel editIcon = new JLabel(penIcon);
-                editIcon.setToolTipText("Sửa");
-                JLabel deleteIcon = new JLabel(binIcon);
-                deleteIcon.setToolTipText("Xóa");
-
-                actionPanel.add(editIcon);
-                actionPanel.add(deleteIcon);
-                return actionPanel;
-            }
-        });
-
-        tableTongHop.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
+            public void mouseMoved(MouseEvent e) {
                 int row = tableTongHop.rowAtPoint(e.getPoint());
-                int col = tableTongHop.columnAtPoint(e.getPoint());
-                if (row < 0 || row >= headers.size()) {
-                    return;
-                }
-                if (col != 4) {
-                    return;
-                }
-
-                GiaHeader h = headers.get(row);
-
-                int xInCell = e.getX() - tableTongHop.getCellRect(row, col, true).x;
-                int half = tableTongHop.getCellRect(row, col, true).width / 2;
-                if (xInCell < half) {
-                    showDetailDialog(h);
-                } else {
-                    int confirm = JOptionPane.showConfirmDialog(null,
-                            "Xóa bảng giá " + h.getMaGiaHeader() + "?",
-                            "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        String err = bangGiaService.xoaHeader(h.getMaGiaHeader());
-                        if (err != null) {
-                            JOptionPane.showMessageDialog(null, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
-                            return;
-                        }
-                        loadTongHop();
-                    }
+                if (row != hoveredRow[0]) {
+                    hoveredRow[0] = row;
+                    tableTongHop.repaint();
                 }
             }
         });
+        tableTongHop.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hoveredRow[0] = -1;
+                tableTongHop.repaint();
+            }
+        });
+
+        // Custom cell renderer with hover
+        tableTongHop.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                setFont(column == 0 ? FONT_BOLD : FONT_PLAIN);
+                setBorder(new CompoundBorder(
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 14, 0, 10)));
+                if (isSelected) {
+                    setBackground(AppColors.PRIMARY_TINT_HOVER);
+                    setForeground(AppColors.SLATE_900);
+                } else if (row == hoveredRow[0]) {
+                    setBackground(AppColors.SLATE_50);
+                    setForeground(AppColors.SLATE_900);
+                } else {
+                    setBackground(AppColors.WHITE);
+                    setForeground(AppColors.SLATE_900);
+                }
+                return this;
+            }
+        });
+
+        // --- Right-click context menu ---
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miDelete = new JMenuItem("Xóa");
+        miDelete.setForeground(new java.awt.Color(239, 68, 68));
+        contextMenu.add(miEdit);
+        contextMenu.add(miDelete);
+
+        miEdit.addActionListener(ev -> {
+            int row = tableTongHop.getSelectedRow();
+            if (row >= 0 && row < headers.size())
+                showDetailDialog(headers.get(row));
+        });
+        miDelete.addActionListener(ev -> {
+            int row = tableTongHop.getSelectedRow();
+            if (row < 0 || row >= headers.size())
+                return;
+            GiaHeader h = headers.get(row);
+            int confirm = JOptionPane.showConfirmDialog(null,
+                    "Xóa bảng giá " + h.getMaGiaHeader() + "?",
+                    "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                String err = bangGiaService.xoaHeader(h.getMaGiaHeader());
+                if (err != null) {
+                    JOptionPane.showMessageDialog(null, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                loadTongHop();
+            }
+        });
+
+        tableTongHop.setComponentPopupMenu(contextMenu);
 
         JScrollPane scroll = new JScrollPane(tableTongHop);
         scroll.setBorder(null);
+        scroll.getViewport().setBackground(AppColors.WHITE);
         section.add(scroll, BorderLayout.CENTER);
         return section;
     }
@@ -238,10 +270,40 @@ public class BangGiaUI {
                     h.getMaGiaHeader(),
                     h.getGhiChu(),
                     formatDate(h.getNgayBatDau()),
-                    formatDate(h.getNgayKetThuc()),
-                    ""
+                    formatDate(h.getNgayKetThuc())
             });
         }
+    }
+
+    private void styleTable(JTable table, int rowHeight) {
+        table.setFont(FONT_PLAIN);
+        table.setRowHeight(rowHeight);
+        table.setShowVerticalLines(false);
+        table.setShowHorizontalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setBackground(AppColors.WHITE);
+        table.setSelectionBackground(AppColors.PRIMARY_TINT_HOVER);
+        table.setSelectionForeground(AppColors.SLATE_900);
+        table.setFocusable(true);
+        table.setFillsViewportHeight(true);
+
+        JTableHeader header = table.getTableHeader();
+        header.setReorderingAllowed(false);
+        header.setPreferredSize(new Dimension(0, 42));
+        header.setDefaultRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                super.getTableCellRendererComponent(tbl, value, isSelected, hasFocus, row, column);
+                setFont(FONT_HEADER);
+                setForeground(AppColors.SLATE_600);
+                setBackground(AppColors.SLATE_50);
+                setBorder(new CompoundBorder(
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 14, 0, 10)));
+                return this;
+            }
+        });
     }
 
     private ImageIcon loadActionIcon(String path) {
@@ -271,14 +333,37 @@ public class BangGiaUI {
             }
         };
         JTable table = new JTable(model);
-        table.setRowHeight(26);
-        table.setFont(FONT_PLAIN);
+        styleTable(table, 38);
+
+        // Cell renderer with row separator
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                super.getTableCellRendererComponent(tbl, value, isSelected, hasFocus, row, column);
+                setFont(FONT_PLAIN);
+                setBorder(new CompoundBorder(
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 14, 0, 10)));
+                if (isSelected) {
+                    setBackground(AppColors.PRIMARY_TINT_HOVER);
+                    setForeground(AppColors.SLATE_900);
+                } else {
+                    setBackground(AppColors.WHITE);
+                    setForeground(AppColors.SLATE_900);
+                }
+                return this;
+            }
+        });
 
         for (GiaDetail d : bangGiaService.layDetailTheoHeader(header.getMaGiaHeader())) {
-            model.addRow(new Object[] { resolveTenLoai(header.getLoai(), d), numberFormat.format(d.getDonGia()) });
+            model.addRow(new Object[] { resolveTenLoai(header.getLoai(), d), d.getDonGia() });
         }
 
-        root.add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane detailScroll = new JScrollPane(table);
+        detailScroll.setBorder(new LineBorder(AppColors.SLATE_200, 1, true));
+        detailScroll.getViewport().setBackground(AppColors.WHITE);
+        root.add(detailScroll, BorderLayout.CENTER);
 
         JPanel south = new JPanel(new BorderLayout(8, 0));
         south.setBackground(AppColors.WHITE);
@@ -364,6 +449,8 @@ public class BangGiaUI {
         detailSection.setBackground(AppColors.WHITE);
         detailSection.setBorder(new LineBorder(AppColors.SLATE_200, 1, true));
 
+        styleTable(ctx.tableDetail, 36);
+
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
         actionRow.setBackground(AppColors.WHITE);
 
@@ -392,19 +479,11 @@ public class BangGiaUI {
         actionRow.add(btnDeleteRow);
         actionRow.add(btnUpdatePrice);
 
-        ctx.tableDetail.getColumnModel().getColumn(1).setCellRenderer(new DefaultTableCellRenderer() {
-            @Override
-            protected void setValue(Object value) {
-                if (value instanceof Number) {
-                    setText(numberFormat.format(value));
-                } else {
-                    super.setValue(value);
-                }
-            }
-        });
-
         detailSection.add(actionRow, BorderLayout.NORTH);
-        detailSection.add(new JScrollPane(ctx.tableDetail), BorderLayout.CENTER);
+        JScrollPane addScroll = new JScrollPane(ctx.tableDetail);
+        addScroll.setBorder(null);
+        addScroll.getViewport().setBackground(AppColors.WHITE);
+        detailSection.add(addScroll, BorderLayout.CENTER);
 
         panel.add(detailSection, BorderLayout.CENTER);
         return panel;
@@ -424,16 +503,15 @@ public class BangGiaUI {
 
         ctx.comboItems = items;
         ctx.tableDetail.getColumnModel().getColumn(0).setCellEditor(
-                new DefaultCellEditor(new JComboBox<ComboItem>(items.toArray(new ComboItem[0]))));
+                new DefaultCellEditor(new JComboBox<>(items.toArray(ComboItem[]::new))));
         ctx.tableDetail.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             protected void setValue(Object value) {
-                if (value instanceof ComboItem) {
-                    ComboItem item = (ComboItem) value;
+                if (value instanceof ComboItem item) {
                     super.setValue(item.toString());
-                } else {
-                    super.setValue(value);
+                    return;
                 }
+                super.setValue(value);
             }
         });
     }
@@ -497,8 +575,8 @@ public class BangGiaUI {
     }
 
     private ComboItem toComboItem(AddContext ctx, Object value) {
-        if (value instanceof ComboItem) {
-            return (ComboItem) value;
+        if (value instanceof ComboItem item) {
+            return item;
         }
         if (value == null) {
             return null;
@@ -518,11 +596,9 @@ public class BangGiaUI {
             if (lp == null) {
                 return "";
             }
-            if (cachedLoaiPhongs == null) {
-                cachedLoaiPhongs = bangGiaService.layDanhSachLoaiPhong();
-            }
-            if (lp >= 0 && lp < cachedLoaiPhongs.size()) {
-                return cachedLoaiPhongs.get(lp).getTen();
+            List<BangGiaService.LoaiPhongItem> ds = bangGiaService.layDanhSachLoaiPhong();
+            if (lp >= 0 && lp < ds.size()) {
+                return ds.get(lp).getTen();
             }
             return String.valueOf(lp);
         }
@@ -531,10 +607,7 @@ public class BangGiaUI {
         if (maDichVu == null) {
             return "";
         }
-        if (cachedDichVus == null) {
-            cachedDichVus = bangGiaService.layDanhSachDichVu();
-        }
-        for (DichVu d : cachedDichVus) {
+        for (DichVu d : bangGiaService.layDanhSachDichVu()) {
             if (maDichVu.equals(d.getMaDichVu())) {
                 return d.toString();
             }
@@ -554,7 +627,7 @@ public class BangGiaUI {
     }
 
     private LocalDate parseDate(String text, boolean allowBlank) {
-        if (text == null || text.trim().isEmpty()) {
+        if (text == null || text.isBlank()) {
             if (allowBlank) {
                 return null;
             }
@@ -575,8 +648,8 @@ public class BangGiaUI {
         if (value == null) {
             throw new NumberFormatException("Empty value");
         }
-        if (value instanceof Number) {
-            return ((Number) value).doubleValue();
+        if (value instanceof Number n) {
+            return n.doubleValue();
         }
         return Double.parseDouble(value.toString().trim().replace(",", ""));
     }
@@ -585,12 +658,10 @@ public class BangGiaUI {
         if (taiKhoan == null) {
             return "Không xác định";
         }
-        if (taiKhoan instanceof Chu) {
-            Chu c = (Chu) taiKhoan;
+        if (taiKhoan instanceof Chu c) {
             return c.getHoTen() + " (" + c.getMaTaiKhoan() + ")";
         }
-        if (taiKhoan instanceof QuanLy) {
-            QuanLy ql = (QuanLy) taiKhoan;
+        if (taiKhoan instanceof QuanLy ql) {
             return ql.getHoTen() + " (" + ql.getMaTaiKhoan() + ")";
         }
         return taiKhoan.getEmail() + " (" + taiKhoan.getMaTaiKhoan() + ")";

@@ -4,14 +4,15 @@ import dao.ChiSoDienNuocDAO;
 import dao.DichVuDAO;
 import dao.GiaDetailDAO;
 import dao.GiaHeaderDAO;
+import dao.LoaiPhongDAO;
 import dao.QuanLyPhongDAO;
 import dao.TangDAO;
 import entity.ChiSoDienNuoc;
 import entity.DichVu;
 import entity.GiaDetail;
 import entity.GiaHeader;
+import entity.LoaiPhong;
 import entity.Phong;
-import entity.Phong.LoaiPhong;
 import entity.Tang;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -251,14 +252,16 @@ public class QuanLyPhongUI {
         header.add(lblRoom, BorderLayout.WEST);
         header.add(createStatusBadge(phong.getTrangThai().getTen()), BorderLayout.EAST);
 
-        JPanel btnRow = new JPanel(new BorderLayout(6, 0));
-        btnRow.setOpaque(false);
+        // --- Right-click context menu ---
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miDelete = new JMenuItem("Xóa");
+        miDelete.setForeground(new Color(239, 68, 68));
+        contextMenu.add(miEdit);
+        contextMenu.add(miDelete);
 
-        JButton btnSetting = makeOutlineButton("⚙ Cài đặt");
-        btnSetting.addActionListener(e -> showSettingDialog(phong));
-
-        JButton btnDelete = makeDeleteButton();
-        btnDelete.addActionListener(e -> {
+        miEdit.addActionListener(ev -> showSettingDialog(phong));
+        miDelete.addActionListener(ev -> {
             int confirm = JOptionPane.showConfirmDialog(
                     SwingUtilities.getWindowAncestor(card),
                     "Xóa phòng \"" + phong.getMaPhong() + "\"?",
@@ -272,10 +275,9 @@ public class QuanLyPhongUI {
             }
         });
 
-        btnRow.add(btnSetting, BorderLayout.CENTER);
-        btnRow.add(btnDelete, BorderLayout.EAST);
+        card.setComponentPopupMenu(contextMenu);
+
         card.add(header, BorderLayout.NORTH);
-        card.add(btnRow, BorderLayout.SOUTH);
         return card;
     }
 
@@ -306,7 +308,8 @@ public class QuanLyPhongUI {
         txtMa.setPlaceholder("VD: P1.06");
         JLabel errMa = makeErrLabel();
 
-        JComboBox<LoaiPhong> cLoai = new JComboBox<>(LoaiPhong.values());
+        java.util.List<LoaiPhong> dsLoaiPhongAdd = new LoaiPhongDAO().layTatCa();
+        JComboBox<LoaiPhong> cLoai = new JComboBox<>(dsLoaiPhongAdd.toArray(new LoaiPhong[0]));
         cLoai.setFont(FONT_PLAIN);
         cLoai.setBackground(AppColors.WHITE);
         cLoai.setForeground(AppColors.SLATE_900);
@@ -382,7 +385,7 @@ public class QuanLyPhongUI {
             }
             errMa.setVisible(false);
 
-            Phong.LoaiPhong loaiChon = (Phong.LoaiPhong) cLoai.getSelectedItem();
+            LoaiPhong loaiChon = (LoaiPhong) cLoai.getSelectedItem();
             String maGiaDetail = timMaGiaDetailPhuHop(loaiChon.ordinal());
             if (maGiaDetail == null) {
                 JOptionPane.showMessageDialog(dlg,
@@ -444,7 +447,8 @@ public class QuanLyPhongUI {
 
         // ── Loại phòng ──
         LoaiPhong currentLoai = phong.getLoaiPhong();
-        JComboBox<LoaiPhong> cLoai = new JComboBox<>(LoaiPhong.values());
+        java.util.List<LoaiPhong> dsLoaiPhongEdit = new LoaiPhongDAO().layTatCa();
+        JComboBox<LoaiPhong> cLoai = new JComboBox<>(dsLoaiPhongEdit.toArray(new LoaiPhong[0]));
         cLoai.setFont(FONT_PLAIN);
         cLoai.setBackground(AppColors.WHITE);
         cLoai.setForeground(AppColors.SLATE_900);

@@ -7,7 +7,6 @@ import database.connectDB;
 import entity.DichVu;
 import entity.GiaDetail;
 import entity.GiaHeader;
-import entity.Phong;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -77,9 +76,8 @@ public class BangGiaService {
 
     public List<LoaiPhongItem> layDanhSachLoaiPhong() {
         List<LoaiPhongItem> ds = new ArrayList<>();
-        Phong.LoaiPhong[] values = Phong.LoaiPhong.values();
-        for (int i = 0; i < values.length; i++) {
-            ds.add(new LoaiPhongItem(i, values[i].getTen()));
+        for (entity.LoaiPhong lp : new dao.LoaiPhongDAO().layTatCa()) {
+            ds.add(new LoaiPhongItem(lp.getMaLoaiPhong(), lp.getTenLoaiPhong()));
         }
         return ds;
     }
