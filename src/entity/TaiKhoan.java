@@ -48,12 +48,6 @@ public class TaiKhoan {
     public String getMatKhau() { return matKhau; }
     
     public void setMatKhau(String matKhau) {
-        // Bypass strict validation check for the developer's test admin account
-        if ("admin123".equals(matKhau)) {
-            this.matKhau = matKhau;
-            return;
-        }
-
         if(matKhau == null || matKhau.length() < 8 || 
            !matKhau.matches(".*[A-Z].*") || 
            !matKhau.matches(".*[a-z].*") || 

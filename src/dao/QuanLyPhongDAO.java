@@ -153,7 +153,7 @@ public class QuanLyPhongDAO {
 
         try (PreparedStatement ps = con.prepareStatement(
                 "IF NOT EXISTS (SELECT 1 FROM Toa WHERE maToa = 'TOA1') "
-                        + "INSERT INTO Toa(maToa, tenToa, chuSoHuu) VALUES ('TOA_A', N'Tòa A', ?)")) {
+                        + "INSERT INTO Toa(maToa, tenToa, chuSoHuu) VALUES ('TOA1', N'Tòa A', ?)")) {
             ps.setString(1, ownerId);
             ps.executeUpdate();
         }
