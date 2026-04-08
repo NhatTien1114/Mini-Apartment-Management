@@ -13,6 +13,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import ui.util.AppColors;
 import ui.util.PhongInfo;
+import ui.util.RoundedPanel;
 
 public class TrangChu extends JFrame {
     // ===== LAYOUT COMPONENTS =====
@@ -421,7 +422,7 @@ public class TrangChu extends JFrame {
         pnlTop.setBackground(AppColors.APP_BACKGROUND);
 
         JPanel pnlThongKe = createThongKePanel();
-        pnlThongKe.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+        pnlThongKe.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
         pnlTop.add(pnlThongKe);
         pnlTop.add(Box.createVerticalStrut(12));
         pnlTop.add(createFilterPanel());
@@ -431,20 +432,22 @@ public class TrangChu extends JFrame {
 
     // ================= THỐNG KÊ =================
     private JPanel createThongKePanel() {
-        JPanel pnlThongKe = new JPanel(new GridLayout(1, 4, 10, 0));
+        JPanel pnlThongKe = new JPanel(new GridLayout(1, 5, 14, 0));
         pnlThongKe.setBackground(AppColors.APP_BACKGROUND);
-        pnlThongKe.setPreferredSize(new Dimension(0, 70));
+        pnlThongKe.setPreferredSize(new Dimension(0, 100));
 
         List<Phong> dsPhong = layDanhSachPhong();
+        int tongSoPhong = dsPhong.size();
         int soPhongTrong = demTheoTrangThai(dsPhong, "Trống");
         int soPhongDaThue = demTheoTrangThai(dsPhong, "Đã thuê");
         int soPhongDaCoc = demTheoTrangThai(dsPhong, "Đã cọc");
         int soPhongSua = demTheoTrangThai(dsPhong, "Đang sửa");
 
-        pnlThongKe.add(createCard(String.valueOf(soPhongTrong), "Trống", AppColors.GREEN));
-        pnlThongKe.add(createCard(String.valueOf(soPhongDaThue), "Đã thuê", AppColors.RED));
-        pnlThongKe.add(createCard(String.valueOf(soPhongDaCoc), "Đã cọc", AppColors.BLUE));
-        pnlThongKe.add(createCard(String.valueOf(soPhongSua), "Sửa chữa", AppColors.WARNING));
+        pnlThongKe.add(createStatCard(String.valueOf(tongSoPhong), "Tổng phòng", AppColors.PRIMARY, "img/icons/home.png"));
+        pnlThongKe.add(createStatCard(String.valueOf(soPhongTrong), "Phòng trống", AppColors.GREEN_500, "img/icons/home.png"));
+        pnlThongKe.add(createStatCard(String.valueOf(soPhongDaThue), "Đã thuê", AppColors.RED_500, "img/icons/user.png"));
+        pnlThongKe.add(createStatCard(String.valueOf(soPhongDaCoc), "Đã cọc", AppColors.BLUE, "img/icons/google-docs.png"));
+        pnlThongKe.add(createStatCard(String.valueOf(soPhongSua), "Đang sửa", AppColors.WARNING, "img/icons/settings.png"));
 
         return pnlThongKe;
     }
@@ -516,24 +519,59 @@ public class TrangChu extends JFrame {
         return lbl;
     }
 
-    private JPanel createCard(String so, String tieuDe, Color mau) {
-        JPanel pnlCard = new JPanel();
+    private JPanel createStatCard(String so, String tieuDe, Color mau, String iconPath) {
+        RoundedPanel pnlCard = new RoundedPanel(14);
         pnlCard.setBackground(Color.WHITE);
-        pnlCard.setLayout(new FlowLayout(FlowLayout.LEFT, 20, 20));
+        pnlCard.setLayout(new BorderLayout());
 
-        JLabel lblSo = new JLabel(so);
-        lblSo.setOpaque(true);
-        lblSo.setBackground(mau);
-        lblSo.setForeground(Color.WHITE);
-        lblSo.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
-        lblSo.setHorizontalAlignment(SwingConstants.CENTER);
-        lblSo.setPreferredSize(new Dimension(40, 30));
+        // Colored left accent bar
+        JPanel accent = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(mau);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
+                g2.setColor(Color.WHITE);
+                g2.fillRect(getWidth() / 2, 0, getWidth() / 2, getHeight());
+            }
+        };
+        accent.setPreferredSize(new Dimension(6, 0));
+        accent.setOpaque(false);
 
+        JPanel content = new JPanel();
+        content.setOpaque(false);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(new EmptyBorder(14, 16, 14, 16));
+
+        // Icon + title row
+        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        titleRow.setOpaque(false);
+        titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        try {
+            ImageIcon rawIcon = new ImageIcon(iconPath);
+            Image scaledImg = rawIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+            JLabel lblIcon = new JLabel(new ImageIcon(scaledImg));
+            titleRow.add(lblIcon);
+        } catch (Exception ignored) {
+        }
         JLabel lblTieuDe = new JLabel(tieuDe);
-        lblTieuDe.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
+        lblTieuDe.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
+        lblTieuDe.setForeground(AppColors.SLATE_500);
+        titleRow.add(lblTieuDe);
 
-        pnlCard.add(lblSo);
-        pnlCard.add(lblTieuDe);
+        // Large number
+        JLabel lblSo = new JLabel(so);
+        lblSo.setFont(new Font("Be Vietnam Pro", Font.BOLD, 28));
+        lblSo.setForeground(mau);
+        lblSo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblSo.setBorder(new EmptyBorder(4, 2, 0, 0));
+
+        content.add(titleRow);
+        content.add(lblSo);
+
+        pnlCard.add(accent, BorderLayout.WEST);
+        pnlCard.add(content, BorderLayout.CENTER);
 
         return pnlCard;
     }
