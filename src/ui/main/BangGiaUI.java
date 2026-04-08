@@ -7,13 +7,18 @@ import entity.GiaHeader;
 import entity.QuanLy;
 import entity.TaiKhoan;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dialog;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Image;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -36,13 +41,17 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import service.BangGiaService;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
+import ui.util.RoundedPanel;
 
 public class BangGiaUI {
 
@@ -87,12 +96,14 @@ public class BangGiaUI {
                 }
             };
             this.tableDetail = new JTable(modelDetail);
-            this.tableDetail.setRowHeight(26);
+            this.tableDetail.setRowHeight(36);
         }
     }
 
     private final java.awt.Font FONT_TITLE = new java.awt.Font("Be Vietnam Pro", java.awt.Font.BOLD, 22);
     private final java.awt.Font FONT_PLAIN = new java.awt.Font("Be Vietnam Pro", java.awt.Font.PLAIN, 13);
+    private final java.awt.Font FONT_BOLD = new java.awt.Font("Be Vietnam Pro", java.awt.Font.BOLD, 13);
+    private final java.awt.Font FONT_HEADER = new java.awt.Font("Be Vietnam Pro", java.awt.Font.PLAIN, 12);
     private final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final PrimaryButton primaryButtonHelper = new PrimaryButton();
@@ -150,9 +161,9 @@ public class BangGiaUI {
     }
 
     private JPanel createTongHopSection() {
-        JPanel section = new JPanel(new BorderLayout());
+        RoundedPanel section = new RoundedPanel(12);
         section.setBackground(AppColors.WHITE);
-        section.setBorder(new LineBorder(AppColors.SLATE_200, 1, true));
+        section.setLayout(new BorderLayout());
 
         modelTongHop = new DefaultTableModel(
                 new String[] { "Mã bảng giá", "Người tạo", "Ngày bắt đầu", "Ngày kết thúc" }, 0) {
@@ -163,9 +174,52 @@ public class BangGiaUI {
         };
 
         tableTongHop = new JTable(modelTongHop);
-        tableTongHop.setFont(FONT_PLAIN);
-        tableTongHop.setRowHeight(28);
+        styleTable(tableTongHop, 46);
         tableTongHop.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // Hover effect
+        final int[] hoveredRow = { -1 };
+        tableTongHop.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int row = tableTongHop.rowAtPoint(e.getPoint());
+                if (row != hoveredRow[0]) {
+                    hoveredRow[0] = row;
+                    tableTongHop.repaint();
+                }
+            }
+        });
+        tableTongHop.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hoveredRow[0] = -1;
+                tableTongHop.repaint();
+            }
+        });
+
+        // Custom cell renderer with hover
+        tableTongHop.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                setFont(column == 0 ? FONT_BOLD : FONT_PLAIN);
+                setBorder(new CompoundBorder(
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 14, 0, 10)));
+                if (isSelected) {
+                    setBackground(AppColors.PRIMARY_TINT_HOVER);
+                    setForeground(AppColors.SLATE_900);
+                } else if (row == hoveredRow[0]) {
+                    setBackground(AppColors.SLATE_50);
+                    setForeground(AppColors.SLATE_900);
+                } else {
+                    setBackground(AppColors.WHITE);
+                    setForeground(AppColors.SLATE_900);
+                }
+                return this;
+            }
+        });
 
         // --- Right-click context menu ---
         JPopupMenu contextMenu = new JPopupMenu();
@@ -202,6 +256,7 @@ public class BangGiaUI {
 
         JScrollPane scroll = new JScrollPane(tableTongHop);
         scroll.setBorder(null);
+        scroll.getViewport().setBackground(AppColors.WHITE);
         section.add(scroll, BorderLayout.CENTER);
         return section;
     }
@@ -218,6 +273,37 @@ public class BangGiaUI {
                     formatDate(h.getNgayKetThuc())
             });
         }
+    }
+
+    private void styleTable(JTable table, int rowHeight) {
+        table.setFont(FONT_PLAIN);
+        table.setRowHeight(rowHeight);
+        table.setShowVerticalLines(false);
+        table.setShowHorizontalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setBackground(AppColors.WHITE);
+        table.setSelectionBackground(AppColors.PRIMARY_TINT_HOVER);
+        table.setSelectionForeground(AppColors.SLATE_900);
+        table.setFocusable(true);
+        table.setFillsViewportHeight(true);
+
+        JTableHeader header = table.getTableHeader();
+        header.setReorderingAllowed(false);
+        header.setPreferredSize(new Dimension(0, 42));
+        header.setDefaultRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                super.getTableCellRendererComponent(tbl, value, isSelected, hasFocus, row, column);
+                setFont(FONT_HEADER);
+                setForeground(AppColors.SLATE_600);
+                setBackground(AppColors.SLATE_50);
+                setBorder(new CompoundBorder(
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 14, 0, 10)));
+                return this;
+            }
+        });
     }
 
     private ImageIcon loadActionIcon(String path) {
@@ -247,14 +333,37 @@ public class BangGiaUI {
             }
         };
         JTable table = new JTable(model);
-        table.setRowHeight(26);
-        table.setFont(FONT_PLAIN);
+        styleTable(table, 38);
+
+        // Cell renderer with row separator
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                super.getTableCellRendererComponent(tbl, value, isSelected, hasFocus, row, column);
+                setFont(FONT_PLAIN);
+                setBorder(new CompoundBorder(
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 14, 0, 10)));
+                if (isSelected) {
+                    setBackground(AppColors.PRIMARY_TINT_HOVER);
+                    setForeground(AppColors.SLATE_900);
+                } else {
+                    setBackground(AppColors.WHITE);
+                    setForeground(AppColors.SLATE_900);
+                }
+                return this;
+            }
+        });
 
         for (GiaDetail d : bangGiaService.layDetailTheoHeader(header.getMaGiaHeader())) {
             model.addRow(new Object[] { resolveTenLoai(header.getLoai(), d), d.getDonGia() });
         }
 
-        root.add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane detailScroll = new JScrollPane(table);
+        detailScroll.setBorder(new LineBorder(AppColors.SLATE_200, 1, true));
+        detailScroll.getViewport().setBackground(AppColors.WHITE);
+        root.add(detailScroll, BorderLayout.CENTER);
 
         JPanel south = new JPanel(new BorderLayout(8, 0));
         south.setBackground(AppColors.WHITE);
@@ -340,6 +449,8 @@ public class BangGiaUI {
         detailSection.setBackground(AppColors.WHITE);
         detailSection.setBorder(new LineBorder(AppColors.SLATE_200, 1, true));
 
+        styleTable(ctx.tableDetail, 36);
+
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
         actionRow.setBackground(AppColors.WHITE);
 
@@ -369,7 +480,10 @@ public class BangGiaUI {
         actionRow.add(btnUpdatePrice);
 
         detailSection.add(actionRow, BorderLayout.NORTH);
-        detailSection.add(new JScrollPane(ctx.tableDetail), BorderLayout.CENTER);
+        JScrollPane addScroll = new JScrollPane(ctx.tableDetail);
+        addScroll.setBorder(null);
+        addScroll.getViewport().setBackground(AppColors.WHITE);
+        detailSection.add(addScroll, BorderLayout.CENTER);
 
         panel.add(detailSection, BorderLayout.CENTER);
         return panel;
