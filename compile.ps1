@@ -1,0 +1,1 @@
+ = Get-ChildItem -Path 'C:\Program Files\Java' -Recurse -Filter 'javac.exe' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if () { &  -encoding UTF-8 -d bin src\ui\main\BangGiaUI.java 2> error.txt; Get-Content error.txt } else { echo 'javac not found' }

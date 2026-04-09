@@ -1,6 +1,5 @@
 package dao;
 
-import static dao.QuanLyPhongDAO.normalise;
 import database.connectDB;
 import entity.KhachHang;
 
