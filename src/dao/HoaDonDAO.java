@@ -8,7 +8,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import ui.main.HoaDonUI;
 
 public class HoaDonDAO {
@@ -103,23 +105,27 @@ public class HoaDonDAO {
                     psDetail.setDouble(6, bill.tienPhong);
                     psDetail.addBatch();
 
-                    // 3. LƯU CHI TIẾT: TIỀN ĐIỆN
-                    psDetail.setString(1, taoMaTheoThoiGian("CT"));
-                    psDetail.setString(2, maHoaDon);
-                    psDetail.setString(3, bill.maDichVuDien); // Tự động lấy "DV03"
-                    psDetail.setInt(4, bill.tongTieuThuD);
-                    psDetail.setString(5, "Tiền điện");
-                    psDetail.setDouble(6, bill.donGiaDien);
-                    psDetail.addBatch();
+                    // 3. LƯU CHI TIẾT: TIỀN ĐIỆN (bỏ qua nếu tiêu thụ = 0)
+                    if (bill.tongTieuThuD > 0) {
+                        psDetail.setString(1, taoMaTheoThoiGian("CT"));
+                        psDetail.setString(2, maHoaDon);
+                        psDetail.setString(3, bill.maDichVuDien);
+                        psDetail.setInt(4, bill.tongTieuThuD);
+                        psDetail.setString(5, "Tiền điện");
+                        psDetail.setDouble(6, bill.donGiaDien);
+                        psDetail.addBatch();
+                    }
 
-                    // 4. LƯU CHI TIẾT: TIỀN NƯỚC
-                    psDetail.setString(1, taoMaTheoThoiGian("CT"));
-                    psDetail.setString(2, maHoaDon);
-                    psDetail.setString(3, bill.maDichVuNuoc); // Tự động lấy "DV02"
-                    psDetail.setInt(4, bill.tongTieuThuN);
-                    psDetail.setString(5, "Tiền nước");
-                    psDetail.setDouble(6, bill.donGiaNuoc);
-                    psDetail.addBatch();
+                    // 4. LƯU CHI TIẾT: TIỀN NƯỚC (bỏ qua nếu tiêu thụ = 0)
+                    if (bill.tongTieuThuN > 0) {
+                        psDetail.setString(1, taoMaTheoThoiGian("CT"));
+                        psDetail.setString(2, maHoaDon);
+                        psDetail.setString(3, bill.maDichVuNuoc);
+                        psDetail.setInt(4, bill.tongTieuThuN);
+                        psDetail.setString(5, "Tiền nước");
+                        psDetail.setDouble(6, bill.donGiaNuoc);
+                        psDetail.addBatch();
+                    }
 
                     // 5. LƯU CHI TIẾT: DỊCH VỤ KHÁC (wifi, rác, ...)
                     if (bill.dichVuKhac != null) {
@@ -287,6 +293,105 @@ public class HoaDonDAO {
             System.err.println("Lỗi lấy chi tiết hóa đơn tháng: " + e.getMessage());
         }
         return rows;
+    }
+
+    public List<HoaDonUI.RoomMonthSummary> getRoomSummariesTheoThang(int month, int year) {
+        Map<String, HoaDonUI.RoomMonthSummary> byRoom = new LinkedHashMap<>();
+
+        String sqlMain = "SELECT hd.maPhong, hd.trangThaiThanhToan, "
+                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền điện' THEN ct.soLuong ELSE 0 END) AS tieuThuDien, "
+                + "MAX(CASE WHEN ct.tenKhoan = N'Tiền điện' THEN ct.donGia ELSE 0 END) AS donGiaDien, "
+                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền nước' THEN ct.soLuong ELSE 0 END) AS tieuThuNuoc, "
+                + "MAX(CASE WHEN ct.tenKhoan = N'Tiền nước' THEN ct.donGia ELSE 0 END) AS donGiaNuoc "
+                + "FROM HoaDon hd LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
+                + "WHERE MONTH(hd.tuNgay) = ? AND YEAR(hd.tuNgay) = ? "
+                + "GROUP BY hd.maPhong, hd.maHoaDon, hd.trangThaiThanhToan "
+                + "ORDER BY hd.maPhong";
+
+        String sqlServices = "SELECT hd.maPhong, ct.maDichVu, ct.tenKhoan, ct.soLuong, ct.donGia "
+                + "FROM HoaDon hd JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
+                + "WHERE MONTH(hd.tuNgay) = ? AND YEAR(hd.tuNgay) = ? "
+                + "AND ct.tenKhoan NOT IN (N'Tiền thuê phòng', N'Tiền điện', N'Tiền nước') "
+                + "ORDER BY hd.maPhong";
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sqlMain)) {
+            ps.setInt(1, month);
+            ps.setInt(2, year);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    HoaDonUI.RoomMonthSummary s = new HoaDonUI.RoomMonthSummary();
+                    s.maPhong = rs.getString("maPhong");
+                    s.tienPhong = rs.getDouble("tienPhong");
+                    s.tieuThuDien = rs.getInt("tieuThuDien");
+                    s.donGiaDien = rs.getDouble("donGiaDien");
+                    s.tieuThuNuoc = rs.getInt("tieuThuNuoc");
+                    s.donGiaNuoc = rs.getDouble("donGiaNuoc");
+                    s.daThanhToan = rs.getInt("trangThaiThanhToan") == 1;
+                    byRoom.put(s.maPhong, s);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi load hóa đơn tháng: " + e.getMessage());
+        }
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sqlServices)) {
+            ps.setInt(1, month);
+            ps.setInt(2, year);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String maPhong = rs.getString("maPhong");
+                    HoaDonUI.RoomMonthSummary s = byRoom.get(maPhong);
+                    if (s != null) {
+                        HoaDonUI.BillServiceItem si = new HoaDonUI.BillServiceItem();
+                        si.maDichVu = rs.getString("maDichVu");
+                        si.tenKhoan = rs.getString("tenKhoan");
+                        si.soLuong = rs.getInt("soLuong");
+                        si.donGia = rs.getDouble("donGia");
+                        s.services.add(si);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi load dịch vụ hóa đơn tháng: " + e.getMessage());
+        }
+
+        return new ArrayList<>(byRoom.values());
+    }
+
+    public boolean daCoHoaDonThang(int month, int year) {
+        String sql = "SELECT COUNT(*) FROM HoaDon WHERE MONTH(tuNgay) = ? AND YEAR(tuNgay) = ?";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, month);
+            ps.setInt(2, year);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi kiểm tra hóa đơn tháng: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean updateTrangThaiThanhToan(String maPhong, int thang, int nam, boolean daThanhToan) {
+        String sql = "UPDATE HoaDon SET trangThaiThanhToan = ? WHERE maPhong = ? AND MONTH(tuNgay) = ? AND YEAR(tuNgay) = ?";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, daThanhToan ? 1 : 0);
+            ps.setString(2, maPhong);
+            ps.setInt(3, thang);
+            ps.setInt(4, nam);
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Lỗi cập nhật trạng thái thanh toán: " + e.getMessage());
+            return false;
+        }
     }
 
     public List<Integer> getDanhSachNamHoaDon() {
