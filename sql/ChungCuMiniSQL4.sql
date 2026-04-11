@@ -41,3 +41,14 @@ FROM dbo.DichVu AS d
 LEFT JOIN GiaHienHanh AS g
     ON d.maDichVu = g.maDichVu;
 GO
+
+/* 
+  Data Seeding: Khởi tạo tài khoản Chủ/Admin đầu tiên. 
+  Tài khoản này được tự động chèn vào database để khởi động dự án.
+*/
+IF NOT EXISTS (SELECT 1 FROM dbo.TaiKhoan WHERE maTaiKhoan = 'TK00')
+BEGIN
+    INSERT INTO dbo.TaiKhoan (maTaiKhoan, tenDangNhap, matKhau, hoTen, soDienThoai, ngaySinh, diaChi, role)
+    VALUES ('TK00', 'admin@gmail.com', 'Admin@123', N'Administrator', '0123456789', '2000-01-01', N'Hệ Thống Mặc Định', 0);
+END
+GO

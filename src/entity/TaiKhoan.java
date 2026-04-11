@@ -48,8 +48,12 @@ public class TaiKhoan {
     public String getMatKhau() { return matKhau; }
     
     public void setMatKhau(String matKhau) {
-        if (matKhau == null || matKhau.trim().isEmpty()) {
-            throw new IllegalArgumentException("Mật khẩu không được để trống");
+        if(matKhau == null || matKhau.length() < 8 || 
+           !matKhau.matches(".*[A-Z].*") || 
+           !matKhau.matches(".*[a-z].*") || 
+           !matKhau.matches(".*[0-9].*") || 
+           !matKhau.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*")) {
+            throw new IllegalArgumentException("Mật khẩu phải có chữ viết hoa, số, chữ thường, kí tự đặc biệt và tối thiểu 8 ký tự!");
         }
         this.matKhau = matKhau;
     }
