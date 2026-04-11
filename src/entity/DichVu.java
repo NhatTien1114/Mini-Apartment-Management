@@ -67,7 +67,7 @@ public class DichVu {
 
     @Override
     public String toString() {
-        if (donVi == null || donVi.isBlank()) {
+        if (donVi == null || donVi.trim().isEmpty()) {
             return tenDichVu;
         }
         return tenDichVu + " (" + donVi + ")";

@@ -53,7 +53,7 @@ public class GiaDetailDAO {
             int idx = 1;
             for (GiaDetail d : details) {
                 String maDetail = d.getMaGiaDetail();
-                if (maDetail == null || maDetail.isBlank()) {
+                if (maDetail == null || maDetail.trim().isEmpty()) {
                     maDetail = phatSinhMaChiTiet(maGiaHeader, idx++);
                     d.setMaGiaDetail(maDetail);
                 }

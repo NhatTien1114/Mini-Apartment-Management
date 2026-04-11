@@ -846,7 +846,7 @@ public class TrangChu extends JFrame {
         try {
             return phongDAO.layTatCa();
         } catch (RuntimeException e) {
-            return List.of();
+            return java.util.Collections.emptyList();
         }
     }
 
