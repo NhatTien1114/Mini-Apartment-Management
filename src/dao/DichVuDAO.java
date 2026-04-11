@@ -49,7 +49,10 @@ public class DichVuDAO {
                             rs.getString("donVi"),
                             rs.getString("maGiaDetail"),
                             rs.getObject("donGia") != null ? rs.getDouble("donGia") : null);
-                    ds.add(dv);
+                    if (!dv.getMaDichVu().equals("DV00")) {
+                        ds.add(dv);
+                    }        
+                    
                 }
             }
         } catch (SQLException e) {
@@ -126,7 +129,7 @@ public class DichVuDAO {
         DichVu dv = null; // Mặc định là null nếu không tìm thấy
 
         // Lấy toàn bộ cột của dịch vụ
-        String sql = "SELECT * FROM DichVu WHERE tenDichVu = ?";
+        String sql = "SELECT * FROM DichVu WHERE tenDichVu = ? AND maDichVu <> 'DV00'";
 
         try (Connection con = connectDB.getConnection();
                 PreparedStatement stmt = con.prepareStatement(sql)) {
@@ -157,7 +160,7 @@ public class DichVuDAO {
 
     public Set<String> layMaDichVuTheoPhong(String maPhong) {
         Set<String> result = new HashSet<>();
-        String sql = "SELECT maDichVu FROM PhongDichVu WHERE maPhong = ?";
+        String sql = "SELECT maDichVu FROM PhongDichVu WHERE maPhong = ? AND maDichVu <> 'DV00'";
 
         try (Connection con = connectDB.getConnection()) {
             ensurePhongDichVuTable(con);
@@ -210,7 +213,7 @@ public class DichVuDAO {
     public void ganTatCaDichVuChoPhongNeuChuaCo(String maPhong) {
         String sqlCount = "SELECT COUNT(1) AS cnt FROM PhongDichVu WHERE maPhong = ?";
         String sqlInsertAll = "INSERT INTO PhongDichVu(maPhong, maDichVu) "
-                + "SELECT ?, maDichVu FROM DichVu";
+                + "SELECT ?, maDichVu FROM DichVu WHERE maDichVu <> 'DV00'";
 
         try (Connection con = connectDB.getConnection()) {
             ensurePhongDichVuTable(con);

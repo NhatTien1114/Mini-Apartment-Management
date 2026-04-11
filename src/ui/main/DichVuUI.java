@@ -124,7 +124,7 @@ public class DichVuUI {
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
 
         JComboBox<String> cboPhong = new JComboBox<>(
-                dsPhongThue.stream().map(Phong::getMaPhong).toArray(String[]::new));
+                dsPhongThue.stream().map(Phong::getMaPhong).toArray(size -> new String[size]));
         cboPhong.setFont(FONT_PLAIN);
         cboPhong.setPreferredSize(new Dimension(200, 36));
 
@@ -181,7 +181,7 @@ public class DichVuUI {
         JButton btnSave = primaryButton.makePrimaryButton("Lưu cấu hình");
         btnSave.addActionListener(e -> {
             String maPhong = (String) cboPhong.getSelectedItem();
-            if (maPhong == null || maPhong.isBlank()) {
+            if (maPhong == null || maPhong.trim().isEmpty()) {
                 MessageDialog.show(dlg, "Lỗi", "Chưa chọn phòng.", MessageDialog.MessageType.ERROR);
                 return;
             }
@@ -504,7 +504,8 @@ public class DichVuUI {
 
         dlg.setContentPane(root);
 
-        if (owner instanceof JFrame frame) {
+        if (owner instanceof JFrame) {
+            JFrame frame = (JFrame) owner;
             Component oldGlassPane = frame.getGlassPane();
             JPanel overlay = new JPanel() {
                 @Override

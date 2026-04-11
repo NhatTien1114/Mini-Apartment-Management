@@ -39,8 +39,8 @@ public class TaiKhoan {
     public String getEmail() { return email; }
     
     public void setEmail(String email) {
-        if(email == null || !email.endsWith("@gmail.com")) {
-            throw new IllegalArgumentException("Email phải kết thúc với đuôi @gmail.com");
+        if(email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email không được để trống");
         }
         this.email = email;
     }

@@ -97,7 +97,7 @@ public class HopDongUI {
     }
 
     private String formatToDDMMYYYY(Object dateObj) {
-        if (dateObj == null || dateObj.toString().isBlank()) {
+        if (dateObj == null || dateObj.toString().trim().isEmpty()) {
             return "";
         }
         String dateStr = dateObj.toString().trim();
@@ -699,12 +699,14 @@ public class HopDongUI {
                         dialog.dispose();
                     } else {
                         String err = dao.getLastError();
-                        if (err == null || err.isBlank()) {
+                        if (err == null || err.trim().isEmpty()) {
                             showToast("Lỗi: Không thể lưu vào cơ sở dữ liệu!");
                         } else {
                             showToast("Lỗi lưu hợp đồng: " + err);
                         }
                     }
+                } else {
+                    dialog.setVisible(true);
                 }
             }
         });
@@ -919,7 +921,7 @@ public class HopDongUI {
     }
 
     private String extractRoomCode(String roomDisplay) {
-        if (roomDisplay == null || roomDisplay.isBlank()) {
+        if (roomDisplay == null || roomDisplay.trim().isEmpty()) {
             return "";
         }
         int idx = roomDisplay.indexOf('-');
@@ -1008,7 +1010,7 @@ public class HopDongUI {
         addDocLine(doc, "CCCD/CMND: " + draft.cccd, false, 8);
         addDocLine(doc, "Số điện thoại: " + draft.soDienThoai, false, 8);
         addDocLine(doc, "Địa chỉ: " + draft.diaChi, false, 8);
-        addDocLine(doc, "Ngày sinh: " + (draft.ngaySinh == null || draft.ngaySinh.isBlank() ? "" : draft.ngaySinh),
+        addDocLine(doc, "Ngày sinh: " + (draft.ngaySinh == null || draft.ngaySinh.trim().isEmpty() ? "" : draft.ngaySinh),
                 false, 8);
 
         addDocLine(doc, "Điều 3: Nội dung hợp đồng:", true, 16);
@@ -1047,7 +1049,11 @@ public class HopDongUI {
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(BORDER_COLOR),
                         new EmptyBorder(10, 12, 10, 12)));
-        btnBack.addActionListener(e -> dialog.dispose());
+        btnBack.addActionListener(e -> {
+            accepted[0] = false;
+            dialog.dispose();
+        });
+
 
         JButton btnConfirm = primaryButton.makePrimaryButton("Xác nhận hợp đồng");
         btnConfirm.setBorder(new EmptyBorder(10, 12, 10, 12));

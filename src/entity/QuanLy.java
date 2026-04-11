@@ -28,17 +28,13 @@ public class QuanLy extends TaiKhoan {
     public String getHoTen() { return hoTen; }
 
     public void setHoTen(String hoTen) {
-        if(hoTen == null || hoTen.trim().isEmpty()) throw new IllegalArgumentException("Họ tên không được rỗng");
-        this.hoTen = hoTen;
+        this.hoTen = (hoTen == null) ? "" : hoTen;
     }
 
     public String getSoDienThoai() { return soDienThoai; }
 
     public void setSoDienThoai(String soDienThoai) {
-        if(soDienThoai == null || !soDienThoai.matches("^0\\d{9}$")) {
-            throw new IllegalArgumentException("Dãy số gồm có 10 số và bắt đầu là số 0");
-        }
-        this.soDienThoai = soDienThoai;
+        this.soDienThoai = (soDienThoai == null) ? "" : soDienThoai;
     }
 
     public LocalDate getNgaySinh() { return ngaySinh; }
@@ -53,8 +49,7 @@ public class QuanLy extends TaiKhoan {
     public String getDiaChi() { return diaChi; }
 
     public void setDiaChi(String diaChi) {
-        if(diaChi == null || diaChi.trim().isEmpty()) throw new IllegalArgumentException("Địa chỉ không rỗng");
-        this.diaChi = diaChi;
+        this.diaChi = (diaChi == null) ? "" : diaChi;
     }
 
     public boolean suaThongTinCaNhan() {
