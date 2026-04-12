@@ -1,17 +1,12 @@
 package ui.main;
 
 import dao.DichVuDAO;
-import dao.QuanLyPhongDAO;
 import entity.DichVu;
-import entity.Phong;
 import java.awt.*;
 import java.awt.event.*;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -45,7 +40,6 @@ public class DichVuUI {
     private DefaultTableModel tableModel;
     private JTable table;
     private final DichVuDAO dao = new DichVuDAO();
-    private final QuanLyPhongDAO phongDAO = new QuanLyPhongDAO();
     private List<DichVu> dsDichVu;
 
     public JPanel getPanel() {
@@ -80,12 +74,8 @@ public class DichVuUI {
         JButton btnAdd = primaryButton.makePrimaryButton("Thêm dịch vụ");
         btnAdd.addActionListener(e -> showDialog(null));
 
-        JButton btnConfigRoom = makeOutlineButton("Cấu hình phòng thuê");
-        btnConfigRoom.addActionListener(e -> showRoomServiceDialog());
-
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
-        right.add(btnConfigRoom);
         right.add(btnAdd);
         bar.add(right, BorderLayout.EAST);
 
@@ -103,115 +93,6 @@ public class DichVuUI {
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return btn;
-    }
-
-    private void showRoomServiceDialog() {
-        List<Phong> dsPhongThue = phongDAO.getAllPhongDaThue();
-        if (dsPhongThue == null || dsPhongThue.isEmpty()) {
-            MessageDialog.show(null, "Thông báo", "Không có phòng đang thuê để cấu hình.",
-                    MessageDialog.MessageType.ERROR);
-            return;
-        }
-
-        Window owner = SwingUtilities.getWindowAncestor(table);
-        JDialog dlg = new JDialog(owner instanceof Frame ? (Frame) owner : null,
-                "Cấu hình dịch vụ phòng thuê", true);
-        dlg.setSize(560, 560);
-        dlg.setLocationRelativeTo(owner);
-
-        JPanel root = new JPanel(new BorderLayout(0, 12));
-        root.setBackground(MAU_CARD);
-        root.setBorder(new EmptyBorder(16, 16, 16, 16));
-
-        JComboBox<String> cboPhong = new JComboBox<>(
-                dsPhongThue.stream().map(Phong::getMaPhong).toArray(size -> new String[size]));
-        cboPhong.setFont(FONT_PLAIN);
-        cboPhong.setPreferredSize(new Dimension(200, 36));
-
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
-        top.add(new JLabel("Phòng đang thuê"), BorderLayout.NORTH);
-        top.add(cboPhong, BorderLayout.CENTER);
-        root.add(top, BorderLayout.NORTH);
-
-        JPanel pnlChecks = new JPanel();
-        pnlChecks.setBackground(MAU_CARD);
-        pnlChecks.setLayout(new BoxLayout(pnlChecks, BoxLayout.Y_AXIS));
-
-        JScrollPane sp = new JScrollPane(pnlChecks);
-        sp.setBorder(new LineBorder(MAU_BORDER, 1, true));
-        sp.getViewport().setBackground(MAU_CARD);
-        root.add(sp, BorderLayout.CENTER);
-
-        List<JCheckBox> checkBoxes = new ArrayList<>();
-        Runnable reloadChecks = () -> {
-            pnlChecks.removeAll();
-            checkBoxes.clear();
-
-            String maPhong = (String) cboPhong.getSelectedItem();
-            Set<String> selected = maPhong == null ? new HashSet<>() : dao.layMaDichVuTheoPhong(maPhong);
-            boolean noConfig = selected.isEmpty();
-
-            List<DichVu> allServices = dao.layTatCa();
-            for (DichVu dv : allServices) {
-                String label = dv.getTenDichVu() + " - " + (dv.getDonGia() == null ? "0" : NF.format(dv.getDonGia()))
-                        + "đ/" + (dv.getDonVi() == null ? "tháng" : dv.getDonVi());
-                JCheckBox cb = new JCheckBox(label);
-                cb.putClientProperty("maDichVu", dv.getMaDichVu());
-                cb.setFont(FONT_PLAIN);
-                cb.setOpaque(false);
-                cb.setSelected(noConfig || selected.contains(dv.getMaDichVu()));
-                checkBoxes.add(cb);
-                pnlChecks.add(cb);
-                pnlChecks.add(Box.createVerticalStrut(6));
-            }
-
-            pnlChecks.revalidate();
-            pnlChecks.repaint();
-        };
-
-        cboPhong.addActionListener(e -> reloadChecks.run());
-        reloadChecks.run();
-
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        bottom.setOpaque(false);
-        JButton btnCancel = makeOutlineButton("Hủy");
-        btnCancel.addActionListener(e -> dlg.dispose());
-
-        JButton btnSave = primaryButton.makePrimaryButton("Lưu cấu hình");
-        btnSave.addActionListener(e -> {
-            String maPhong = (String) cboPhong.getSelectedItem();
-            if (maPhong == null || maPhong.trim().isEmpty()) {
-                MessageDialog.show(dlg, "Lỗi", "Chưa chọn phòng.", MessageDialog.MessageType.ERROR);
-                return;
-            }
-
-            Set<String> selectedIds = new HashSet<>();
-            for (JCheckBox cb : checkBoxes) {
-                if (cb.isSelected()) {
-                    Object maDv = cb.getClientProperty("maDichVu");
-                    if (maDv != null) {
-                        selectedIds.add(maDv.toString());
-                    }
-                }
-            }
-
-            if (dao.capNhatDichVuPhong(maPhong, selectedIds)) {
-                MessageDialog.show(dlg, "Thành công", "Đã lưu dịch vụ cho phòng " + maPhong,
-                        MessageDialog.MessageType.SUCCESS);
-                dlg.dispose();
-            } else {
-                MessageDialog.show(dlg, "Lỗi", "Không thể lưu cấu hình dịch vụ.",
-                        MessageDialog.MessageType.ERROR);
-            }
-        });
-
-        bottom.add(btnCancel);
-        bottom.add(btnSave);
-        root.add(bottom, BorderLayout.SOUTH);
-
-        dlg.setContentPane(root);
-        dlg.setVisible(true);
     }
 
     private JPanel buildTableCard() {

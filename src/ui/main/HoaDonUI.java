@@ -4,12 +4,15 @@ import dao.ChiSoDienNuocDAO;
 import dao.DichVuDAO;
 import dao.GiaDetailDAO;
 import dao.HoaDonDAO;
+import dao.PhuongTienDAO;
 import dao.QuanLyPhongDAO;
 import entity.ChiSoDienNuoc;
 import entity.DichVu;
 import entity.GiaDetail;
 import entity.Phong;
+import entity.PhuongTien;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -86,6 +89,7 @@ public class HoaDonUI {
     private final GiaDetailDAO giaDetailDAO = new GiaDetailDAO();
     private final DichVuDAO dvDAO = new DichVuDAO();
     private final HoaDonDAO hdDAO = new HoaDonDAO();
+    private final PhuongTienDAO ptDAO = new PhuongTienDAO();
     private final ChiSoDienNuocDAO chiSoDAO = new ChiSoDienNuocDAO();
 
     private final PrimaryButton primaryButtonHelper = new PrimaryButton();
@@ -106,6 +110,12 @@ public class HoaDonUI {
     private String currentMonth = "";
     private String currentYear = "";
     private boolean isPreviewMode = false;
+
+    private Runnable onInvoiceSaved;
+
+    public void setOnInvoiceSaved(Runnable callback) {
+        this.onInvoiceSaved = callback;
+    }
 
     public static class BillServiceItem {
         public String maDichVu;
@@ -211,22 +221,38 @@ public class HoaDonUI {
         public List<BillServiceItem> services = new ArrayList<>();
     }
 
+    private JPanel pnlRoot;
+    private JPanel pnlHistoryView;
+    private JPanel pnlCalcView;
+    private CardLayout mainCardLayout;
+
     public JPanel getPanel() {
+        pnlRoot = new JPanel(new BorderLayout());
+        pnlRoot.setBackground(MAU_NEN);
+
+        mainCardLayout = new CardLayout();
+        JPanel cardPanel = new JPanel(mainCardLayout);
+        cardPanel.setBackground(MAU_NEN);
+
+        pnlHistoryView = buildHistoryView();
+        pnlCalcView = buildCalcView();
+
+        cardPanel.add(pnlHistoryView, "history");
+        cardPanel.add(pnlCalcView, "calc");
+
+        pnlRoot.add(cardPanel, BorderLayout.CENTER);
+
+        mainCardLayout.show(cardPanel, "history");
+
+        loadHistory();
+        return pnlRoot;
+    }
+
+    private JPanel buildHistoryView() {
         JPanel root = new JPanel(new BorderLayout(0, 18));
         root.setBackground(MAU_NEN);
         root.setBorder(new EmptyBorder(24, 24, 24, 24));
 
-        root.add(buildTopBar(), BorderLayout.NORTH);
-        root.add(buildBody(), BorderLayout.CENTER);
-
-        loadHistory();
-        loadCurrentMonthDrafts();
-        rebuildSummaryModel();
-        refreshSummaryCard();
-        return root;
-    }
-
-    private JPanel buildTopBar() {
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
 
@@ -235,25 +261,54 @@ public class HoaDonUI {
         title.setForeground(MAU_TEXT);
         top.add(title, BorderLayout.WEST);
 
-        JButton btnCalc = makeOutlineButton("Tính hóa đơn");
+        JButton btnCalc = primaryButton.makePrimaryButton("Tính hóa đơn");
         btnCalc.addActionListener(e -> showCreateDialog());
         top.add(btnCalc, BorderLayout.EAST);
 
-        return top;
+        root.add(top, BorderLayout.NORTH);
+        root.add(buildHistoryCard(), BorderLayout.CENTER);
+
+        return root;
     }
 
-    private JPanel buildBody() {
+    private JPanel buildCalcView() {
+        JPanel root = new JPanel(new BorderLayout(0, 18));
+        root.setBackground(MAU_NEN);
+        root.setBorder(new EmptyBorder(24, 24, 24, 24));
+
+        JPanel top = new JPanel(new BorderLayout());
+        top.setOpaque(false);
+
+        JLabel title = new JLabel("Hóa đơn hàng tháng");
+        title.setFont(FONT_TITLE);
+        title.setForeground(MAU_TEXT);
+        top.add(title, BorderLayout.WEST);
+
+        JPanel rightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        rightBtns.setOpaque(false);
+
+        JButton btnBack = makeOutlineButton("← Quay lại");
+        btnBack.addActionListener(e -> {
+            mainCardLayout.show(
+                    pnlRoot.getComponent(0) instanceof JPanel ? (java.awt.Container) pnlRoot.getComponent(0) : pnlRoot,
+                    "history");
+            loadHistory();
+        });
+        rightBtns.add(btnBack);
+        top.add(rightBtns, BorderLayout.EAST);
+
+        root.add(top, BorderLayout.NORTH);
+
         JPanel body = new JPanel();
         body.setOpaque(false);
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
 
         summaryCard = buildSummaryCard();
-        JPanel historyCard = buildHistoryCard();
-
         body.add(summaryCard);
-        body.add(Box.createVerticalStrut(16));
-        body.add(historyCard);
-        return body;
+
+        root.add(body, BorderLayout.CENTER);
+
+        return root;
     }
 
     private JPanel buildSummaryCard() {
@@ -275,7 +330,7 @@ public class HoaDonUI {
         head.add(lblSummaryTitle, BorderLayout.WEST);
         head.add(btnExport, BorderLayout.EAST);
 
-        summaryModel = new DefaultTableModel(new String[]{}, 0);
+        summaryModel = new DefaultTableModel(new String[] {}, 0);
 
         tblSummary = new JTable(summaryModel);
         tblSummary.setRowHeight(46);
@@ -376,6 +431,8 @@ public class HoaDonUI {
             rebuildSummaryModel();
             refreshSummaryCard();
             dlg.dispose();
+            // Switch to calc view
+            mainCardLayout.show((java.awt.Container) pnlRoot.getComponent(0), "calc");
         });
 
         root.add(form, BorderLayout.CENTER);
@@ -415,7 +472,12 @@ public class HoaDonUI {
         int m = Integer.parseInt(month);
         int y = Integer.parseInt(year);
 
+        List<PhuongTien> allVehicles = ptDAO.getAllPhuongTien();
+
         for (Phong room : rooms) {
+            // Đảm bảo tất cả dịch vụ được gán cho phòng
+            dvDAO.ganTatCaDichVuChoPhongNeuChuaCo(room.getMaPhong());
+
             MonthlyRoomDraft d = new MonthlyRoomDraft();
             d.maPhong = room.getMaPhong();
             d.donGiaDien = donGiaDien;
@@ -451,6 +513,19 @@ public class HoaDonUI {
                 op.selected = true;
                 d.options.add(op);
             }
+
+            // Thêm phí phương tiện
+            for (PhuongTien pt : allVehicles) {
+                if (room.getMaPhong().equals(pt.getMaPhong())) {
+                    ServiceOption vop = new ServiceOption();
+                    vop.maDichVu = "DV00";
+                    vop.tenDichVu = "Gửi xe: " + pt.getLoaiXe() + " (" + pt.getBienSo() + ")";
+                    vop.donGia = pt.getMucPhi();
+                    vop.selected = true;
+                    d.options.add(vop);
+                }
+            }
+
             currentDrafts.add(d);
         }
     }
@@ -497,7 +572,8 @@ public class HoaDonUI {
             b.maDichVuDien = dvDien == null ? null : dvDien.getMaDichVu();
             b.maDichVuNuoc = dvNuoc == null ? null : dvNuoc.getMaDichVu();
             for (ServiceOption op : d.options) {
-                if (!op.selected) continue;
+                if (!op.selected)
+                    continue;
                 BillServiceItem si = new BillServiceItem();
                 si.maDichVu = op.maDichVu;
                 si.tenKhoan = op.tenDichVu;
@@ -517,41 +593,58 @@ public class HoaDonUI {
     private void rebuildSummaryModel() {
         if (isPreviewMode) {
             summaryModel = new DefaultTableModel(
-                    new String[]{"Phòng", "Tiền phòng", "Điện", "Nước", "Dịch vụ", "Tổng", "Chi tiết"}, 0) {
+                    new String[] { "Phòng", "Tiền phòng", "Điện", "Nước", "Dịch vụ", "Tổng", "Chi tiết" }, 0) {
                 @Override
                 public boolean isCellEditable(int row, int col) {
                     return (col >= 1 && col <= 4) || col == 6;
                 }
+
                 @Override
-                public Class<?> getColumnClass(int col) { return Object.class; }
+                public Class<?> getColumnClass(int col) {
+                    return Object.class;
+                }
             };
             summaryModel.addTableModelListener(e -> {
                 int row = e.getFirstRow(), col = e.getColumn();
-                if (row < 0 || row >= currentDrafts.size() || col < 1 || col > 4) return;
+                if (row < 0 || row >= currentDrafts.size() || col < 1 || col > 4)
+                    return;
                 Object val = summaryModel.getValueAt(row, col);
-                if (val == null) return;
+                if (val == null)
+                    return;
                 String s = val.toString().replaceAll("[^0-9]", "");
-                if (s.isEmpty()) return;
+                if (s.isEmpty())
+                    return;
                 try {
                     double v = Long.parseLong(s);
                     MonthlyRoomDraft d = currentDrafts.get(row);
                     switch (col) {
-                        case 1: d.tienPhong = v; break;
-                        case 2: d.tienDienOverride = v; break;
-                        case 3: d.tienNuocOverride = v; break;
-                        default: break;
+                        case 1:
+                            d.tienPhong = v;
+                            break;
+                        case 2:
+                            d.tienDienOverride = v;
+                            break;
+                        case 3:
+                            d.tienNuocOverride = v;
+                            break;
+                        default:
+                            break;
                     }
                     summaryModel.setValueAt(formatMoney(d.tongTien()), row, 5);
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                }
             });
             tblSummary.setModel(summaryModel);
             tblSummary.getColumnModel().getColumn(6).setCellRenderer(new EyeCellRenderer());
             tblSummary.getColumnModel().getColumn(6).setCellEditor(new SummaryDetailEditor());
         } else {
             summaryModel = new DefaultTableModel(
-                    new String[]{"Phòng", "Tiền phòng", "Điện", "Nước", "Dịch vụ", "Tổng", "Đã TT", "Chi tiết"}, 0) {
+                    new String[] { "Phòng", "Tiền phòng", "Điện", "Nước", "Dịch vụ", "Tổng", "Đã TT", "Chi tiết" }, 0) {
                 @Override
-                public boolean isCellEditable(int row, int col) { return col == 6 || col == 7; }
+                public boolean isCellEditable(int row, int col) {
+                    return col == 6 || col == 7;
+                }
+
                 @Override
                 public Class<?> getColumnClass(int col) {
                     return col == 6 ? Boolean.class : Object.class;
@@ -587,7 +680,7 @@ public class HoaDonUI {
         lblSummaryTitle.setText("Hóa đơn tháng " + currentMonth + "/" + currentYear + modeLabel);
         for (MonthlyRoomDraft d : currentDrafts) {
             if (isPreviewMode) {
-                summaryModel.addRow(new Object[]{
+                summaryModel.addRow(new Object[] {
                         d.maPhong,
                         formatMoney(d.tienPhong),
                         formatMoney(d.getTienDien()),
@@ -597,7 +690,7 @@ public class HoaDonUI {
                         ""
                 });
             } else {
-                summaryModel.addRow(new Object[]{
+                summaryModel.addRow(new Object[] {
                         d.maPhong,
                         formatMoney(d.tienPhong),
                         formatMoney(d.getTienDien()) + " (" + d.tieuThuDien() + " kWh)",
@@ -615,16 +708,20 @@ public class HoaDonUI {
         Calendar cal = Calendar.getInstance();
         int m = cal.get(Calendar.MONTH) + 1;
         int y = cal.get(Calendar.YEAR);
-        if (!hdDAO.daCoHoaDonThang(m, y)) return;
+        if (!hdDAO.daCoHoaDonThang(m, y))
+            return;
         loadDraftsFromDB(m, y);
     }
 
     private void loadMonthFromHistory(String monthYear) {
         String[] parts = monthYear.split("/");
-        if (parts.length != 2) return;
+        if (parts.length != 2)
+            return;
         loadDraftsFromDB(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
         rebuildSummaryModel();
         refreshSummaryCard();
+        // Switch to calc view
+        mainCardLayout.show((java.awt.Container) pnlRoot.getComponent(0), "calc");
     }
 
     private void loadDraftsFromDB(int m, int y) {
@@ -681,6 +778,7 @@ public class HoaDonUI {
             });
         }
     }
+
     private ImageIcon loadEyeIcon() {
         ImageIcon raw = new ImageIcon("img/icons/eye.png");
         if (raw.getIconWidth() <= 0 || raw.getIconHeight() <= 0) {
@@ -702,7 +800,8 @@ public class HoaDonUI {
         fc.setDialogTitle("Chọn thư mục lưu hóa đơn");
         fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         fc.setAcceptAllFileFilterUsed(false);
-        if (fc.showSaveDialog(summaryCard) != JFileChooser.APPROVE_OPTION) return;
+        if (fc.showSaveDialog(summaryCard) != JFileChooser.APPROVE_OPTION)
+            return;
 
         // Bước 2: Lưu vào database
         saveToDatabase();
@@ -712,6 +811,10 @@ public class HoaDonUI {
         rebuildSummaryModel();
         refreshSummaryCard();
         loadHistory();
+
+        if (onInvoiceSaved != null) {
+            onInvoiceSaved.run();
+        }
 
         // Bước 4: Xuất ảnh hàng loạt
         File dir = fc.getSelectedFile();
@@ -740,7 +843,6 @@ public class HoaDonUI {
                     "Có lỗi", JOptionPane.WARNING_MESSAGE);
         }
     }
-
 
     private BufferedImage renderPanelToImage(JPanel panel) {
         panel.setSize(panel.getPreferredSize());
@@ -857,8 +959,10 @@ public class HoaDonUI {
             return "";
         }
     }
+
     private void refreshRowInTable(int rowIndex) {
-        if (rowIndex < 0 || rowIndex >= currentDrafts.size()) return;
+        if (rowIndex < 0 || rowIndex >= currentDrafts.size())
+            return;
         MonthlyRoomDraft d = currentDrafts.get(rowIndex);
         summaryModel.setValueAt(formatMoney(d.tienPhong), rowIndex, 1);
         summaryModel.setValueAt(formatMoney(d.getTienDien()), rowIndex, 2);
@@ -868,7 +972,8 @@ public class HoaDonUI {
     }
 
     private void showRoomDetailDialog(int rowIndex) {
-        if (rowIndex < 0 || rowIndex >= currentDrafts.size()) return;
+        if (rowIndex < 0 || rowIndex >= currentDrafts.size())
+            return;
         MonthlyRoomDraft d = currentDrafts.get(rowIndex);
 
         Window owner = SwingUtilities.getWindowAncestor(summaryCard);
@@ -893,7 +998,8 @@ public class HoaDonUI {
         // ── Tiền phòng ──
         JTextField txtTienPhong = makeField(NF.format((long) d.tienPhong));
         txtTienPhong.setEditable(isPreviewMode);
-        if (!isPreviewMode) txtTienPhong.setBackground(MAU_NEN);
+        if (!isPreviewMode)
+            txtTienPhong.setBackground(MAU_NEN);
         txtTienPhong.setMaximumSize(new Dimension(5, 38));
         txtTienPhong.setEditable(false);
 
@@ -905,7 +1011,8 @@ public class HoaDonUI {
 
         JTextField txtDienMoi = makeField(String.valueOf(d.soDienMoi));
         txtDienMoi.setEditable(isPreviewMode);
-        if (!isPreviewMode) txtDienMoi.setBackground(MAU_NEN);
+        if (!isPreviewMode)
+            txtDienMoi.setBackground(MAU_NEN);
         txtDienMoi.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
 
         JLabel lblKwh = new JLabel("Tiêu thụ: " + d.tieuThuDien() + " kWh  →  " + formatMoney(d.getTienDien()));
@@ -921,7 +1028,8 @@ public class HoaDonUI {
 
         JTextField txtNuocMoi = makeField(String.valueOf(d.soNuocMoi));
         txtNuocMoi.setEditable(isPreviewMode);
-        if (!isPreviewMode) txtNuocMoi.setBackground(MAU_NEN);
+        if (!isPreviewMode)
+            txtNuocMoi.setBackground(MAU_NEN);
         txtNuocMoi.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
 
         JLabel lblM3 = new JLabel("Tiêu thụ: " + d.tieuThuNuoc() + " m³  →  " + formatMoney(d.getTienNuoc()));
@@ -978,7 +1086,8 @@ public class HoaDonUI {
             lblDv.setAlignmentX(Component.LEFT_ALIGNMENT);
             form.add(lblDv);
             form.add(Box.createVerticalStrut(4));
-            for (JCheckBox cb : checks) form.add(cb);
+            for (JCheckBox cb : checks)
+                form.add(cb);
             form.add(Box.createVerticalStrut(10));
         }
 
@@ -1033,7 +1142,10 @@ public class HoaDonUI {
                 // Tiền phòng
                 String tienStr = txtTienPhong.getText().trim().replaceAll("[^0-9]", "");
                 if (!tienStr.isEmpty()) {
-                    try { d.tienPhong = Long.parseLong(tienStr); } catch (NumberFormatException ignored) {}
+                    try {
+                        d.tienPhong = Long.parseLong(tienStr);
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
                 // Số điện mới
                 try {
@@ -1046,7 +1158,8 @@ public class HoaDonUI {
                     }
                     d.soDienMoi = dienMoi;
                     d.tienDienOverride = -1;
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                }
                 // Số nước mới
                 try {
                     int nuocMoi = Integer.parseInt(txtNuocMoi.getText().trim());
@@ -1058,7 +1171,8 @@ public class HoaDonUI {
                     }
                     d.soNuocMoi = nuocMoi;
                     d.tienNuocOverride = -1;
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                }
                 // Dịch vụ
                 for (JCheckBox cb : checks) {
                     int idx = (int) cb.getClientProperty("idx");
@@ -1083,7 +1197,8 @@ public class HoaDonUI {
     }
 
     private void showInvoicePreviewDialog(int rowIndex) {
-        if (rowIndex < 0 || rowIndex >= currentDrafts.size()) return;
+        if (rowIndex < 0 || rowIndex >= currentDrafts.size())
+            return;
         MonthlyRoomDraft d = currentDrafts.get(rowIndex);
 
         Window owner = SwingUtilities.getWindowAncestor(summaryCard);
@@ -1170,50 +1285,53 @@ public class HoaDonUI {
         Color borderC = new Color(160, 160, 160);
         Color totalBg = new Color(146, 208, 80); // xanh lá như ảnh mẫu
         Font fNormal = new Font("Arial", Font.PLAIN, 13);
-        Font fBold   = new Font("Arial", Font.BOLD, 13);
+        Font fBold = new Font("Arial", Font.BOLD, 13);
 
         // ── Xây dựng dữ liệu các dòng ──
         // Mỗi phần tử: [stt, dichVu, chiSo, soTien, rowType]
         List<Object[]> rows = new ArrayList<>();
         int stt = 1;
 
-        rows.add(new Object[]{String.valueOf(stt++), "Tiền phòng", "1", formatMoney(d.tienPhong), ROW_NORMAL});
-        rows.add(new Object[]{"", "Chỉ số mới", String.valueOf(d.soDienMoi), "", ROW_SUBITEM});
-        rows.add(new Object[]{"", "Chỉ số cũ", String.valueOf(d.soDienCu), "", ROW_SUBITEM});
-        rows.add(new Object[]{"", "Số kWh điện tiêu thụ", String.valueOf(d.tieuThuDien()), "", ROW_SUBITEM_BOLD});
-        rows.add(new Object[]{
-            String.valueOf(stt++),
-            "Thành tiền (×" + NF.format((long) d.donGiaDien) + " VND)",
-            "",
-            formatMoney((double) d.tieuThuDien() * d.donGiaDien),
-            ROW_NORMAL
+        rows.add(new Object[] { String.valueOf(stt++), "Tiền phòng", "1", formatMoney(d.tienPhong), ROW_NORMAL });
+        rows.add(new Object[] { "", "Chỉ số mới", String.valueOf(d.soDienMoi), "", ROW_SUBITEM });
+        rows.add(new Object[] { "", "Chỉ số cũ", String.valueOf(d.soDienCu), "", ROW_SUBITEM });
+        rows.add(new Object[] { "", "Số kWh điện tiêu thụ", String.valueOf(d.tieuThuDien()), "", ROW_SUBITEM_BOLD });
+        rows.add(new Object[] {
+                String.valueOf(stt++),
+                "Thành tiền (×" + NF.format((long) d.donGiaDien) + " VND)",
+                "",
+                formatMoney((double) d.tieuThuDien() * d.donGiaDien),
+                ROW_NORMAL
         });
-        rows.add(new Object[]{
-            String.valueOf(stt++), "Tiền nước",
-            d.tieuThuNuoc() + " m³",
-            formatMoney((double) d.tieuThuNuoc() * d.donGiaNuoc),
-            ROW_NORMAL
+        rows.add(new Object[] {
+                String.valueOf(stt++), "Tiền nước",
+                d.tieuThuNuoc() + " m³",
+                formatMoney((double) d.tieuThuNuoc() * d.donGiaNuoc),
+                ROW_NORMAL
         });
         for (ServiceOption op : d.options) {
             if (op.selected) {
-                rows.add(new Object[]{String.valueOf(stt++), op.tenDichVu, "1", formatMoney(op.donGia), ROW_NORMAL});
+                rows.add(new Object[] { String.valueOf(stt++), op.tenDichVu, "1", formatMoney(op.donGia), ROW_NORMAL });
             }
         }
-        rows.add(new Object[]{"", "", "", "", ROW_EMPTY});
-        rows.add(new Object[]{"", "Tổng cộng", "", formatMoney(d.tongTien()), ROW_TOTAL});
+        rows.add(new Object[] { "", "", "", "", ROW_EMPTY });
+        rows.add(new Object[] { "", "Tổng cộng", "", formatMoney(d.tongTien()), ROW_TOTAL });
 
         // Tách dữ liệu bảng và mảng loại dòng
-        String[] cols = {"STT", "DỊCH VỤ", "CHỈ SỐ", "SỐ TIỀN"};
+        String[] cols = { "STT", "DỊCH VỤ", "CHỈ SỐ", "SỐ TIỀN" };
         Object[][] tableData = new Object[rows.size()][4];
         int[] rowTypes = new int[rows.size()];
         for (int i = 0; i < rows.size(); i++) {
             Object[] r = rows.get(i);
-            tableData[i] = new Object[]{r[0], r[1], r[2], r[3]};
+            tableData[i] = new Object[] { r[0], r[1], r[2], r[3] };
             rowTypes[i] = (int) r[4];
         }
 
         DefaultTableModel model = new DefaultTableModel(tableData, cols) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
+            @Override
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
 
         JTable table = new JTable(model);
@@ -1226,7 +1344,7 @@ public class HoaDonUI {
         table.setSelectionBackground(Color.WHITE);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         // Cột: STT=45, DỊCH VỤ=240, CHỈ SỐ=110, SỐ TIỀN=130
-        int[] colWidths = {45, 240, 110, 130};
+        int[] colWidths = { 45, 240, 110, 130 };
         for (int c = 0; c < 4; c++)
             table.getColumnModel().getColumn(c).setPreferredWidth(colWidths[c]);
 
@@ -1239,12 +1357,13 @@ public class HoaDonUI {
         th.setReorderingAllowed(false);
 
         // Header renderers
-        int[] hAlign = {SwingConstants.CENTER, SwingConstants.CENTER, SwingConstants.CENTER, SwingConstants.CENTER};
+        int[] hAlign = { SwingConstants.CENTER, SwingConstants.CENTER, SwingConstants.CENTER, SwingConstants.CENTER };
         for (int c = 0; c < 4; c++) {
             final int col = c;
             table.getColumnModel().getColumn(c).setHeaderRenderer(new DefaultTableCellRenderer() {
                 @Override
-                public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int r, int co) {
+                public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int r,
+                        int co) {
                     JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, v, sel, foc, r, co);
                     lbl.setBackground(Color.WHITE);
                     lbl.setForeground(Color.BLACK);
@@ -1262,7 +1381,8 @@ public class HoaDonUI {
             final int col = c;
             table.getColumnModel().getColumn(c).setCellRenderer(new DefaultTableCellRenderer() {
                 @Override
-                public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int row, int co) {
+                public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int row,
+                        int co) {
                     JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, v, sel, foc, row, co);
                     int type = rowTypes[row];
 

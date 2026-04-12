@@ -10,7 +10,6 @@ import entity.Phong;
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import ui.main.HopDongUI;
 
 public class PhongInfo {
 
@@ -21,16 +20,6 @@ public class PhongInfo {
     GiaDetailDAO donGiaDAO = new GiaDetailDAO();
     HopDongKhachHangDAO HDKH_DAO = new HopDongKhachHangDAO();
     HopDongDAO hopDongDAO = new HopDongDAO();
-    HopDongUI.ContractDraft draft = new HopDongUI.ContractDraft();
-
-    JTextField txtTenKhachThue;
-    JTextField txtPhone;
-    JTextField txtCccd;
-    JTextField txtStartDate;
-    JTextField txtEndDate;
-    JTextField txtDeposit;
-    JComboBox<String> cboCondition;
-    JTextField txtMonthlyRent;
 
     public PhongInfo(String tenPhong) {
         this.tenPhong = tenPhong;
@@ -51,10 +40,10 @@ public class PhongInfo {
         JPanel pnlContent;
         if (phong.getTrangThai() == Phong.TrangThai.THUE) {
             pnlContent = createContentForPhongDaThue(phong);
-            dialog.setSize(700, 520);
+            dialog.setSize(700, 400);
         } else {
             pnlContent = createContentForPhongTrong(phong);
-            dialog.setSize(700, 520);
+            dialog.setSize(700, 280);
         }
 
         JScrollPane scrollPane = new JScrollPane(pnlContent);
@@ -120,52 +109,6 @@ public class PhongInfo {
         pnlContainer.add(pnlRoomRow2);
         pnlContainer.add(Box.createVerticalStrut(10));
         pnlContainer.add(pnlRoomRow3);
-
-        // --- Separator ---
-        pnlContainer.add(Box.createVerticalStrut(15));
-        JSeparator sep = new JSeparator();
-        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        pnlContainer.add(sep);
-        pnlContainer.add(Box.createVerticalStrut(15));
-
-        // --- Thông tin hợp đồng (editable) ---
-        JPanel pnlRow1 = new JPanel(new GridLayout(1, 3, 15, 0));
-        pnlRow1.setBackground(Color.WHITE);
-
-        txtTenKhachThue = new JTextField();
-        txtPhone = new JTextField();
-        txtCccd = new JTextField();
-
-        pnlRow1.add(createFieldPanel(new JLabel("Tên khách thuê"), txtTenKhachThue));
-        pnlRow1.add(createFieldPanel(new JLabel("SĐT"), txtPhone));
-        pnlRow1.add(createFieldPanel(new JLabel("CCCD"), txtCccd));
-
-        JPanel pnlRow2 = new JPanel(new GridLayout(1, 3, 15, 0));
-        pnlRow2.setBackground(Color.WHITE);
-
-        txtStartDate = new JTextField();
-        txtEndDate = new JTextField();
-        txtDeposit = new JTextField();
-
-        pnlRow2.add(createFieldPanel(new JLabel("Ngày bắt đầu"), txtStartDate));
-        pnlRow2.add(createFieldPanel(new JLabel("Ngày kết thúc"), txtEndDate));
-        pnlRow2.add(createFieldPanel(new JLabel("Tiền cọc"), txtDeposit));
-
-        JPanel pnlRow3 = new JPanel(new GridLayout(1, 2, 15, 0));
-        pnlRow3.setBackground(Color.WHITE);
-
-        txtMonthlyRent = new JTextField();
-        cboCondition = new JComboBox<>(new String[] { "Đã cọc", "Đã thuê", "Trống" });
-        cboCondition.setSelectedIndex(2);
-
-        pnlRow3.add(createFieldPanel(new JLabel("Tiền thuê/tháng"), txtMonthlyRent));
-        pnlRow3.add(createFieldPanel(new JLabel("Trạng thái phòng sau khi tạo"), cboCondition));
-
-        pnlContainer.add(pnlRow1);
-        pnlContainer.add(Box.createVerticalStrut(10));
-        pnlContainer.add(pnlRow2);
-        pnlContainer.add(Box.createVerticalStrut(10));
-        pnlContainer.add(pnlRow3);
         pnlContainer.add(Box.createVerticalGlue());
 
         return pnlContainer;
@@ -318,38 +261,12 @@ public class PhongInfo {
         JPanel pnlBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlBottom.setBackground(Color.WHITE);
 
-        JButton btnCancel = new JButton("Hủy");
-        btnCancel.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        btnCancel.setPreferredSize(new Dimension(100, 40));
-        btnCancel.addActionListener(e -> dialog.dispose());
+        JButton btnClose = new JButton("Đóng");
+        btnClose.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        btnClose.setPreferredSize(new Dimension(100, 40));
+        btnClose.addActionListener(e -> dialog.dispose());
 
-        JButton btnCreate = new JButton("Tạo hợp đồng");
-        btnCreate.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        btnCreate.setForeground(Color.WHITE);
-        btnCreate.setBackground(MAU_XANH_DUONG);
-        btnCreate.setBorder(BorderFactory.createEmptyBorder());
-        btnCreate.setPreferredSize(new Dimension(150, 40));
-        btnCreate.addActionListener(e -> {
-
-            draft.hoTen = txtTenKhachThue.getText().trim();
-            draft.soDienThoai = txtPhone.getText().trim();
-            draft.cccd = txtCccd.getText().trim();
-            draft.ngayBatDau = txtStartDate.getText().trim();
-            draft.ngayKetThuc = txtEndDate.getText().trim();
-            draft.tienCocRaw = txtDeposit.getText().trim();
-            draft.giaThueRaw = txtMonthlyRent.getText().trim();
-            draft.diaChi = "NULL";
-            draft.phong = tenPhong.trim();
-
-            hopDongDAO.luuHopDongMoi(draft);
-            phongDAO.updateTrangThaiPhong(tenPhong, "Đã thuê");
-
-            JOptionPane.showMessageDialog(dialog, "Tạo hợp đồng thành công!");
-            dialog.dispose();
-        });
-
-        pnlBottom.add(btnCancel);
-        pnlBottom.add(btnCreate);
+        pnlBottom.add(btnClose);
 
         return pnlBottom;
     }

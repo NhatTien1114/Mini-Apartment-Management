@@ -51,8 +51,8 @@ public class DichVuDAO {
                             rs.getObject("donGia") != null ? rs.getDouble("donGia") : null);
                     if (!dv.getMaDichVu().equals("DV00")) {
                         ds.add(dv);
-                    }        
-                    
+                    }
+
                 }
             }
         } catch (SQLException e) {
@@ -211,28 +211,17 @@ public class DichVuDAO {
     }
 
     public void ganTatCaDichVuChoPhongNeuChuaCo(String maPhong) {
-        String sqlCount = "SELECT COUNT(1) AS cnt FROM PhongDichVu WHERE maPhong = ?";
-        String sqlInsertAll = "INSERT INTO PhongDichVu(maPhong, maDichVu) "
-                + "SELECT ?, maDichVu FROM DichVu WHERE maDichVu <> 'DV00'";
+        String sqlInsertMissing = "INSERT INTO PhongDichVu(maPhong, maDichVu) "
+                + "SELECT ?, maDichVu FROM DichVu WHERE maDichVu <> 'DV00' "
+                + "AND maDichVu NOT IN (SELECT maDichVu FROM PhongDichVu WHERE maPhong = ?)";
 
         try (Connection con = connectDB.getConnection()) {
             ensurePhongDichVuTable(con);
 
-            int count = 0;
-            try (PreparedStatement psCount = con.prepareStatement(sqlCount)) {
-                psCount.setString(1, maPhong);
-                try (ResultSet rs = psCount.executeQuery()) {
-                    if (rs.next()) {
-                        count = rs.getInt("cnt");
-                    }
-                }
-            }
-
-            if (count == 0) {
-                try (PreparedStatement psIns = con.prepareStatement(sqlInsertAll)) {
-                    psIns.setString(1, maPhong);
-                    psIns.executeUpdate();
-                }
+            try (PreparedStatement psIns = con.prepareStatement(sqlInsertMissing)) {
+                psIns.setString(1, maPhong);
+                psIns.setString(2, maPhong);
+                psIns.executeUpdate();
             }
         } catch (SQLException e) {
             System.err.println("Lỗi ganTatCaDichVuChoPhongNeuChuaCo: " + e.getMessage());
