@@ -1,8 +1,6 @@
 package ui.main;
 
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import ui.util.AppColors;
@@ -186,9 +184,9 @@ public class LoginUI extends JFrame {
         pnlForm.add(btnLogin);
 
         card.add(pnlForm);
-        
-        txtEmail.setText("admin@gmail.com");
-        txtPass.setText("Admin@123");
+
+        txtEmail.setText("tien@gmail.com");
+        txtPass.setText("*Tien1408");
 
         return card;
     }

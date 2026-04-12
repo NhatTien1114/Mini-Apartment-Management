@@ -39,6 +39,9 @@ public class HopDongUI {
     private JPanel pnlRoot;
     private DefaultTableModel model;
     private JTable table;
+    private TableRowSorter<DefaultTableModel> sorter;
+    private RoundedTextField txtSearch;
+    private JComboBox<String> cboFilterHanHopDong;
 
     HopDongDAO HopDongDao = new HopDongDAO();
 
@@ -153,10 +156,10 @@ public class HopDongUI {
         pnlMainContent.setOpaque(false);
 
         // --- Search Bar ---
-        JPanel pnlToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel pnlToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         pnlToolbar.setOpaque(false);
 
-        RoundedTextField txtSearch = new RoundedTextField(8) {
+        txtSearch = new RoundedTextField(8) {
             @Override
             public void paint(Graphics g) {
                 super.paint(g);
@@ -178,7 +181,7 @@ public class HopDongUI {
         };
         txtSearch.setBorder(new EmptyBorder(8, 36, 8, 12));
         txtSearch.setPlaceholder("Tìm theo tên hoặc phòng...");
-        txtSearch.setPreferredSize(new Dimension(320, 40));
+        txtSearch.setPreferredSize(new Dimension(280, 40));
         txtSearch.setBackground(Color.WHITE);
         txtSearch.addFocusListener(new FocusAdapter() {
             public void focusGained(FocusEvent e) {
@@ -190,7 +193,23 @@ public class HopDongUI {
             }
         });
 
+        JButton btnTimKiem = primaryButton.makePrimaryButton("Tìm kiếm");
+        btnTimKiem.setPreferredSize(new Dimension(110, 40));
+        btnTimKiem.addActionListener(e -> applyContractFilter());
+
+        cboFilterHanHopDong = new JComboBox<>(new String[] { "Tất cả", "Sắp hết hạn", "Đã hết hạn" });
+        cboFilterHanHopDong.setPreferredSize(new Dimension(150, 40));
+        cboFilterHanHopDong.setFont(new Font("Inter", Font.PLAIN, 14));
+        cboFilterHanHopDong.setBackground(Color.WHITE);
+        cboFilterHanHopDong.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.ITEM_STATE_CHANGED) {
+                applyContractFilter();
+            }
+        });
+
         pnlToolbar.add(txtSearch);
+        pnlToolbar.add(btnTimKiem);
+        pnlToolbar.add(cboFilterHanHopDong);
         pnlMainContent.add(pnlToolbar, BorderLayout.NORTH);
 
         // --- Data Table Card ---
@@ -218,6 +237,47 @@ public class HopDongUI {
         table.setSelectionBackground(new Color(241, 245, 249));
         table.setBorder(null);
 
+        // --- Right-click context menu (must be created before mouse listeners) ---
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miDelete = new JMenuItem("Xóa");
+        miDelete.setForeground(new Color(239, 68, 68));
+        contextMenu.add(miEdit);
+        contextMenu.add(miDelete);
+
+        miEdit.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0)
+                showContractForm(true, table.convertRowIndexToModel(row));
+        });
+        miDelete.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row < 0)
+                return;
+            int modelRow = table.convertRowIndexToModel(row);
+            String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
+            String tenKhachHang = String.valueOf(model.getValueAt(modelRow, 2));
+            String maPhong = String.valueOf(model.getValueAt(modelRow, 1));
+            int luaChon = JOptionPane.showConfirmDialog(
+                    pnlRoot,
+                    "Bạn có chắc chắn muốn xóa hợp đồng của khách hàng '" + tenKhachHang + "' (Phòng " + maPhong
+                            + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
+                    "Xác nhận xóa hợp đồng",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (luaChon == JOptionPane.YES_OPTION) {
+                boolean ok = HopDongDao.xoaHopDongVaKhachHangLienQuan(maHopDong);
+                if (ok) {
+                    loadDataToTable();
+                    showToast("Đã xóa hợp đồng thành công");
+                } else {
+                    showToast("Xóa hợp đồng thất bại");
+                }
+            }
+        });
+
+        table.setComponentPopupMenu(contextMenu);
+
         table.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseMoved(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
@@ -228,32 +288,32 @@ public class HopDongUI {
         });
         table.addMouseListener(new MouseAdapter() {
             public void mouseExited(MouseEvent e) {
-                table.clearSelection();
+                if (!contextMenu.isVisible()) {
+                    table.clearSelection();
+                }
+            }
+
+            public void mousePressed(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row >= 0) {
+                    table.setRowSelectionInterval(row, row);
+                }
             }
         });
 
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+        sorter = new TableRowSorter<>(model);
         table.setRowSorter(sorter);
         txtSearch.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                filter();
+                applyContractFilter();
             }
 
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                filter();
+                applyContractFilter();
             }
 
             public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                filter();
-            }
-
-            private void filter() {
-                String text = txtSearch.getText();
-                if (text.trim().length() == 0) {
-                    sorter.setRowFilter(null);
-                } else {
-                    sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
-                }
+                applyContractFilter();
             }
         });
 
@@ -334,47 +394,6 @@ public class HopDongUI {
             }
         });
 
-        // --- Right-click context menu ---
-        JPopupMenu contextMenu = new JPopupMenu();
-        JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
-        JMenuItem miDelete = new JMenuItem("Xóa");
-        miDelete.setForeground(new Color(239, 68, 68));
-        contextMenu.add(miEdit);
-        contextMenu.add(miDelete);
-
-        miEdit.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row >= 0)
-                showContractForm(true, table.convertRowIndexToModel(row));
-        });
-        miDelete.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row < 0)
-                return;
-            int modelRow = table.convertRowIndexToModel(row);
-            String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
-            String tenKhachHang = String.valueOf(model.getValueAt(modelRow, 2));
-            String maPhong = String.valueOf(model.getValueAt(modelRow, 1));
-            int luaChon = JOptionPane.showConfirmDialog(
-                    pnlRoot,
-                    "Bạn có chắc chắn muốn xóa hợp đồng của khách hàng '" + tenKhachHang + "' (Phòng " + maPhong
-                            + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
-                    "Xác nhận xóa hợp đồng",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-            if (luaChon == JOptionPane.YES_OPTION) {
-                boolean ok = HopDongDao.xoaHopDongVaKhachHangLienQuan(maHopDong);
-                if (ok) {
-                    loadDataToTable();
-                    showToast("Đã xóa hợp đồng thành công");
-                } else {
-                    showToast("Xóa hợp đồng thất bại");
-                }
-            }
-        });
-
-        table.setComponentPopupMenu(contextMenu);
-
         table.getColumnModel().getColumn(0).setMinWidth(0);
         table.getColumnModel().getColumn(0).setMaxWidth(0);
         table.getColumnModel().getColumn(0).setPreferredWidth(0);
@@ -397,6 +416,84 @@ public class HopDongUI {
         pnlRoot.add(pnlMainContent, BorderLayout.CENTER);
 
         return pnlRoot;
+    }
+
+    private void applyContractFilter() {
+        String text = txtSearch.getText().trim();
+        String hanFilter = (String) cboFilterHanHopDong.getSelectedItem();
+
+        java.util.List<RowFilter<Object, Object>> filters = new java.util.ArrayList<>();
+
+        if (!text.isEmpty()) {
+            filters.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(text)));
+        }
+
+        if ("Sắp hết hạn".equals(hanFilter)) {
+            filters.add(new RowFilter<Object, Object>() {
+                @Override
+                public boolean include(Entry<? extends Object, ? extends Object> entry) {
+                    Object dateVal = entry.getValue(4); // Ngày kết thúc
+                    if (dateVal == null)
+                        return false;
+                    try {
+                        java.time.LocalDate ngayKetThuc = parseTableDate(dateVal);
+                        if (ngayKetThuc == null)
+                            return false;
+                        java.time.LocalDate today = java.time.LocalDate.now();
+                        long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(today, ngayKetThuc);
+                        return daysLeft >= 0 && daysLeft <= 15;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }
+            });
+        } else if ("Đã hết hạn".equals(hanFilter)) {
+            filters.add(new RowFilter<Object, Object>() {
+                @Override
+                public boolean include(Entry<? extends Object, ? extends Object> entry) {
+                    Object dateVal = entry.getValue(4); // Ngày kết thúc
+                    if (dateVal == null)
+                        return false;
+                    try {
+                        java.time.LocalDate ngayKetThuc = parseTableDate(dateVal);
+                        if (ngayKetThuc == null)
+                            return false;
+                        return ngayKetThuc.isBefore(java.time.LocalDate.now());
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }
+            });
+        }
+
+        if (filters.isEmpty()) {
+            sorter.setRowFilter(null);
+        } else {
+            sorter.setRowFilter(RowFilter.andFilter(filters));
+        }
+    }
+
+    private java.time.LocalDate parseTableDate(Object dateVal) {
+        if (dateVal instanceof java.time.LocalDate) {
+            return (java.time.LocalDate) dateVal;
+        }
+        String dateStr = dateVal.toString().trim();
+        if (dateStr.isEmpty())
+            return null;
+        // Try yyyy-MM-dd
+        try {
+            if (dateStr.length() > 10)
+                dateStr = dateStr.substring(0, 10);
+            return java.time.LocalDate.parse(dateStr);
+        } catch (Exception e) {
+            // ignore
+        }
+        // Try dd/MM/yyyy
+        try {
+            return java.time.LocalDate.parse(dateStr, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public void showAddContractForm() {
@@ -499,8 +596,8 @@ public class HopDongUI {
         RoundedTextField txtCccd = createFocusableField();
         RoundedTextField txtDiaChi = createFocusableField();
         JFormattedTextField txtNgaySinh = createFocusableDateField();
-        JFormattedTextField txtBatDau = createFocusableDateField();
         JFormattedTextField txtKetThuc = createFocusableDateField();
+        JFormattedTextField txtBatDau = createFocusableDateFieldWithAutoEndDate(txtKetThuc);
         RoundedTextField txtThue = createFocusableField();
         RoundedTextField txtCoc = createFocusableField();
 
@@ -904,6 +1001,40 @@ public class HopDongUI {
         return txt;
     }
 
+    private JFormattedTextField createFocusableDateFieldWithAutoEndDate(JFormattedTextField txtEndDate) {
+        JFormattedTextField txt = createFocusableDateField();
+        txt.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                autoFillEndDate();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                autoFillEndDate();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                autoFillEndDate();
+            }
+
+            private void autoFillEndDate() {
+                SwingUtilities.invokeLater(() -> {
+                    String t = txt.getText();
+                    if (t == null || t.contains("_") || t.length() < 10)
+                        return;
+                    try {
+                        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
+                                .ofPattern("dd/MM/yyyy");
+                        java.time.LocalDate start = java.time.LocalDate.parse(t, fmt);
+                        java.time.LocalDate end = start.plusYears(1);
+                        txtEndDate.setText(end.format(fmt));
+                    } catch (Exception ignored) {
+                    }
+                });
+            }
+        });
+        return txt;
+    }
+
     private void applyNumberFilter(JTextField field) {
         ((AbstractDocument) field.getDocument()).setDocumentFilter(new DocumentFilter() {
             public void insertString(FilterBypass fb, int o, String str, AttributeSet attr)
@@ -963,7 +1094,7 @@ public class HopDongUI {
         JDialog dialog = new JDialog(parent, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
         dialog.setBackground(new Color(0, 0, 0, 0));
-        dialog.setSize(500, 640);
+        dialog.setSize(620, 750);
         dialog.setLocationRelativeTo(pnlRoot);
 
         final boolean[] accepted = { false };
@@ -976,7 +1107,7 @@ public class HopDongUI {
         JPanel head = new JPanel(new BorderLayout());
         head.setOpaque(false);
         JLabel title = new JLabel("Xem trước hợp đồng");
-        title.setFont(new Font("Inter", Font.BOLD, 24));
+        title.setFont(new Font("Inter", Font.BOLD, 20));
         title.setForeground(MAU_TEXT);
         JButton btnClose = new JButton("x");
         btnClose.setFont(new Font("Inter", Font.PLAIN, 18));
@@ -987,48 +1118,131 @@ public class HopDongUI {
         btnClose.addActionListener(e -> dialog.dispose());
         head.add(title, BorderLayout.WEST);
         head.add(btnClose, BorderLayout.EAST);
+        head.setBorder(new EmptyBorder(0, 0, 10, 0));
         root.add(head, BorderLayout.NORTH);
 
+        // ===== Contract document =====
         JPanel doc = new JPanel();
         doc.setOpaque(true);
         doc.setBackground(Color.WHITE);
         doc.setLayout(new BoxLayout(doc, BoxLayout.Y_AXIS));
         doc.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(BORDER_COLOR),
-                new EmptyBorder(16, 18, 16, 18)));
+                new EmptyBorder(28, 32, 28, 32)));
 
-        addDocLine(doc, "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", true, 20);
-        addDocLine(doc, "Độc lập - Tự do - Hạnh phúc", false, 14);
-        addDocLine(doc, "---o0o---", false, 13);
-        addDocLine(doc, "HỢP ĐỒNG THUÊ PHÒNG", true, 30);
+        // --- Quốc hiệu ---
+        JLabel lblQuocHieu = new JLabel("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", SwingConstants.CENTER);
+        lblQuocHieu.setFont(new Font("Inter", Font.BOLD, 14));
+        lblQuocHieu.setAlignmentX(Component.CENTER_ALIGNMENT);
+        doc.add(lblQuocHieu);
+        doc.add(Box.createVerticalStrut(2));
 
-        addDocLine(doc, "Điều 1: Bên cho thuê (Bên A):", true, 10);
-        addDocLine(doc, "Chủ chung cư MINI APARTMENT", false, 10);
+        JLabel lblTieuNgu = new JLabel("Độc lập - Tự do - Hạnh phúc", SwingConstants.CENTER);
+        lblTieuNgu.setFont(new Font("Inter", Font.PLAIN, 13));
+        lblTieuNgu.setAlignmentX(Component.CENTER_ALIGNMENT);
+        doc.add(lblTieuNgu);
+        doc.add(Box.createVerticalStrut(2));
 
-        addDocLine(doc, "Điều 2: Bên thuê (Bên B):", true, 16);
-        addDocLine(doc, "Họ tên: " + draft.hoTen, false, 10);
-        addDocLine(doc, "CCCD/CMND: " + draft.cccd, false, 8);
-        addDocLine(doc, "Số điện thoại: " + draft.soDienThoai, false, 8);
-        addDocLine(doc, "Địa chỉ: " + draft.diaChi, false, 8);
-        addDocLine(doc, "Ngày sinh: " + (draft.ngaySinh == null || draft.ngaySinh.trim().isEmpty() ? "" : draft.ngaySinh),
-                false, 8);
+        JLabel lblLine = new JLabel("─────────────────", SwingConstants.CENTER);
+        lblLine.setFont(new Font("Inter", Font.PLAIN, 12));
+        lblLine.setForeground(MAU_SUBTEXT);
+        lblLine.setAlignmentX(Component.CENTER_ALIGNMENT);
+        doc.add(lblLine);
+        doc.add(Box.createVerticalStrut(16));
 
-        addDocLine(doc, "Điều 3: Nội dung hợp đồng:", true, 16);
-        addDocLine(doc, "Phòng cho thuê: " + draft.phong, false, 10);
-        addDocLine(doc, "Thời hạn: Từ " + draft.ngayBatDau + " đến " + draft.ngayKetThuc, false, 8);
-        addDocLine(doc, "Giá thuê: " + formatCurrency(draft.giaThueRaw) + "/tháng", false, 8);
-        addDocLine(doc, "Tiền cọc: " + formatCurrency(draft.tienCocRaw), false, 8);
+        JLabel lblTitleDoc = new JLabel("HỢP ĐỒNG THUÊ PHÒNG", SwingConstants.CENTER);
+        lblTitleDoc.setFont(new Font("Inter", Font.BOLD, 22));
+        lblTitleDoc.setForeground(MAU_TEXT);
+        lblTitleDoc.setAlignmentX(Component.CENTER_ALIGNMENT);
+        doc.add(lblTitleDoc);
+        doc.add(Box.createVerticalStrut(6));
 
-        addDocLine(doc, "Điều 4: Quyền và nghĩa vụ:", true, 16);
-        addDocLine(doc, "- Bên B thanh toán tiền thuê đúng hạn vào đầu mỗi tháng", false, 10);
-        addDocLine(doc, "- Bên B chịu chi phí điện, nước, dịch vụ theo thực tế sử dụng", false, 8);
-        addDocLine(doc, "- Bên A đảm bảo phòng trong tình trạng sử dụng tốt", false, 8);
-        addDocLine(doc, "- Bên B không được tự ý sửa chữa, thay đổi kết cấu phòng", false, 8);
+        java.time.LocalDate today = java.time.LocalDate.now();
+        String todayStr = "Ngày " + today.getDayOfMonth() + " tháng " + today.getMonthValue() + " năm "
+                + today.getYear();
+        JLabel lblDate = new JLabel(todayStr, SwingConstants.CENTER);
+        lblDate.setFont(new Font("Inter", Font.ITALIC, 12));
+        lblDate.setForeground(MAU_SUBTEXT);
+        lblDate.setAlignmentX(Component.CENTER_ALIGNMENT);
+        doc.add(lblDate);
+        doc.add(Box.createVerticalStrut(20));
 
-        addDocLine(doc, "Điều 5: Chấm dứt hợp đồng:", true, 16);
-        addDocLine(doc, "- Hết thời hạn hợp đồng mà không gia hạn", false, 10);
-        addDocLine(doc, "- Hai bên thỏa thuận chấm dứt", false, 8);
-        addDocLine(doc, "- Bên vi phạm phải bồi thường theo quy định", false, 8);
+        // --- Điều 1: Bên cho thuê ---
+        addContractSection(doc, "Điều 1: BÊN CHO THUÊ (Bên A)");
+        addContractDetail(doc, "Chủ chung cư MINI APARTMENT");
+        doc.add(Box.createVerticalStrut(14));
+
+        // --- Điều 2: Bên thuê ---
+        addContractSection(doc, "Điều 2: BÊN THUÊ (Bên B)");
+        addContractRow(doc, "Họ và tên", draft.hoTen);
+        addContractRow(doc, "Số CCCD/CMND", draft.cccd);
+        addContractRow(doc, "Số điện thoại", draft.soDienThoai);
+        addContractRow(doc, "Địa chỉ thường trú", draft.diaChi);
+        if (draft.ngaySinh != null && !draft.ngaySinh.trim().isEmpty()) {
+            addContractRow(doc, "Ngày sinh", draft.ngaySinh);
+        }
+        doc.add(Box.createVerticalStrut(14));
+
+        // --- Điều 3: Nội dung ---
+        addContractSection(doc, "Điều 3: NỘI DUNG HỢP ĐỒNG");
+        addContractRow(doc, "Phòng cho thuê", draft.phong);
+        addContractRow(doc, "Thời hạn hợp đồng", "Từ " + draft.ngayBatDau + " đến " + draft.ngayKetThuc);
+        addContractRow(doc, "Giá thuê hàng tháng", formatCurrency(draft.giaThueRaw) + " VNĐ/tháng");
+        addContractRow(doc, "Tiền đặt cọc", formatCurrency(draft.tienCocRaw) + " VNĐ");
+        doc.add(Box.createVerticalStrut(14));
+
+        // --- Điều 4: Quyền và nghĩa vụ ---
+        addContractSection(doc, "Điều 4: QUYỀN VÀ NGHĨA VỤ");
+        addContractBullet(doc, "Bên B thanh toán tiền thuê đúng hạn vào đầu mỗi tháng.");
+        addContractBullet(doc, "Bên B chịu chi phí điện, nước, dịch vụ theo thực tế sử dụng.");
+        addContractBullet(doc, "Bên A đảm bảo phòng trong tình trạng sử dụng tốt.");
+        addContractBullet(doc, "Bên B không được tự ý sửa chữa, thay đổi kết cấu phòng.");
+        doc.add(Box.createVerticalStrut(14));
+
+        // --- Điều 5: Chấm dứt hợp đồng ---
+        addContractSection(doc, "Điều 5: CHẤM DỨT HỢP ĐỒNG");
+        addContractBullet(doc, "Hết thời hạn hợp đồng mà không gia hạn.");
+        addContractBullet(doc, "Hai bên thỏa thuận chấm dứt trước hạn.");
+        addContractBullet(doc, "Bên vi phạm hợp đồng phải bồi thường theo quy định.");
+        doc.add(Box.createVerticalStrut(24));
+
+        // --- Ký tên ---
+        JPanel signPanel = new JPanel(new GridLayout(1, 2, 40, 0));
+        signPanel.setOpaque(false);
+        signPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        signPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+
+        JPanel signA = new JPanel();
+        signA.setOpaque(false);
+        signA.setLayout(new BoxLayout(signA, BoxLayout.Y_AXIS));
+        JLabel lblBenA = new JLabel("BÊN CHO THUÊ (Bên A)");
+        lblBenA.setFont(new Font("Inter", Font.BOLD, 12));
+        lblBenA.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel lblSignA = new JLabel("(Ký, ghi rõ họ tên)");
+        lblSignA.setFont(new Font("Inter", Font.ITALIC, 11));
+        lblSignA.setForeground(MAU_SUBTEXT);
+        lblSignA.setAlignmentX(Component.CENTER_ALIGNMENT);
+        signA.add(lblBenA);
+        signA.add(Box.createVerticalStrut(4));
+        signA.add(lblSignA);
+
+        JPanel signB = new JPanel();
+        signB.setOpaque(false);
+        signB.setLayout(new BoxLayout(signB, BoxLayout.Y_AXIS));
+        JLabel lblBenB = new JLabel("BÊN THUÊ (Bên B)");
+        lblBenB.setFont(new Font("Inter", Font.BOLD, 12));
+        lblBenB.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel lblSignB = new JLabel("(Ký, ghi rõ họ tên)");
+        lblSignB.setFont(new Font("Inter", Font.ITALIC, 11));
+        lblSignB.setForeground(MAU_SUBTEXT);
+        lblSignB.setAlignmentX(Component.CENTER_ALIGNMENT);
+        signB.add(lblBenB);
+        signB.add(Box.createVerticalStrut(4));
+        signB.add(lblSignB);
+
+        signPanel.add(signA);
+        signPanel.add(signB);
+        doc.add(signPanel);
 
         JScrollPane scroll = new JScrollPane(doc);
         scroll.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
@@ -1054,7 +1268,6 @@ public class HopDongUI {
             dialog.dispose();
         });
 
-
         JButton btnConfirm = primaryButton.makePrimaryButton("Xác nhận hợp đồng");
         btnConfirm.setBorder(new EmptyBorder(10, 12, 10, 12));
         btnConfirm.addActionListener(e -> {
@@ -1071,15 +1284,49 @@ public class HopDongUI {
         return accepted[0];
     }
 
-    private void addDocLine(JPanel doc, String text, boolean bold, int spaceTop) {
-        if (spaceTop > 0) {
-            doc.add(Box.createVerticalStrut(spaceTop));
-        }
-        JLabel label = new JLabel(text);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        label.setFont(new Font("Inter", bold ? Font.BOLD : Font.PLAIN, bold ? 16 : 15));
-        label.setForeground(MAU_TEXT);
-        doc.add(label);
+    private void addContractSection(JPanel doc, String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(new Font("Inter", Font.BOLD, 14));
+        lbl.setForeground(MAU_TEXT);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setBorder(new EmptyBorder(0, 0, 6, 0));
+        doc.add(lbl);
+    }
+
+    private void addContractDetail(JPanel doc, String text) {
+        JLabel lbl = new JLabel("     " + text);
+        lbl.setFont(new Font("Inter", Font.PLAIN, 13));
+        lbl.setForeground(MAU_TEXT);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        doc.add(lbl);
+    }
+
+    private void addContractRow(JPanel doc, String label, String value) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 1));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+
+        JLabel lblKey = new JLabel("     " + label + ":  ");
+        lblKey.setFont(new Font("Inter", Font.PLAIN, 13));
+        lblKey.setForeground(MAU_SUBTEXT);
+
+        JLabel lblVal = new JLabel(value != null ? value : "");
+        lblVal.setFont(new Font("Inter", Font.BOLD, 13));
+        lblVal.setForeground(MAU_TEXT);
+
+        row.add(lblKey);
+        row.add(lblVal);
+        doc.add(row);
+    }
+
+    private void addContractBullet(JPanel doc, String text) {
+        JLabel lbl = new JLabel("     •  " + text);
+        lbl.setFont(new Font("Inter", Font.PLAIN, 13));
+        lbl.setForeground(MAU_TEXT);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setBorder(new EmptyBorder(1, 0, 1, 0));
+        doc.add(lbl);
     }
 
     private String formatCurrency(String num) {

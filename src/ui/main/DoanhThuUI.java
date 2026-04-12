@@ -77,6 +77,16 @@ public class DoanhThuUI {
         loadData();
     }
 
+    public void refresh() {
+        years.clear();
+        years.addAll(hoaDonDAO.getDanhSachNamHoaDon());
+        int currentYear = LocalDate.now().getYear();
+        if (years.isEmpty())
+            years.add(currentYear);
+        loadData();
+        refreshAll();
+    }
+
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout(0, 0));
         root.setBackground(BG);
@@ -236,7 +246,7 @@ public class DoanhThuUI {
         btnApply.addActionListener(e -> applyDateFilter());
         bottomRow.add(btnApply);
 
-        bottomRow.add(Box.createHorizontalStrut(12));
+        bottomRow.add(Box.createHorizontalStrut(14));
         String[][] quickFilters = {
                 { "Tháng này", "month" }, { "Quý này", "quarter" }, { "Năm nay", "year" }
         };
@@ -248,7 +258,7 @@ public class DoanhThuUI {
             btnQ.setBorderPainted(false);
             btnQ.setFocusPainted(false);
             btnQ.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            btnQ.setPreferredSize(new Dimension(85, 28));
+            btnQ.setMargin(new Insets(4, 12, 4, 12));
             String type = qf[1];
             btnQ.addActionListener(e -> applyQuickFilter(type));
             bottomRow.add(btnQ);
@@ -263,7 +273,7 @@ public class DoanhThuUI {
         btn.setFont(new Font(FONT, Font.BOLD, 11));
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(70, 28));
+        btn.setMargin(new Insets(4, 14, 4, 14));
         btn.setBorderPainted(false);
         styleFilterChip(btn, active);
         return btn;

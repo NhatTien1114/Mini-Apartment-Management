@@ -11,6 +11,7 @@ import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
@@ -117,6 +118,14 @@ public class BangGiaUI {
     private DefaultTableModel modelTongHop;
     private List<GiaHeader> headers = new ArrayList<>();
 
+    private JTable tablePhong;
+    private DefaultTableModel modelPhong;
+    private List<GiaHeader> headersPhong = new ArrayList<>();
+
+    private JTable tableDichVu;
+    private DefaultTableModel modelDichVu;
+    private List<GiaHeader> headersDichVu = new ArrayList<>();
+
     public BangGiaUI() {
         this(null);
     }
@@ -145,11 +154,18 @@ public class BangGiaUI {
         topBar.add(btnAdd, BorderLayout.EAST);
 
         root.add(topBar, BorderLayout.NORTH);
-        root.add(createTongHopSection(), BorderLayout.CENTER);
+
+        // Split layout: top = room prices, bottom = service prices
+        JPanel splitPanel = new JPanel(new GridLayout(2, 1, 0, 16));
+        splitPanel.setBackground(AppColors.SLATE_100);
+
+        splitPanel.add(createPriceSection("Bảng giá phòng", 0));
+        splitPanel.add(createPriceSection("Bảng giá dịch vụ", 1));
+
+        root.add(splitPanel, BorderLayout.CENTER);
 
         loadTongHop();
 
-        // Reload data when tab is shown
         root.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentShown(ComponentEvent e) {
@@ -160,12 +176,18 @@ public class BangGiaUI {
         return root;
     }
 
-    private JPanel createTongHopSection() {
+    private JPanel createPriceSection(String titleText, int loai) {
         RoundedPanel section = new RoundedPanel(12);
         section.setBackground(AppColors.WHITE);
         section.setLayout(new BorderLayout());
 
-        modelTongHop = new DefaultTableModel(
+        JLabel lblTitle = new JLabel("  " + titleText);
+        lblTitle.setFont(FONT_BOLD);
+        lblTitle.setForeground(AppColors.SLATE_900);
+        lblTitle.setBorder(new EmptyBorder(12, 8, 8, 8));
+        section.add(lblTitle, BorderLayout.NORTH);
+
+        DefaultTableModel model = new DefaultTableModel(
                 new String[] { "Mã bảng giá", "Người tạo", "Ngày bắt đầu", "Ngày kết thúc" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -173,36 +195,43 @@ public class BangGiaUI {
             }
         };
 
-        tableTongHop = new JTable(modelTongHop);
-        styleTable(tableTongHop, 46);
-        tableTongHop.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JTable table = new JTable(model);
+        styleTable(table, 46);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        if (loai == 0) {
+            tablePhong = table;
+            modelPhong = model;
+        } else {
+            tableDichVu = table;
+            modelDichVu = model;
+        }
 
         // Hover effect
         final int[] hoveredRow = { -1 };
-        tableTongHop.addMouseMotionListener(new MouseMotionAdapter() {
+        table.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                int row = tableTongHop.rowAtPoint(e.getPoint());
+                int row = table.rowAtPoint(e.getPoint());
                 if (row != hoveredRow[0]) {
                     hoveredRow[0] = row;
-                    tableTongHop.repaint();
+                    table.repaint();
                 }
             }
         });
-        tableTongHop.addMouseListener(new MouseAdapter() {
+        table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseExited(MouseEvent e) {
                 hoveredRow[0] = -1;
-                tableTongHop.repaint();
+                table.repaint();
             }
         });
 
-        // Custom cell renderer with hover
-        tableTongHop.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value,
+            public Component getTableCellRendererComponent(JTable tbl, Object value,
                     boolean isSelected, boolean hasFocus, int row, int column) {
-                super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                super.getTableCellRendererComponent(tbl, value, isSelected, hasFocus, row, column);
                 setFont(column == 0 ? FONT_BOLD : FONT_PLAIN);
                 setBorder(new CompoundBorder(
                         new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
@@ -221,7 +250,7 @@ public class BangGiaUI {
             }
         });
 
-        // --- Right-click context menu ---
+        // Context menu
         JPopupMenu contextMenu = new JPopupMenu();
         JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
         JMenuItem miDelete = new JMenuItem("Xóa");
@@ -229,16 +258,20 @@ public class BangGiaUI {
         contextMenu.add(miEdit);
         contextMenu.add(miDelete);
 
+        List<GiaHeader> headerList = loai == 0 ? headersPhong : headersDichVu;
+
         miEdit.addActionListener(ev -> {
-            int row = tableTongHop.getSelectedRow();
-            if (row >= 0 && row < headers.size())
-                showDetailDialog(headers.get(row));
+            int row = table.getSelectedRow();
+            List<GiaHeader> currentList = loai == 0 ? headersPhong : headersDichVu;
+            if (row >= 0 && row < currentList.size())
+                showDetailDialog(currentList.get(row));
         });
         miDelete.addActionListener(ev -> {
-            int row = tableTongHop.getSelectedRow();
-            if (row < 0 || row >= headers.size())
+            int row = table.getSelectedRow();
+            List<GiaHeader> currentList = loai == 0 ? headersPhong : headersDichVu;
+            if (row < 0 || row >= currentList.size())
                 return;
-            GiaHeader h = headers.get(row);
+            GiaHeader h = currentList.get(row);
             int confirm = JOptionPane.showConfirmDialog(null,
                     "Xóa bảng giá " + h.getMaGiaHeader() + "?",
                     "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
@@ -252,9 +285,9 @@ public class BangGiaUI {
             }
         });
 
-        tableTongHop.setComponentPopupMenu(contextMenu);
+        table.setComponentPopupMenu(contextMenu);
 
-        JScrollPane scroll = new JScrollPane(tableTongHop);
+        JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(null);
         scroll.getViewport().setBackground(AppColors.WHITE);
         section.add(scroll, BorderLayout.CENTER);
@@ -263,10 +296,24 @@ public class BangGiaUI {
 
     private void loadTongHop() {
         headers = bangGiaService.layTatCaHeader();
-        modelTongHop.setRowCount(0);
 
-        for (GiaHeader h : headers) {
-            modelTongHop.addRow(new Object[] {
+        // Load room prices (loai = 0)
+        headersPhong = bangGiaService.layHeaderTheoLoai(0);
+        modelPhong.setRowCount(0);
+        for (GiaHeader h : headersPhong) {
+            modelPhong.addRow(new Object[] {
+                    h.getMaGiaHeader(),
+                    h.getGhiChu(),
+                    formatDate(h.getNgayBatDau()),
+                    formatDate(h.getNgayKetThuc())
+            });
+        }
+
+        // Load service prices (loai = 1)
+        headersDichVu = bangGiaService.layHeaderTheoLoai(1);
+        modelDichVu.setRowCount(0);
+        for (GiaHeader h : headersDichVu) {
+            modelDichVu.addRow(new Object[] {
                     h.getMaGiaHeader(),
                     h.getGhiChu(),
                     formatDate(h.getNgayBatDau()),

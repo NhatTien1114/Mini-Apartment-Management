@@ -250,6 +250,9 @@ public class TrangChu extends JFrame {
         if (panelIndex == 3) {
             refreshKhachHangTab();
         }
+        if (panelIndex == 5) {
+            refreshDoanhThuTab();
+        }
 
         cardLayout.show(pnlContent, String.valueOf(panelIndex));
     }
@@ -258,6 +261,8 @@ public class TrangChu extends JFrame {
     private QuanLyPhongUI quanLyPhongUI;
     private HopDongUI hopDongUI;
     private KhachHangUI khachHangUI;
+    private DoanhThuUI doanhThuUI;
+    private HoaDonUI hoaDonUI;
 
     private JPanel createMainPanel() {
         JPanel pnlMain = new JPanel(new BorderLayout());
@@ -278,9 +283,12 @@ public class TrangChu extends JFrame {
         khachHangUI = new KhachHangUI();
         pnlContent.add(khachHangUI.getPanel(), "3");
         pnlContent.add(new PhuongTienUI().getPanel(), "4");
-        pnlContent.add(new DoanhThuUI().getPanel(), "5");
+        doanhThuUI = new DoanhThuUI();
+        pnlContent.add(doanhThuUI.getPanel(), "5");
         pnlContent.add(new DichVuUI().getPanel(), "6");
-        pnlContent.add(new HoaDonUI().getPanel(), "7");
+        hoaDonUI = new HoaDonUI();
+        hoaDonUI.setOnInvoiceSaved(() -> refreshDoanhThuTab());
+        pnlContent.add(hoaDonUI.getPanel(), "7");
         pnlContent.add(new BangGiaUI(taiKhoan).getPanel(), "8");
         pnlContent.add(new LoaiPhongUI().getPanel(), "9");
 
@@ -323,6 +331,12 @@ public class TrangChu extends JFrame {
     private void refreshKhachHangTab() {
         if (khachHangUI != null) {
             khachHangUI.refresh();
+        }
+    }
+
+    private void refreshDoanhThuTab() {
+        if (doanhThuUI != null) {
+            doanhThuUI.refresh();
         }
     }
 
@@ -443,11 +457,16 @@ public class TrangChu extends JFrame {
         int soPhongDaCoc = demTheoTrangThai(dsPhong, "Đã cọc");
         int soPhongSua = demTheoTrangThai(dsPhong, "Đang sửa");
 
-        pnlThongKe.add(createStatCard(String.valueOf(tongSoPhong), "Tổng phòng", AppColors.PRIMARY, "img/icons/home.png"));
-        pnlThongKe.add(createStatCard(String.valueOf(soPhongTrong), "Phòng trống", AppColors.GREEN_500, "img/icons/home.png"));
-        pnlThongKe.add(createStatCard(String.valueOf(soPhongDaThue), "Đã thuê", AppColors.RED_500, "img/icons/user.png"));
-        pnlThongKe.add(createStatCard(String.valueOf(soPhongDaCoc), "Đã cọc", AppColors.BLUE, "img/icons/google-docs.png"));
-        pnlThongKe.add(createStatCard(String.valueOf(soPhongSua), "Đang sửa", AppColors.WARNING, "img/icons/settings.png"));
+        pnlThongKe.add(
+                createStatCard(String.valueOf(tongSoPhong), "Tổng phòng", AppColors.PRIMARY, "img/icons/home.png"));
+        pnlThongKe.add(
+                createStatCard(String.valueOf(soPhongTrong), "Phòng trống", AppColors.GREEN_500, "img/icons/home.png"));
+        pnlThongKe
+                .add(createStatCard(String.valueOf(soPhongDaThue), "Đã thuê", AppColors.RED_500, "img/icons/user.png"));
+        pnlThongKe.add(
+                createStatCard(String.valueOf(soPhongDaCoc), "Đã cọc", AppColors.BLUE, "img/icons/google-docs.png"));
+        pnlThongKe.add(
+                createStatCard(String.valueOf(soPhongSua), "Đang sửa", AppColors.WARNING, "img/icons/settings.png"));
 
         return pnlThongKe;
     }

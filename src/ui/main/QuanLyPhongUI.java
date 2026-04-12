@@ -84,7 +84,7 @@ public class QuanLyPhongUI {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  MAIN PANEL
+    // MAIN PANEL
     // ═══════════════════════════════════════════════════════════
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout());
@@ -132,7 +132,7 @@ public class QuanLyPhongUI {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  SEARCH + FILTER BAR
+    // SEARCH + FILTER BAR
     // ═══════════════════════════════════════════════════════════
     private JPanel createSearchAndFilterBar() {
         JPanel wrapper = new JPanel(new BorderLayout(0, 6));
@@ -157,8 +157,15 @@ public class QuanLyPhongUI {
         btnSearch.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(AppColors.SLATE_900, 1, true), new EmptyBorder(7, 14, 7, 14)));
         btnSearch.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btnSearch.setBackground(AppColors.SLATE_600); }
-            @Override public void mouseExited(MouseEvent e) { btnSearch.setBackground(AppColors.SLATE_900); }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btnSearch.setBackground(AppColors.SLATE_600);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btnSearch.setBackground(AppColors.SLATE_900);
+            }
         });
 
         Runnable applySearch = () -> {
@@ -190,9 +197,11 @@ public class QuanLyPhongUI {
                                 return Integer.compare(
                                         Integer.parseInt(t1.replaceAll("\\D+", "")),
                                         Integer.parseInt(t2.replaceAll("\\D+", "")));
-                            } catch (NumberFormatException ex) { return t1.compareTo(t2); }
-                        })
-        ).toArray(String[]::new);
+                            } catch (NumberFormatException ex) {
+                                return t1.compareTo(t2);
+                            }
+                        }))
+                .toArray(String[]::new);
         cboTangFilter = new JComboBox<>(tangOptions);
         cboTangFilter.setFont(FONT_PLAIN);
         cboTangFilter.setSelectedItem(selectedTangFilter);
@@ -205,8 +214,7 @@ public class QuanLyPhongUI {
         List<LoaiPhong> dsLoai = new LoaiPhongDAO().layTatCa();
         String[] loaiOptions = Stream.concat(
                 Stream.of("Tất cả"),
-                dsLoai.stream().map(LoaiPhong::getTen).sorted()
-        ).toArray(String[]::new);
+                dsLoai.stream().map(LoaiPhong::getTen).sorted()).toArray(String[]::new);
         cboLoaiPhongFilter = new JComboBox<>(loaiOptions);
         cboLoaiPhongFilter.setFont(FONT_PLAIN);
         cboLoaiPhongFilter.setSelectedItem(selectedLoaiPhongFilter);
@@ -247,11 +255,16 @@ public class QuanLyPhongUI {
             rebuildFloors();
         });
         btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) {
-                if (!status.equals(selectedStatusFilter)) btn.setBackground(new Color(248, 250, 252));
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (!status.equals(selectedStatusFilter))
+                    btn.setBackground(new Color(248, 250, 252));
             }
-            @Override public void mouseExited(MouseEvent e) {
-                if (!status.equals(selectedStatusFilter)) btn.setBackground(AppColors.WHITE);
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!status.equals(selectedStatusFilter))
+                    btn.setBackground(AppColors.WHITE);
             }
         });
 
@@ -279,24 +292,28 @@ public class QuanLyPhongUI {
     }
 
     private boolean matchesCurrentFilter(Phong phong) {
-        if (phong == null) return false;
+        if (phong == null)
+            return false;
 
         // Filter trạng thái
         if (selectedStatusFilter != null) {
             String status = phong.getTrangThai() == null ? "" : phong.getTrangThai().getTen();
-            if (!selectedStatusFilter.equals(status)) return false;
+            if (!selectedStatusFilter.equals(status))
+                return false;
         }
 
         // Filter loại phòng
         if (!"Tất cả".equals(selectedLoaiPhongFilter)) {
             String tenLoai = phong.getLoaiPhong() != null ? phong.getLoaiPhong().getTen() : "";
-            if (!selectedLoaiPhongFilter.equals(tenLoai)) return false;
+            if (!selectedLoaiPhongFilter.equals(tenLoai))
+                return false;
         }
 
         // Filter tầng
         if (!"Tất cả".equals(selectedTangFilter)) {
             String tenTang = phong.getMaTang() != null ? phong.getMaTang().getTenTang() : "";
-            if (!selectedTangFilter.equals(tenTang)) return false;
+            if (!selectedTangFilter.equals(tenTang))
+                return false;
         }
 
         // Search keyword
@@ -308,7 +325,7 @@ public class QuanLyPhongUI {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  FLOOR SECTION + ROOM CARD
+    // FLOOR SECTION + ROOM CARD
     // ═══════════════════════════════════════════════════════════
     private JPanel createFloorSection(String floorName, List<Phong> phongs) {
         JPanel section = new JPanel(new BorderLayout(0, 10));
@@ -350,16 +367,16 @@ public class QuanLyPhongUI {
             pnlDv.setOpaque(false);
             pnlDv.setLayout(new BoxLayout(pnlDv, BoxLayout.Y_AXIS));
 
-            // Điện + Nước luôn có
-            pnlDv.add(makeDvInfoLabel(layLabelDichVuMacDinh("điện")));
-            pnlDv.add(makeDvInfoLabel(layLabelDichVuMacDinh("nước")));
-
-            // Dịch vụ tùy chọn đã đăng ký
             Set<String> maDvDaChon = dichVuDAO.layMaDichVuTheoPhong(phong.getMaPhong());
-            List<DichVu> dvTuyChon = layDichVuTuyChon();
-            for (DichVu dv : dvTuyChon) {
+            List<DichVu> tatCaDv = dichVuDAO.layTatCa();
+            for (DichVu dv : tatCaDv) {
                 if (maDvDaChon.contains(dv.getMaDichVu())) {
-                    pnlDv.add(makeDvInfoLabel(formatDichVuLabel(dv)));
+                    String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
+                    if (ten.contains("điện") || ten.contains("nước")) {
+                        pnlDv.add(makeDvInfoLabel("• " + dv.getTenDichVu()));
+                    } else {
+                        pnlDv.add(makeDvInfoLabel(formatDichVuLabel(dv)));
+                    }
                 }
             }
             card.add(pnlDv, BorderLayout.CENTER);
@@ -401,7 +418,7 @@ public class QuanLyPhongUI {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  DIALOG KHÁCH THUÊ
+    // DIALOG KHÁCH THUÊ
     // ═══════════════════════════════════════════════════════════
     private void showKhachThueDialog(String maPhong) {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
@@ -454,7 +471,7 @@ public class QuanLyPhongUI {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  DIALOG THÊM PHÒNG
+    // DIALOG THÊM PHÒNG
     // ═══════════════════════════════════════════════════════════
     private void showAddDialog() {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
@@ -493,11 +510,18 @@ public class QuanLyPhongUI {
         txtGia.setMaximumSize(new Dimension(420, 40));
         txtGia.setPlaceholder("Tự động điền theo loại phòng");
 
-        boolean[] userEdited = {false};
+        boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+            }
         });
 
         fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
@@ -508,7 +532,7 @@ public class QuanLyPhongUI {
         });
 
         // Trạng thái: không có "Đã thuê" vì phải tạo qua hợp đồng
-        JComboBox<String> cTT = makeCombo(new String[]{"Trống", "Đã cọc", "Đang sửa"});
+        JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đang sửa" });
 
         form.add(wrapField("Tên phòng", txtMa));
         form.add(errMa);
@@ -547,7 +571,7 @@ public class QuanLyPhongUI {
 
             String maTang = "T" + ma.substring(1, ma.indexOf('.'));
             // Map combo index sang trangThaiInt: 0=Trống, 1=Đã cọc, 2=Đang sửa
-            int[] ttMap = {0, 3, 2};
+            int[] ttMap = { 0, 3, 2 };
             int trangThaiInt = ttMap[cTT.getSelectedIndex()];
             String err = dao.them(ma, maTang, loaiChon.ordinal(), maGiaDetail, trangThaiInt);
             if (err != null) {
@@ -570,7 +594,7 @@ public class QuanLyPhongUI {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  DIALOG CÀI ĐẶT PHÒNG
+    // DIALOG CÀI ĐẶT PHÒNG
     // ═══════════════════════════════════════════════════════════
     private void showSettingDialog(Phong phong) {
         boolean isDaThue = phong.getTrangThai() == Phong.TrangThai.THUE;
@@ -602,18 +626,26 @@ public class QuanLyPhongUI {
         cLoai.setBackground(AppColors.WHITE);
         cLoai.setForeground(AppColors.SLATE_900);
         cLoai.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        if (phong.getLoaiPhong() != null) cLoai.setSelectedItem(phong.getLoaiPhong());
+        if (phong.getLoaiPhong() != null)
+            cLoai.setSelectedItem(phong.getLoaiPhong());
         // Nếu đã thuê → không cho đổi loại
         cLoai.setEnabled(!isDaThue);
 
         // ── Giá thuê ──
         RoundedTextField txtGia = new RoundedTextField(6);
         txtGia.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        boolean[] userEdited = {false};
+        boolean[] userEdited = { false };
         txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { userEdited[0] = true; }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {}
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                userEdited[0] = true;
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+            }
         });
         fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
         cLoai.addActionListener(e -> {
@@ -623,13 +655,16 @@ public class QuanLyPhongUI {
         });
 
         // ── Trạng thái: không cho chọn "Đã thuê" (phải qua hợp đồng) ──
-        JComboBox<String> cTT = makeCombo(new String[]{"Trống", "Đã cọc", "Đang sửa"});
+        JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đang sửa" });
         if (!isDaThue) {
             // Chọn đúng trạng thái hiện tại
             String tenTT = phong.getTrangThai().getTen();
-            if ("Đã cọc".equals(tenTT)) cTT.setSelectedItem("Đã cọc");
-            else if ("Đang sửa".equals(tenTT)) cTT.setSelectedItem("Đang sửa");
-            else cTT.setSelectedItem("Trống");
+            if ("Đã cọc".equals(tenTT))
+                cTT.setSelectedItem("Đã cọc");
+            else if ("Đang sửa".equals(tenTT))
+                cTT.setSelectedItem("Đang sửa");
+            else
+                cTT.setSelectedItem("Trống");
         }
 
         // ── Panel dịch vụ tùy chọn (chỉ hiện khi KHÔNG phải "Đã thuê") ──
@@ -662,7 +697,8 @@ public class QuanLyPhongUI {
         pnlDichVu.add(Box.createVerticalStrut(6));
         pnlDichVu.add(cbDien);
         pnlDichVu.add(cbNuoc);
-        for (JCheckBox cb : checks) pnlDichVu.add(cb);
+        for (JCheckBox cb : checks)
+            pnlDichVu.add(cb);
 
         // ── Panel chỉ số điện/nước (chỉ hiện khi "Đã thuê") ──
         LocalDate now = LocalDate.now();
@@ -689,7 +725,8 @@ public class QuanLyPhongUI {
         txtDienCu.setBackground(AppColors.SLATE_100);
         RoundedTextField txtDienMoi = new RoundedTextField(6);
         txtDienMoi.setPlaceholder("Nhập số mới");
-        if (chiSoThangNay != null) txtDienMoi.setText(String.valueOf(chiSoThangNay[0]));
+        if (chiSoThangNay != null)
+            txtDienMoi.setText(String.valueOf(chiSoThangNay[0]));
         rowDien.add(wrapField("Số điện cũ (kWh)", txtDienCu));
         rowDien.add(wrapField("Số điện mới (kWh)", txtDienMoi));
 
@@ -703,7 +740,8 @@ public class QuanLyPhongUI {
         txtNuocCu.setBackground(AppColors.SLATE_100);
         RoundedTextField txtNuocMoi = new RoundedTextField(6);
         txtNuocMoi.setPlaceholder("Nhập số mới");
-        if (chiSoThangNay != null) txtNuocMoi.setText(String.valueOf(chiSoThangNay[1]));
+        if (chiSoThangNay != null)
+            txtNuocMoi.setText(String.valueOf(chiSoThangNay[1]));
         rowNuoc.add(wrapField("Số nước cũ (m³)", txtNuocCu));
         rowNuoc.add(wrapField("Số nước mới (m³)", txtNuocMoi));
 
@@ -725,11 +763,15 @@ public class QuanLyPhongUI {
         lblDvDaChon.setAlignmentX(Component.LEFT_ALIGNMENT);
         pnlDvDaChon.add(lblDvDaChon);
         pnlDvDaChon.add(Box.createVerticalStrut(6));
-        pnlDvDaChon.add(makeDvInfoLabel(layLabelDichVuMacDinh("điện")));
-        pnlDvDaChon.add(makeDvInfoLabel(layLabelDichVuMacDinh("nước")));
-        for (DichVu dv : dvTuyChon) {
+        List<DichVu> tatCaDvDaChon = dichVuDAO.layTatCa();
+        for (DichVu dv : tatCaDvDaChon) {
             if (maDvDaChon.contains(dv.getMaDichVu())) {
-                pnlDvDaChon.add(makeDvInfoLabel(formatDichVuLabel(dv)));
+                String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
+                if (ten.contains("điện") || ten.contains("nước")) {
+                    pnlDvDaChon.add(makeDvInfoLabel("• " + dv.getTenDichVu()));
+                } else {
+                    pnlDvDaChon.add(makeDvInfoLabel(formatDichVuLabel(dv)));
+                }
             }
         }
 
@@ -789,18 +831,22 @@ public class QuanLyPhongUI {
                     dienMoi = Integer.parseInt(txtDienMoi.getText().trim());
                     nuocMoi = Integer.parseInt(txtNuocMoi.getText().trim());
                 } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(dlg, "Số điện / số nước mới phải là số nguyên!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(dlg, "Số điện / số nước mới phải là số nguyên!", "Lỗi",
+                            JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 if (dienMoi < chiSoCu[0]) {
-                    JOptionPane.showMessageDialog(dlg, "Số điện mới không thể nhỏ hơn số điện cũ (" + chiSoCu[0] + ")!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(dlg, "Số điện mới không thể nhỏ hơn số điện cũ (" + chiSoCu[0] + ")!",
+                            "Lỗi", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 if (nuocMoi < chiSoCu[1]) {
-                    JOptionPane.showMessageDialog(dlg, "Số nước mới không thể nhỏ hơn số nước cũ (" + chiSoCu[1] + ")!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(dlg, "Số nước mới không thể nhỏ hơn số nước cũ (" + chiSoCu[1] + ")!",
+                            "Lỗi", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-                ChiSoDienNuoc cs = new ChiSoDienNuoc(phong.getMaPhong(), now.getMonthValue(), now.getYear(), dienMoi, nuocMoi);
+                ChiSoDienNuoc cs = new ChiSoDienNuoc(phong.getMaPhong(), now.getMonthValue(), now.getYear(), dienMoi,
+                        nuocMoi);
                 String errCs = chiSoDAO.luuHoacCapNhat(cs);
                 if (errCs != null) {
                     JOptionPane.showMessageDialog(dlg, errCs, "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -813,11 +859,12 @@ public class QuanLyPhongUI {
                 // Lưu dịch vụ tùy chọn
                 Set<String> maDvChon = new HashSet<>();
                 for (JCheckBox cb : checks)
-                    if (cb.isSelected()) maDvChon.add((String) cb.getClientProperty("maDichVu"));
+                    if (cb.isSelected())
+                        maDvChon.add((String) cb.getClientProperty("maDichVu"));
                 dichVuDAO.capNhatDichVuPhong(phong.getMaPhong(), maDvChon);
 
                 // Map combo "Trống/Đã cọc/Đang sửa" sang tên trangThai
-                String[] ttNames = {"Trống", "Đã cọc", "Đang sửa"};
+                String[] ttNames = { "Trống", "Đã cọc", "Đang sửa" };
                 String trangThaiChon = ttNames[cTT.getSelectedIndex()];
 
                 LoaiPhong loaiChon = (LoaiPhong) cLoai.getSelectedItem();
@@ -843,7 +890,7 @@ public class QuanLyPhongUI {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  PRIVATE HELPERS
+    // PRIVATE HELPERS
     // ═══════════════════════════════════════════════════════════
 
     private JCheckBox makeDichVuMacDinhCheckBox(String keyword) {
@@ -864,7 +911,8 @@ public class QuanLyPhongUI {
             List<GiaDetail> details = giaDetailDAO.layTheoHeader(activeHeader.getMaGiaHeader());
             List<DichVu> tatCa = dichVuDAO.layTatCa();
             for (GiaDetail d : details) {
-                if (d.getMaDichVu() == null) continue;
+                if (d.getMaDichVu() == null)
+                    continue;
                 for (DichVu dv : tatCa) {
                     if (dv.getMaDichVu().equals(d.getMaDichVu())) {
                         String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
@@ -888,11 +936,18 @@ public class QuanLyPhongUI {
     }
 
     private void fillGia(RoundedTextField txtGia, LoaiPhong loaiPhong) {
-        if (loaiPhong == null) { txtGia.setText(""); return; }
+        if (loaiPhong == null) {
+            txtGia.setText("");
+            return;
+        }
         long gia = dao.layGiaThueMoiNhat(loaiPhong);
         SwingUtilities.invokeLater(() -> {
-            if (gia > 0) txtGia.setText(NF.format(gia));
-            else { txtGia.setText(""); txtGia.setPlaceholder("Chưa có giá trong hệ thống"); }
+            if (gia > 0)
+                txtGia.setText(NF.format(gia));
+            else {
+                txtGia.setText("");
+                txtGia.setPlaceholder("Chưa có giá trong hệ thống");
+            }
         });
     }
 
@@ -902,10 +957,22 @@ public class QuanLyPhongUI {
         badge.setOpaque(true);
         badge.setBorder(new EmptyBorder(3, 8, 3, 8));
         switch (text) {
-            case "Đã thuê": badge.setForeground(Color.WHITE); badge.setBackground(AppColors.RED_500); break;
-            case "Đang sửa": badge.setForeground(AppColors.AMBER_FG); badge.setBackground(AppColors.AMBER_BG); break;
-            case "Đã cọc": badge.setForeground(Color.WHITE); badge.setBackground(AppColors.BLUE); break;
-            default: badge.setForeground(AppColors.GREEN_600); badge.setBackground(AppColors.GREEN_BG); break;
+            case "Đã thuê":
+                badge.setForeground(Color.WHITE);
+                badge.setBackground(AppColors.RED_500);
+                break;
+            case "Đang sửa":
+                badge.setForeground(AppColors.AMBER_FG);
+                badge.setBackground(AppColors.AMBER_BG);
+                break;
+            case "Đã cọc":
+                badge.setForeground(Color.WHITE);
+                badge.setBackground(AppColors.BLUE);
+                break;
+            default:
+                badge.setForeground(AppColors.GREEN_600);
+                badge.setBackground(AppColors.GREEN_BG);
+                break;
         }
         return badge;
     }
@@ -960,16 +1027,19 @@ public class QuanLyPhongUI {
         List<GiaHeader> headers = giaHeaderDAO.layTheoLoai(1);
         GiaHeader activeHeader = headers.stream()
                 .filter(h -> h.getTrangThai() == 1).findFirst().orElse(null);
-        if (activeHeader == null) return result;
+        if (activeHeader == null)
+            return result;
 
         List<GiaDetail> details = giaDetailDAO.layTheoHeader(activeHeader.getMaGiaHeader());
         List<DichVu> tatCaDichVu = dichVuDAO.layTatCa();
         for (GiaDetail d : details) {
-            if (d.getMaDichVu() == null) continue;
+            if (d.getMaDichVu() == null)
+                continue;
             for (DichVu dv : tatCaDichVu) {
                 if (dv.getMaDichVu().equals(d.getMaDichVu())) {
                     String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
-                    if (ten.contains("điện") || ten.contains("nước")) break;
+                    if (ten.contains("điện") || ten.contains("nước"))
+                        break;
                     dv.setDonGia(d.getDonGia());
                     result.add(dv);
                     break;
@@ -990,10 +1060,11 @@ public class QuanLyPhongUI {
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  REBUILD
+    // REBUILD
     // ═══════════════════════════════════════════════════════════
     private void rebuildFloors() {
-        if (floorsPanel == null) return;
+        if (floorsPanel == null)
+            return;
         floorsPanel.removeAll();
         List<Tang> dsTang = tangDAO.layDanhSachTang();
         dsTang.sort((t1, t2) -> {
@@ -1001,7 +1072,9 @@ public class QuanLyPhongUI {
                 return Integer.compare(
                         Integer.parseInt(t1.getMaTang().replaceAll("\\D+", "")),
                         Integer.parseInt(t2.getMaTang().replaceAll("\\D+", "")));
-            } catch (NumberFormatException e) { return t2.getMaTang().compareTo(t1.getMaTang()); }
+            } catch (NumberFormatException e) {
+                return t2.getMaTang().compareTo(t1.getMaTang());
+            }
         });
         // Đảo ngược: tầng cao hiển thị trước
         java.util.Collections.reverse(dsTang);

@@ -3,6 +3,7 @@ package ui.main;
 import dao.QuanLyPhongDAO;
 import entity.KhachHang;
 import entity.Phong;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -11,12 +12,24 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.Window;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.ItemEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -26,6 +39,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
+import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -48,6 +62,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableRowSorter;
+import javax.swing.text.MaskFormatter;
 import service.KhachHangService;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
@@ -71,6 +86,7 @@ public class KhachHangUI {
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
     private JTextField txtTimKiem;
+    private JComboBox<String> cboFilterPhong;
 
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout(20, 20));
@@ -111,18 +127,34 @@ public class KhachHangUI {
                 new LineBorder(AppColors.SLATE_200, 1, true),
                 new EmptyBorder(12, 12, 12, 12)));
 
-        JPanel bar = new JPanel(new BorderLayout());
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         bar.setBackground(AppColors.WHITE);
 
         txtTimKiem = new JTextField();
-        txtTimKiem.setPreferredSize(new Dimension(300, 36));
+        txtTimKiem.setPreferredSize(new Dimension(280, 36));
         txtTimKiem.setFont(FONT_PLAIN);
         txtTimKiem.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(AppColors.SLATE_200, 1, true),
                 new EmptyBorder(7, 10, 7, 10)));
         txtTimKiem.setToolTipText("Tìm theo mã, họ tên, số điện thoại, CCCD");
 
-        bar.add(txtTimKiem, BorderLayout.WEST);
+        JButton btnTimKiem = primaryButton.makePrimaryButton("Tìm kiếm");
+        btnTimKiem.setPreferredSize(new Dimension(110, 36));
+        btnTimKiem.addActionListener(e -> applyFilter());
+
+        List<String> dsPhong = new ArrayList<>();
+        dsPhong.add("Tất cả phòng");
+        for (Phong phong : phongDAO.getAllPhongDaThue()) {
+            dsPhong.add(phong.getMaPhong());
+        }
+        cboFilterPhong = new JComboBox<>(dsPhong.toArray(new String[0]));
+        cboFilterPhong.setPreferredSize(new Dimension(150, 36));
+        cboFilterPhong.setFont(FONT_PLAIN);
+        cboFilterPhong.setBackground(AppColors.WHITE);
+
+        bar.add(txtTimKiem);
+        bar.add(btnTimKiem);
+        bar.add(cboFilterPhong);
         card.add(bar, BorderLayout.NORTH);
 
         String[] cols = { "Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Phòng" };
@@ -294,6 +326,11 @@ public class KhachHangUI {
                 applyFilter();
             }
         });
+        cboFilterPhong.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) {
+                applyFilter();
+            }
+        });
 
         JScrollPane sp = new JScrollPane(table);
         sp.setBorder(BorderFactory.createEmptyBorder());
@@ -306,12 +343,23 @@ public class KhachHangUI {
 
     private void applyFilter() {
         String keyword = txtTimKiem.getText().trim();
-        if (keyword.isEmpty()) {
-            sorter.setRowFilter(null);
-            return;
+        String phongFilter = (String) cboFilterPhong.getSelectedItem();
+
+        List<RowFilter<Object, Object>> filters = new ArrayList<>();
+
+        if (!keyword.isEmpty()) {
+            filters.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 0, 1, 2, 3, 5, 6));
         }
 
-        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 0, 1, 2, 3, 5, 6));
+        if (phongFilter != null && !"Tất cả phòng".equals(phongFilter)) {
+            filters.add(RowFilter.regexFilter("(?i)^" + java.util.regex.Pattern.quote(phongFilter) + "$", 6));
+        }
+
+        if (filters.isEmpty()) {
+            sorter.setRowFilter(null);
+        } else {
+            sorter.setRowFilter(RowFilter.andFilter(filters));
+        }
     }
 
     private void loadKhachHangData() {
@@ -352,7 +400,7 @@ public class KhachHangUI {
             cccdValue = nullSafe(editKhachHang.getSoCCCD());
             diaChiValue = nullSafe(editKhachHang.getDiaChi());
             if (editKhachHang.getNgaySinh() != null) {
-                ngaySinhValue = DATE_FORMAT.format(editKhachHang.getNgaySinh());
+                ngaySinhValue = DateTimeFormatter.ofPattern("dd/MM/yyyy").format(editKhachHang.getNgaySinh());
             }
         }
         final String maKhachHangEditFinal = maKhachHangEdit;
@@ -379,7 +427,7 @@ public class KhachHangUI {
 
         JTextField txtHoTen = makeField(hoTenValue);
         JTextField txtSdt = makeField(sdtValue);
-        JTextField txtNgaySinh = makeField(ngaySinhValue);
+        JFormattedTextField txtNgaySinh = createDatePickerField(ngaySinhValue);
         JTextField txtCccd = makeField(cccdValue);
         JTextArea txtDiaChi = makeTextArea(diaChiValue);
 
@@ -413,7 +461,7 @@ public class KhachHangUI {
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Số điện thoại", txtSdt));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Ngày sinh (yyyy-MM-dd)", txtNgaySinh));
+        form.add(wrapField("Ngày sinh (dd/MM/yyyy)", txtNgaySinh));
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("CCCD", txtCccd));
         form.add(Box.createVerticalStrut(10));
@@ -439,12 +487,14 @@ public class KhachHangUI {
                 }
 
                 LocalDate ngaySinh = null;
-                String ngaySinhRaw = txtNgaySinh.getText().trim();
-                if (!ngaySinhRaw.isEmpty()) {
+                String ngaySinhRaw = txtNgaySinh.getText().replace("_", "").trim();
+                if (!ngaySinhRaw.isEmpty() && ngaySinhRaw.length() >= 10) {
                     try {
-                        ngaySinh = LocalDate.parse(ngaySinhRaw, DATE_FORMAT);
+                        DateTimeFormatter ddMMyyyyFmt = DateTimeFormatter.ofPattern("dd/MM/uuuu")
+                                .withResolverStyle(java.time.format.ResolverStyle.STRICT);
+                        ngaySinh = LocalDate.parse(ngaySinhRaw, ddMMyyyyFmt);
                     } catch (DateTimeParseException ex) {
-                        JOptionPane.showMessageDialog(dlg, "Ngày sinh không đúng định dạng yyyy-MM-dd.",
+                        JOptionPane.showMessageDialog(dlg, "Ngày sinh không đúng định dạng dd/MM/yyyy.",
                                 "Sai định dạng",
                                 JOptionPane.WARNING_MESSAGE);
                         txtNgaySinh.requestFocus();
@@ -580,6 +630,249 @@ public class KhachHangUI {
             label.setIcon(icon);
         }
         return label;
+    }
+
+    private JFormattedTextField createDatePickerField(String initialValue) {
+        MaskFormatter mask = null;
+        try {
+            mask = new MaskFormatter("##/##/####");
+            mask.setPlaceholderCharacter('_');
+        } catch (java.text.ParseException e) {
+            // ignore
+        }
+
+        JFormattedTextField txt = new JFormattedTextField(mask) {
+            boolean focused = false;
+            {
+                addFocusListener(new FocusAdapter() {
+                    public void focusGained(FocusEvent e) {
+                        focused = true;
+                        repaint();
+                    }
+
+                    public void focusLost(FocusEvent e) {
+                        focused = false;
+                        repaint();
+                    }
+                });
+                setOpaque(false);
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 6, 6);
+                super.paintComponent(g);
+                g2.dispose();
+            }
+
+            @Override
+            protected void paintBorder(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (focused) {
+                    g2.setColor(AppColors.PRIMARY);
+                    g2.setStroke(new BasicStroke(2f));
+                } else {
+                    g2.setColor(AppColors.SLATE_200);
+                    g2.setStroke(new BasicStroke(1f));
+                }
+                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 6, 6);
+
+                // calendar icon
+                g2.setColor(AppColors.SLATE_900);
+                int cx = getWidth() - 20;
+                int cy = getHeight() / 2;
+                g2.drawRect(cx - 5, cy - 4, 10, 8);
+                g2.drawLine(cx - 3, cy - 6, cx - 3, cy - 4);
+                g2.drawLine(cx + 3, cy - 6, cx + 3, cy - 4);
+                g2.drawLine(cx - 5, cy - 1, cx + 5, cy - 1);
+                g2.drawRect(cx - 2, cy + 2, 1, 1);
+                g2.dispose();
+            }
+        };
+        txt.setBorder(new EmptyBorder(7, 10, 7, 36));
+        txt.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
+        txt.setFont(FONT_PLAIN);
+        txt.setForeground(AppColors.SLATE_900);
+        txt.setPreferredSize(new Dimension(0, 42));
+        txt.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+
+        if (initialValue != null && !initialValue.isEmpty()) {
+            txt.setText(initialValue);
+        }
+
+        txt.addMouseMotionListener(new MouseMotionAdapter() {
+            public void mouseMoved(MouseEvent e) {
+                txt.setCursor(e.getX() > txt.getWidth() - 36
+                        ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                        : Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
+            }
+        });
+        txt.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                if (e.getX() > txt.getWidth() - 36) {
+                    new KhDatePickerPopup(txt).show(txt, 0, txt.getHeight());
+                    txt.requestFocus();
+                } else {
+                    if (txt.getText().equals("__/__/____")) {
+                        txt.setCaretPosition(0);
+                    }
+                }
+            }
+        });
+
+        return txt;
+    }
+
+    class KhDatePickerPopup extends JPopupMenu {
+        private Calendar calTracker = Calendar.getInstance();
+        private JPanel daysPanel;
+        private JLabel lblMonthYear;
+        private JTextField targetField;
+
+        public KhDatePickerPopup(JTextField targetField) {
+            this.targetField = targetField;
+            setLayout(new BorderLayout());
+            setBackground(Color.WHITE);
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(AppColors.SLATE_200),
+                    new EmptyBorder(12, 16, 12, 16)));
+
+            JPanel pnlHead = new JPanel(new BorderLayout());
+            pnlHead.setOpaque(false);
+            lblMonthYear = new JLabel("", SwingConstants.LEFT);
+            lblMonthYear.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
+
+            JPanel pnlArrows = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+            pnlArrows.setOpaque(false);
+            JButton btnPrev = createArrBtn("\u2190");
+            JButton btnNext = createArrBtn("\u2192");
+            btnPrev.addActionListener(e -> {
+                calTracker.add(Calendar.MONTH, -1);
+                updateCal();
+            });
+            btnNext.addActionListener(e -> {
+                calTracker.add(Calendar.MONTH, 1);
+                updateCal();
+            });
+            pnlArrows.add(btnPrev);
+            pnlArrows.add(btnNext);
+
+            pnlHead.add(lblMonthYear, BorderLayout.CENTER);
+            pnlHead.add(pnlArrows, BorderLayout.EAST);
+            add(pnlHead, BorderLayout.NORTH);
+
+            JPanel pnlGrid = new JPanel(new BorderLayout(0, 8));
+            pnlGrid.setOpaque(false);
+            pnlGrid.setBorder(new EmptyBorder(12, 0, 12, 0));
+
+            JPanel pnlDOW = new JPanel(new GridLayout(1, 7, 4, 4));
+            pnlDOW.setOpaque(false);
+            String[] dows = { "CN", "T2", "T3", "T4", "T5", "T6", "T7" };
+            for (String d : dows) {
+                JLabel l = new JLabel(d, SwingConstants.CENTER);
+                l.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
+                l.setForeground(AppColors.SLATE_500);
+                pnlDOW.add(l);
+            }
+            pnlGrid.add(pnlDOW, BorderLayout.NORTH);
+
+            daysPanel = new JPanel(new GridLayout(6, 7, 4, 4));
+            daysPanel.setOpaque(false);
+            pnlGrid.add(daysPanel, BorderLayout.CENTER);
+            add(pnlGrid, BorderLayout.CENTER);
+
+            JPanel pnlFooter = new JPanel(new BorderLayout());
+            pnlFooter.setOpaque(false);
+            JButton btnClear = createTxtBtn("X\u00f3a");
+            JButton btnToday = createTxtBtn("H\u00f4m nay");
+            btnClear.addActionListener(e -> {
+                targetField.setText("__/__/____");
+                setVisible(false);
+            });
+            btnToday.addActionListener(e -> {
+                targetField.setText(fmtStr(Calendar.getInstance()));
+                setVisible(false);
+            });
+            pnlFooter.add(btnClear, BorderLayout.WEST);
+            pnlFooter.add(btnToday, BorderLayout.EAST);
+            add(pnlFooter, BorderLayout.SOUTH);
+
+            updateCal();
+        }
+
+        private void updateCal() {
+            daysPanel.removeAll();
+            Calendar cal = (Calendar) calTracker.clone();
+            String m = cal.getDisplayName(Calendar.MONTH, Calendar.LONG, java.util.Locale.getDefault());
+            lblMonthYear.setText(m + " " + cal.get(Calendar.YEAR));
+
+            cal.set(Calendar.DAY_OF_MONTH, 1);
+            int sd = cal.get(Calendar.DAY_OF_WEEK);
+            cal.add(Calendar.DAY_OF_MONTH, -(sd - 1));
+
+            for (int i = 0; i < 42; i++) {
+                int d = cal.get(Calendar.DAY_OF_MONTH);
+                boolean cM = cal.get(Calendar.MONTH) == calTracker.get(Calendar.MONTH);
+                JButton b = new JButton(String.valueOf(d));
+                b.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
+                b.setForeground(cM ? AppColors.SLATE_900 : AppColors.SLATE_400);
+                b.setBackground(Color.WHITE);
+                b.setBorderPainted(false);
+                b.setContentAreaFilled(false);
+                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                b.setMargin(new Insets(2, 2, 2, 2));
+
+                b.addMouseListener(new MouseAdapter() {
+                    public void mouseEntered(MouseEvent e) {
+                        b.setContentAreaFilled(true);
+                        b.setBackground(AppColors.SLATE_100);
+                    }
+
+                    public void mouseExited(MouseEvent e) {
+                        b.setContentAreaFilled(false);
+                    }
+                });
+
+                Calendar cap = (Calendar) cal.clone();
+                b.addActionListener(e -> {
+                    targetField.setText(fmtStr(cap));
+                    setVisible(false);
+                });
+                daysPanel.add(b);
+                cal.add(Calendar.DAY_OF_MONTH, 1);
+            }
+            daysPanel.revalidate();
+            daysPanel.repaint();
+        }
+
+        private String fmtStr(Calendar c) {
+            return String.format("%02d/%02d/%04d", c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH) + 1,
+                    c.get(Calendar.YEAR));
+        }
+
+        private JButton createArrBtn(String t) {
+            JButton b = new JButton(t);
+            b.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
+            b.setForeground(AppColors.SLATE_500);
+            b.setBorderPainted(false);
+            b.setContentAreaFilled(false);
+            b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            return b;
+        }
+
+        private JButton createTxtBtn(String t) {
+            JButton b = new JButton(t);
+            b.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
+            b.setForeground(AppColors.PRIMARY);
+            b.setBorderPainted(false);
+            b.setContentAreaFilled(false);
+            b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            return b;
+        }
     }
 
 }
