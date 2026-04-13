@@ -142,10 +142,30 @@ public class QuanLyPhongUI {
         JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 2));
         row1.setOpaque(false);
 
-        txtSearch = new RoundedTextField(6);
+        txtSearch = new RoundedTextField(8) {
+            @Override
+            public void paint(Graphics g) {
+                super.paint(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(148, 163, 184));
+                g2.setStroke(new BasicStroke(1.5f));
+                int cx = 18;
+                int cy = getHeight() / 2 - 2;
+                g2.drawOval(cx - 4, cy - 4, 8, 8);
+                g2.drawLine(cx + 2, cy + 2, cx + 7, cy + 7);
+
+                if (isFocusOwner()) {
+                    g2.setColor(new Color(37, 99, 235));
+                    g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 8, 8);
+                }
+                g2.dispose();
+            }
+        };
+        txtSearch.setBorder(new EmptyBorder(8, 36, 8, 12));
         txtSearch.setFont(FONT_PLAIN);
         txtSearch.setPlaceholder("Tìm theo mã phòng...");
-        txtSearch.setPreferredSize(new Dimension(220, 36));
+        txtSearch.setPreferredSize(new Dimension(280, 40));
 
         JButton btnSearch = new JButton("Tìm kiếm");
         btnSearch.setFont(FONT_PLAIN);
@@ -334,10 +354,20 @@ public class QuanLyPhongUI {
         lblFloor.setFont(new Font("Be Vietnam Pro", Font.BOLD, 18));
         lblFloor.setForeground(AppColors.SLATE_900);
         section.add(lblFloor, BorderLayout.NORTH);
-        JPanel roomsWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        int cols = 5;
+        int rows = (int) Math.ceil(phongs.size() / (double) cols);
+        JPanel roomsWrap = new JPanel(new GridLayout(rows, cols, 12, 12));
         roomsWrap.setOpaque(false);
+        roomsWrap.setBorder(new EmptyBorder(8, 0, 0, 0));
         for (Phong p : phongs)
             roomsWrap.add(createRoomCard(p));
+        // Fill empty cells so GridLayout doesn't stretch
+        int empty = rows * cols - phongs.size();
+        for (int i = 0; i < empty; i++) {
+            JPanel filler = new JPanel();
+            filler.setOpaque(false);
+            roomsWrap.add(filler);
+        }
         section.add(roomsWrap, BorderLayout.CENTER);
         return section;
     }
@@ -345,42 +375,80 @@ public class QuanLyPhongUI {
     private JPanel createRoomCard(Phong phong) {
         boolean isDaThue = phong.getTrangThai() == Phong.TrangThai.THUE;
 
-        JPanel card = new JPanel(new BorderLayout(0, 8));
-        card.setBackground(AppColors.WHITE);
-        card.setPreferredSize(new Dimension(210, 112));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(AppColors.SLATE_200, 1),
-                new EmptyBorder(10, 12, 10, 12)));
+        final int ARC = 16;
+        Color loaiBorderColor = mauTheoLoaiPhong(phong.getLoaiPhong());
+        Color statusColor = mauNenTrangThai(phong.getTrangThai() != null ? phong.getTrangThai().getTen() : "");
+        final Color[] hoverBorder = { loaiBorderColor };
 
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        JLabel lblRoom = new JLabel(phong.getMaPhong());
-        lblRoom.setFont(new Font("Be Vietnam Pro", Font.BOLD, 17));
-        lblRoom.setForeground(AppColors.SLATE_900);
-        header.add(lblRoom, BorderLayout.WEST);
-        header.add(createStatusBadge(phong.getTrangThai().getTen()), BorderLayout.EAST);
-        card.add(header, BorderLayout.NORTH);
-
-        // Nếu đã thuê: hiển thị danh sách dịch vụ ngắn gọn
-        if (isDaThue) {
-            JPanel pnlDv = new JPanel();
-            pnlDv.setOpaque(false);
-            pnlDv.setLayout(new BoxLayout(pnlDv, BoxLayout.Y_AXIS));
-
-            Set<String> maDvDaChon = dichVuDAO.layMaDichVuTheoPhong(phong.getMaPhong());
-            List<DichVu> tatCaDv = dichVuDAO.layTatCa();
-            for (DichVu dv : tatCaDv) {
-                if (maDvDaChon.contains(dv.getMaDichVu())) {
-                    String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
-                    if (ten.contains("điện") || ten.contains("nước")) {
-                        pnlDv.add(makeDvInfoLabel("• " + dv.getTenDichVu()));
-                    } else {
-                        pnlDv.add(makeDvInfoLabel(formatDichVuLabel(dv)));
-                    }
-                }
+        JPanel card = new JPanel(new BorderLayout(0, 6)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
+                g2.setColor(hoverBorder[0]);
+                g2.setStroke(new BasicStroke(2f));
+                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, ARC, ARC);
+                g2.dispose();
             }
-            card.add(pnlDv, BorderLayout.CENTER);
-        }
+        };
+        card.setOpaque(false);
+        card.setBackground(AppColors.WHITE);
+        card.setBorder(new EmptyBorder(14, 16, 14, 16));
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                hoverBorder[0] = loaiBorderColor.darker();
+                card.repaint();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hoverBorder[0] = loaiBorderColor;
+                card.repaint();
+            }
+        });
+
+        // ── Header: mã phòng + loại phòng ──
+        JLabel lblRoom = new JLabel(phong.getMaPhong());
+        lblRoom.setFont(new Font("Be Vietnam Pro", Font.BOLD, 18));
+        lblRoom.setForeground(AppColors.SLATE_900);
+
+        JLabel lblType = new JLabel(
+                phong.getLoaiPhong() != null ? phong.getLoaiPhong().getTen() : "");
+        lblType.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
+        lblType.setForeground(loaiBorderColor.darker());
+
+        JPanel pnlHeader = new JPanel(new BorderLayout(0, 2));
+        pnlHeader.setOpaque(false);
+        pnlHeader.add(lblRoom, BorderLayout.NORTH);
+        pnlHeader.add(lblType, BorderLayout.SOUTH);
+        card.add(pnlHeader, BorderLayout.NORTH);
+
+        // ── Footer: status badge ──
+        JLabel lblStatus = new JLabel(phong.getTrangThai() != null ? phong.getTrangThai().getTen() : "") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        lblStatus.setOpaque(false);
+        lblStatus.setBackground(statusColor);
+        lblStatus.setForeground(AppColors.WHITE);
+        lblStatus.setBorder(new EmptyBorder(4, 10, 4, 10));
+        lblStatus.setFont(new Font("Be Vietnam Pro", Font.BOLD, 11));
+
+        JPanel pnlStatus = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        pnlStatus.setOpaque(false);
+        pnlStatus.add(lblStatus);
+        card.add(pnlStatus, BorderLayout.SOUTH);
 
         // ── Right-click context menu ──
         JPopupMenu contextMenu = new JPopupMenu();
@@ -763,17 +831,16 @@ public class QuanLyPhongUI {
         lblDvDaChon.setAlignmentX(Component.LEFT_ALIGNMENT);
         pnlDvDaChon.add(lblDvDaChon);
         pnlDvDaChon.add(Box.createVerticalStrut(6));
+        JPanel pnlDvChips = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        pnlDvChips.setBackground(AppColors.WHITE);
+        pnlDvChips.setAlignmentX(Component.LEFT_ALIGNMENT);
         List<DichVu> tatCaDvDaChon = dichVuDAO.layTatCa();
         for (DichVu dv : tatCaDvDaChon) {
             if (maDvDaChon.contains(dv.getMaDichVu())) {
-                String ten = dv.getTenDichVu() == null ? "" : dv.getTenDichVu().toLowerCase();
-                if (ten.contains("điện") || ten.contains("nước")) {
-                    pnlDvDaChon.add(makeDvInfoLabel("• " + dv.getTenDichVu()));
-                } else {
-                    pnlDvDaChon.add(makeDvInfoLabel(formatDichVuLabel(dv)));
-                }
+                pnlDvChips.add(createServiceChip(dv));
             }
         }
+        pnlDvDaChon.add(pnlDvChips);
 
         // ── Thêm vào form ──
         form.add(wrapField("Loại phòng", cLoai));
@@ -781,10 +848,13 @@ public class QuanLyPhongUI {
         form.add(wrapField("Giá thuê (VNĐ/tháng)", txtGia));
         form.add(Box.createVerticalStrut(10));
 
+        boolean isTrong = phong.getTrangThai() == Phong.TrangThai.TRONG;
         if (!isDaThue) {
             form.add(wrapField("Trạng thái", cTT));
-            form.add(Box.createVerticalStrut(12));
-            form.add(pnlDichVu);
+            if (!isTrong) {
+                form.add(Box.createVerticalStrut(12));
+                form.add(pnlDichVu);
+            }
         } else {
             // Khi đã thuê: hiển thị trạng thái dạng label (không cho đổi)
             JLabel lblTT = new JLabel("Trạng thái");
@@ -809,7 +879,7 @@ public class QuanLyPhongUI {
 
         root.add(form, BorderLayout.CENTER);
 
-        dlg.setSize(440, isDaThue ? 660 : 560);
+        dlg.setSize(440, isDaThue ? 660 : (isTrong ? 380 : 560));
         dlg.setLocationRelativeTo(owner);
 
         // ── Nút Lưu ──
@@ -935,6 +1005,54 @@ public class QuanLyPhongUI {
         return lbl;
     }
 
+    private JLabel createServiceChip(DichVu dv) {
+        String ten = dv.getTenDichVu() != null ? dv.getTenDichVu() : "";
+        String tenLower = ten.toLowerCase();
+
+        String chipText;
+        if (tenLower.contains("điện") || tenLower.contains("nước")) {
+            chipText = ten;
+        } else {
+            chipText = formatDichVuLabel(dv);
+        }
+
+        Color bgColor, fgColor;
+        if (tenLower.contains("điện")) {
+            bgColor = new Color(254, 249, 195);
+            fgColor = new Color(161, 98, 7);
+        } else if (tenLower.contains("nước")) {
+            bgColor = new Color(219, 234, 254);
+            fgColor = new Color(37, 99, 235);
+        } else if (tenLower.contains("rác")) {
+            bgColor = new Color(220, 252, 231);
+            fgColor = new Color(22, 163, 74);
+        } else if (tenLower.contains("wifi") || tenLower.contains("internet")) {
+            bgColor = new Color(243, 232, 255);
+            fgColor = new Color(168, 85, 247);
+        } else {
+            bgColor = AppColors.SLATE_100;
+            fgColor = AppColors.SLATE_600;
+        }
+
+        final Color bg = bgColor;
+        JLabel chip = new JLabel(chipText) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(bg);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        chip.setFont(new Font("Be Vietnam Pro", Font.BOLD, 10));
+        chip.setForeground(fgColor);
+        chip.setOpaque(false);
+        chip.setBorder(new EmptyBorder(3, 8, 3, 8));
+        return chip;
+    }
+
     private void fillGia(RoundedTextField txtGia, LoaiPhong loaiPhong) {
         if (loaiPhong == null) {
             txtGia.setText("");
@@ -951,30 +1069,29 @@ public class QuanLyPhongUI {
         });
     }
 
-    private JLabel createStatusBadge(String text) {
-        JLabel badge = new JLabel(text, SwingConstants.CENTER);
-        badge.setFont(new Font("Be Vietnam Pro", Font.BOLD, 11));
-        badge.setOpaque(true);
-        badge.setBorder(new EmptyBorder(3, 8, 3, 8));
-        switch (text) {
-            case "Đã thuê":
-                badge.setForeground(Color.WHITE);
-                badge.setBackground(AppColors.RED_500);
-                break;
-            case "Đang sửa":
-                badge.setForeground(AppColors.AMBER_FG);
-                badge.setBackground(AppColors.AMBER_BG);
-                break;
-            case "Đã cọc":
-                badge.setForeground(Color.WHITE);
-                badge.setBackground(AppColors.BLUE);
-                break;
+    private Color mauTheoLoaiPhong(LoaiPhong loaiPhong) {
+        if (loaiPhong == null)
+            return AppColors.SLATE_300;
+        switch (loaiPhong.ordinal()) {
+            case 0:
+                return AppColors.BLUE;
+            case 1:
+                return AppColors.GREEN;
+            case 2:
+                return AppColors.VIOLET_500;
             default:
-                badge.setForeground(AppColors.GREEN_600);
-                badge.setBackground(AppColors.GREEN_BG);
-                break;
+                return AppColors.SLATE_300;
         }
-        return badge;
+    }
+
+    private Color mauNenTrangThai(String trangThai) {
+        if ("Đã thuê".equals(trangThai))
+            return AppColors.RED_500;
+        if ("Đã cọc".equals(trangThai))
+            return AppColors.BLUE;
+        if ("Đang sửa".equals(trangThai))
+            return AppColors.WARNING;
+        return AppColors.GREEN_500;
     }
 
     private JComboBox<String> makeCombo(String[] items) {

@@ -24,6 +24,7 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
+import ui.util.RoundedTextField;
 
 public class PhuongTienUI {
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 24);
@@ -40,7 +41,7 @@ public class PhuongTienUI {
     private JTable table;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
-    private JTextField txtTimKiem;
+    private RoundedTextField txtTimKiem;
     private JComboBox<String> cboFilterType;
 
     public JPanel getPanel() {
@@ -81,15 +82,34 @@ public class PhuongTienUI {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         bar.setBackground(AppColors.WHITE);
 
-        txtTimKiem = new JTextField();
-        txtTimKiem.setPreferredSize(new Dimension(300, 36));
+        txtTimKiem = new RoundedTextField(8) {
+            @Override
+            public void paint(Graphics g) {
+                super.paint(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(148, 163, 184));
+                g2.setStroke(new BasicStroke(1.5f));
+                int cx = 18;
+                int cy = getHeight() / 2 - 2;
+                g2.drawOval(cx - 4, cy - 4, 8, 8);
+                g2.drawLine(cx + 2, cy + 2, cx + 7, cy + 7);
+
+                if (isFocusOwner()) {
+                    g2.setColor(new Color(37, 99, 235));
+                    g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 8, 8);
+                }
+                g2.dispose();
+            }
+        };
+
+        txtTimKiem.setBorder(new EmptyBorder(8, 36, 8, 12));
+        txtTimKiem.setPlaceholder("Tìm kiếm phương tiện...");
+        txtTimKiem.setPreferredSize(new Dimension(280, 40));
         txtTimKiem.setFont(FONT_PLAIN);
-        txtTimKiem.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(AppColors.SLATE_200, 1, true),
-                new EmptyBorder(7, 10, 7, 10)));
         txtTimKiem.setToolTipText("Tìm kiếm theo biển số, khách hàng...");
 
-        cboFilterType = new JComboBox<>(new String[]{"Tất cả loại xe", "Xe máy", "Ô tô", "Xe điện", "Khác"});
+        cboFilterType = new JComboBox<>(new String[] { "Tất cả loại xe", "Xe máy", "Ô tô", "Xe điện", "Khác" });
         cboFilterType.setPreferredSize(new Dimension(150, 36));
         cboFilterType.setFont(FONT_PLAIN);
         cboFilterType.setBackground(AppColors.WHITE);
@@ -146,7 +166,8 @@ public class PhuongTienUI {
 
         DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus,
+                    int row, int column) {
                 super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
                 setFont(FONT_SMALL);
                 setForeground(AppColors.SLATE_600);
@@ -169,7 +190,8 @@ public class PhuongTienUI {
 
         DefaultTableCellRenderer paddedCell = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
+            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus,
+                    int row, int col) {
                 super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, col);
                 setBorder(BorderFactory.createCompoundBorder(
                         new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
@@ -211,12 +233,15 @@ public class PhuongTienUI {
             if (row >= 0) {
                 int modelRow = table.convertRowIndexToModel(row);
                 String bienSo = (String) tableModel.getValueAt(modelRow, 0);
-                int opt = JOptionPane.showConfirmDialog(table, "Bạn có chắc muốn xóa phương tiện \nBiển số: " + bienSo + "?", "Xóa", JOptionPane.YES_NO_OPTION);
+                int opt = JOptionPane.showConfirmDialog(table,
+                        "Bạn có chắc muốn xóa phương tiện \nBiển số: " + bienSo + "?", "Xóa",
+                        JOptionPane.YES_NO_OPTION);
                 if (opt == JOptionPane.YES_OPTION) {
                     if (phuongTienDAO.delete(bienSo)) {
                         loadData();
                     } else {
-                        JOptionPane.showMessageDialog(table, "Lỗi khi xóa phương tiện!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(table, "Lỗi khi xóa phương tiện!", "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
                     }
                 }
             }
@@ -227,9 +252,17 @@ public class PhuongTienUI {
         table.setRowSorter(sorter);
 
         txtTimKiem.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { applyFilter(); }
-            public void removeUpdate(DocumentEvent e) { applyFilter(); }
-            public void changedUpdate(DocumentEvent e) { applyFilter(); }
+            public void insertUpdate(DocumentEvent e) {
+                applyFilter();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                applyFilter();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                applyFilter();
+            }
         });
 
         cboFilterType.addItemListener(e -> {
@@ -249,13 +282,13 @@ public class PhuongTienUI {
     private void applyFilter() {
         String keyword = txtTimKiem.getText().trim();
         String typeFilter = (String) cboFilterType.getSelectedItem();
-        
-        List<RowFilter<Object,Object>> filters = new java.util.ArrayList<>();
-        
+
+        List<RowFilter<Object, Object>> filters = new java.util.ArrayList<>();
+
         if (!keyword.isEmpty()) {
             filters.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(keyword), 0, 2, 3, 4));
         }
-        
+
         if (!"Tất cả loại xe".equals(typeFilter)) {
             filters.add(RowFilter.regexFilter("(?i)^" + java.util.regex.Pattern.quote(typeFilter) + "$", 1));
         }
@@ -271,13 +304,13 @@ public class PhuongTienUI {
         tableModel.setRowCount(0);
         List<PhuongTien> list = phuongTienDAO.getAllPhuongTien();
         for (PhuongTien pt : list) {
-            tableModel.addRow(new Object[]{
-                pt.getBienSo(),
-                pt.getLoaiXe(),
-                pt.getMaKhachHang(),
-                pt.getTenKhachHang() != null ? pt.getTenKhachHang() : "",
-                pt.getMaPhong() != null ? pt.getMaPhong() : "",
-                formatter.format(pt.getMucPhi())
+            tableModel.addRow(new Object[] {
+                    pt.getBienSo(),
+                    pt.getLoaiXe(),
+                    pt.getMaKhachHang(),
+                    pt.getTenKhachHang() != null ? pt.getTenKhachHang() : "",
+                    pt.getMaPhong() != null ? pt.getMaPhong() : "",
+                    formatter.format(pt.getMucPhi())
             });
         }
     }
@@ -285,7 +318,8 @@ public class PhuongTienUI {
     private void showRegistrationDialog(PhuongTien editPt) {
         boolean isEdit = editPt != null;
         Window owner = SwingUtilities.getWindowAncestor(table);
-        JDialog dlg = new JDialog(owner instanceof Frame ? (Frame) owner : null, isEdit ? "Sửa phương tiện" : "Đăng ký phương tiện", true);
+        JDialog dlg = new JDialog(owner instanceof Frame ? (Frame) owner : null,
+                isEdit ? "Sửa phương tiện" : "Đăng ký phương tiện", true);
         dlg.setSize(550, 600);
         dlg.setLocationRelativeTo(owner);
         dlg.setResizable(false);
@@ -308,21 +342,23 @@ public class PhuongTienUI {
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
 
         JTextField txtBienSo = makeField(isEdit ? editPt.getBienSo() : "");
-        if (isEdit) txtBienSo.setEnabled(false); // Primary key locked on edit
+        if (isEdit)
+            txtBienSo.setEnabled(false); // Primary key locked on edit
 
-        JComboBox<String> cboLoaiXe = new JComboBox<>(new String[]{"Xe máy", "Ô tô", "Xe điện", "Khác"});
+        JComboBox<String> cboLoaiXe = new JComboBox<>(new String[] { "Xe máy", "Ô tô", "Xe điện", "Khác" });
         cboLoaiXe.setFont(FONT_PLAIN);
         cboLoaiXe.setBackground(AppColors.WHITE);
         cboLoaiXe.setPreferredSize(new Dimension(0, 38));
         cboLoaiXe.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        if(isEdit) cboLoaiXe.setSelectedItem(editPt.getLoaiXe());
+        if (isEdit)
+            cboLoaiXe.setSelectedItem(editPt.getLoaiXe());
 
         JComboBox<KhachHangItem> cboKhachHang = new JComboBox<>();
         cboKhachHang.setFont(FONT_PLAIN);
         cboKhachHang.setBackground(AppColors.WHITE);
         cboKhachHang.setPreferredSize(new Dimension(0, 38));
         cboKhachHang.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        
+
         List<KhachHang> dskh = khachHangDAO.layDanhSachKhachHang();
         KhachHangItem selectedKH = null;
         cboKhachHang.addItem(new KhachHangItem("", "-- Chọn Khách Hàng --"));
@@ -333,12 +369,13 @@ public class PhuongTienUI {
                 selectedKH = item;
             }
         }
-        if (selectedKH != null) cboKhachHang.setSelectedItem(selectedKH);
+        if (selectedKH != null)
+            cboKhachHang.setSelectedItem(selectedKH);
 
         JTextField txtPhong = makeField(isEdit && editPt.getMaPhong() != null ? editPt.getMaPhong() : "");
         txtPhong.setEnabled(false);
 
-        JTextField txtPhi = makeField(isEdit ? String.valueOf((long)editPt.getMucPhi()) : "0");
+        JTextField txtPhi = makeField(isEdit ? String.valueOf((long) editPt.getMucPhi()) : "0");
 
         // Dynamic price matching
         Runnable updatePrice = () -> {
@@ -346,12 +383,12 @@ public class PhuongTienUI {
                 txtPhi.setText("0");
                 return;
             }
-            String type = ((String)cboLoaiXe.getSelectedItem()).toLowerCase();
+            String type = ((String) cboLoaiXe.getSelectedItem()).toLowerCase();
             List<DichVu> services = dichVuDAO.layTatCa();
             boolean found = false;
-            for(DichVu dv : services) {
-                if(dv.getTenDichVu() != null && dv.getTenDichVu().toLowerCase().contains(type)) {
-                    if(dv.getDonGia() != null) {
+            for (DichVu dv : services) {
+                if (dv.getTenDichVu() != null && dv.getTenDichVu().toLowerCase().contains(type)) {
+                    if (dv.getDonGia() != null) {
                         txtPhi.setText(String.valueOf(dv.getDonGia().longValue()));
                         found = true;
                     }
@@ -415,7 +452,8 @@ public class PhuongTienUI {
             String maKH = khItem != null && !khItem.maKH.isEmpty() ? khItem.maKH : null;
             String loai = (String) cboLoaiXe.getSelectedItem();
             String phong = txtPhong.getText().trim();
-            if(phong.isEmpty()) phong = null;
+            if (phong.isEmpty())
+                phong = null;
             double phi = 0;
             try {
                 phi = Double.parseDouble(txtPhi.getText().trim());
@@ -426,7 +464,7 @@ public class PhuongTienUI {
 
             PhuongTien pt = new PhuongTien(bsx, loai, maKH, "", phong, phi);
             boolean success = false;
-            
+
             if (isEdit) {
                 success = phuongTienDAO.update(pt);
             } else {
@@ -489,10 +527,12 @@ public class PhuongTienUI {
     static class KhachHangItem {
         String maKH;
         String display;
+
         KhachHangItem(String maKH, String display) {
             this.maKH = maKH;
             this.display = display;
         }
+
         @Override
         public String toString() {
             return display;

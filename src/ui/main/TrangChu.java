@@ -706,15 +706,38 @@ public class TrangChu extends JFrame {
         Color borderColor = mauTheoLoaiPhong(phong.getLoaiPhong());
         Color statusColor = mauNenTrangThai(phong.getTrangThai() != null ? phong.getTrangThai().getTen() : "");
 
-        JPanel pnlCard = new JPanel(new BorderLayout(0, 12));
+        final int ARC = 16;
+        final Color[] hoverBorder = { borderColor };
+        JPanel pnlCard = new JPanel(new BorderLayout(0, 12)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
+                g2.setColor(hoverBorder[0]);
+                g2.setStroke(new BasicStroke(2f));
+                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, ARC, ARC);
+                g2.dispose();
+            }
+        };
+        pnlCard.setOpaque(false);
         pnlCard.setBackground(AppColors.WHITE);
-        pnlCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 0, 0, AppColors.TRANSPARENT),
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, 0, 0, AppColors.TRANSPARENT),
-                        BorderFactory.createCompoundBorder(
-                                BorderFactory.createLineBorder(borderColor, 2, true),
-                                BorderFactory.createEmptyBorder(16, 16, 16, 16)))));
+        pnlCard.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        pnlCard.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        pnlCard.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                hoverBorder[0] = borderColor.darker();
+                pnlCard.repaint();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hoverBorder[0] = borderColor;
+                pnlCard.repaint();
+            }
+        });
 
         JLabel lblRoom = new JLabel(phong.getMaPhong());
         lblRoom.setFont(new Font("Be Vietnam Pro", Font.BOLD, 20));
@@ -730,11 +753,21 @@ public class TrangChu extends JFrame {
         pnlHeader.add(lblRoom, BorderLayout.NORTH);
         pnlHeader.add(lblType, BorderLayout.SOUTH);
 
-        JLabel lblStatus = new JLabel(phong.getTrangThai() != null ? phong.getTrangThai().getTen() : "Không xác định");
-        lblStatus.setOpaque(true);
+        JLabel lblStatus = new JLabel(phong.getTrangThai() != null ? phong.getTrangThai().getTen() : "Không xác định") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        lblStatus.setOpaque(false);
         lblStatus.setBackground(statusColor);
         lblStatus.setForeground(AppColors.WHITE);
-        lblStatus.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        lblStatus.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         lblStatus.setFont(new Font("Be Vietnam Pro", Font.BOLD, 12));
 
         JPanel pnlStatus = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
