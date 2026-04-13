@@ -7,7 +7,7 @@ public class HopDongKhachThue {
     private VaiTro vaiTro;
 
     public enum VaiTro {
-        DAI_DIEN("Đại Diện"), THANH_VIEN("Thành Viên");
+        DAI_DIEN("Đại Diện"), THANH_VIEN("Thành Viên"), DA_ROI("Đã rời đi");
 
         private String ten;
 
@@ -24,13 +24,23 @@ public class HopDongKhachThue {
         }
 
         public static VaiTro fromInt(int value) {
-            if (value == 0) return DAI_DIEN;
-            if (value == 1) return THANH_VIEN;
-            return DAI_DIEN; // Mặc định nếu dữ liệu lạ
+            if (value == 0)
+                return DAI_DIEN;
+            if (value == 1)
+                return THANH_VIEN;
+            if (value == 2)
+                return DA_ROI;
+            return DAI_DIEN;
         }
+
         public int toInt() {
-            return this == DAI_DIEN ? 0 : 1;
+            if (this == DAI_DIEN)
+                return 0;
+            if (this == THANH_VIEN)
+                return 1;
+            return 2;
         }
+
         @Override
         public String toString() {
             return ten;

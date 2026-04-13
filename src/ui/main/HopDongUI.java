@@ -10,6 +10,7 @@ import java.util.Locale;
 import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
 import javax.swing.table.*;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
@@ -35,6 +36,8 @@ public class HopDongUI {
     private final Color MAU_TEXT = AppColors.SLATE_900;
     private final Color MAU_SUBTEXT = AppColors.SLATE_500;
     private final Color BORDER_COLOR = AppColors.SLATE_200;
+
+    private final Font FONT_BOLD = new Font("Be Vietnam Pro", Font.BOLD, 14);
 
     private JPanel pnlRoot;
     private DefaultTableModel model;
@@ -224,7 +227,12 @@ public class HopDongUI {
         String[] columnNames = { "Mã HĐ", "Phòng", "Khách thuê", "Ngày bắt đầu", "Ngày kết thúc", "Tiền cọc",
                 "Tiền thuê/tháng", "Trạng thái" };
 
-        this.model = new DefaultTableModel(columnNames, 0);
+        this.model = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
         this.table = new JTable(this.model); // Sử dụng biến class
 
         loadDataToTable();
@@ -240,10 +248,22 @@ public class HopDongUI {
         // --- Right-click context menu (must be created before mouse listeners) ---
         JPopupMenu contextMenu = new JPopupMenu();
         JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
+        JMenuItem miMembers = new JMenuItem("Quản lý thành viên");
         JMenuItem miDelete = new JMenuItem("Xóa");
         miDelete.setForeground(new Color(239, 68, 68));
         contextMenu.add(miEdit);
+        contextMenu.add(miMembers);
         contextMenu.add(miDelete);
+
+        miMembers.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row < 0)
+                return;
+            int modelRow = table.convertRowIndexToModel(row);
+            String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
+            String maPhong = String.valueOf(model.getValueAt(modelRow, 1));
+            showMemberManagementDialog(maHopDong, maPhong);
+        });
 
         miEdit.addActionListener(e -> {
             int row = table.getSelectedRow();
@@ -405,6 +425,7 @@ public class HopDongUI {
         table.getColumnModel().getColumn(6).setPreferredWidth(110);
         table.getColumnModel().getColumn(7).setPreferredWidth(125);
 
+        table.getColumnModel().getColumn(2).setCellRenderer(boldPaddedRenderer());
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(MAU_CARD);
@@ -498,6 +519,21 @@ public class HopDongUI {
 
     public void showAddContractForm() {
         showContractForm(false, -1);
+    }
+
+    private TableCellRenderer boldPaddedRenderer() {
+        return new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int r, int c) {
+                super.getTableCellRendererComponent(t, v, sel, foc, r, c);
+                setFont(FONT_BOLD);
+                setForeground(AppColors.SLATE_900);
+                setBorder(BorderFactory.createCompoundBorder(
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 16, 0, 8)));
+                return this;
+            }
+        };
     }
 
     private void showContractForm(boolean isEdit, int row) {
@@ -1361,6 +1397,384 @@ public class HopDongUI {
 
     private String formatCurrencyValue(long amount) {
         return VN_MONEY.format(amount);
+    }
+
+    private void showMemberManagementDialog(String maHopDong, String maPhong) {
+        Window parent = SwingUtilities.getWindowAncestor(pnlRoot);
+
+        JDialog overlay = new JDialog(parent);
+        overlay.setUndecorated(true);
+        try {
+            overlay.setBackground(new Color(0, 0, 0, 100));
+        } catch (Exception e) {
+        }
+        if (parent != null)
+            overlay.setBounds(parent.getBounds());
+        overlay.setFocusableWindowState(false);
+
+        JDialog dialog = new JDialog(parent, Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+        dialog.setSize(680, 520);
+        dialog.setLocationRelativeTo(pnlRoot);
+
+        dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "ESC");
+        dialog.getRootPane().getActionMap().put("ESC", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                dialog.dispose();
+            }
+        });
+
+        RoundedPanel pnlBg = new RoundedPanel(16);
+        pnlBg.setBackground(Color.WHITE);
+        pnlBg.setLayout(new BorderLayout());
+        pnlBg.setBorder(new EmptyBorder(16, 20, 20, 20));
+
+        // Header
+        JPanel pnlHead = new JPanel(new BorderLayout());
+        pnlHead.setOpaque(false);
+        JLabel lblTitle = new JLabel("Quản lý thành viên - Phòng " + maPhong);
+        lblTitle.setFont(new Font("Inter", Font.BOLD, 18));
+        lblTitle.setForeground(MAU_TEXT);
+
+        JButton btnClose = new JButton("X") {
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? MAU_TEXT : MAU_SUBTEXT);
+                g2.setStroke(new BasicStroke(1.5f));
+                int cx = getWidth() / 2, cy = getHeight() / 2;
+                g2.drawLine(cx - 4, cy - 4, cx + 4, cy + 4);
+                g2.drawLine(cx - 4, cy + 4, cx + 4, cy - 4);
+                g2.dispose();
+            }
+        };
+        btnClose.setPreferredSize(new Dimension(24, 24));
+        btnClose.setBorderPainted(false);
+        btnClose.setContentAreaFilled(false);
+        btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnClose.addActionListener(e -> dialog.dispose());
+
+        pnlHead.add(lblTitle, BorderLayout.WEST);
+        pnlHead.add(btnClose, BorderLayout.EAST);
+        pnlHead.setBorder(new EmptyBorder(0, 0, 16, 0));
+        pnlBg.add(pnlHead, BorderLayout.NORTH);
+
+        // Content - Member Table
+        String[] cols = { "", "Họ tên", "SĐT", "CCCD", "Vai trò" };
+        DefaultTableModel memberModel = new DefaultTableModel(cols, 0) {
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
+        };
+        JTable memberTable = new JTable(memberModel);
+        memberTable.setRowHeight(48);
+        memberTable.setShowGrid(false);
+        memberTable.setIntercellSpacing(new Dimension(0, 0));
+        memberTable.setFocusable(false);
+        memberTable.setSelectionBackground(new Color(241, 245, 249));
+        memberTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+
+        // Hide maHDKT column
+        memberTable.getColumnModel().getColumn(0).setMinWidth(0);
+        memberTable.getColumnModel().getColumn(0).setMaxWidth(0);
+        memberTable.getColumnModel().getColumn(0).setPreferredWidth(0);
+        memberTable.getColumnModel().getColumn(1).setPreferredWidth(160);
+        memberTable.getColumnModel().getColumn(2).setPreferredWidth(110);
+        memberTable.getColumnModel().getColumn(3).setPreferredWidth(130);
+        memberTable.getColumnModel().getColumn(4).setPreferredWidth(120);
+
+        JTableHeader mHeader = memberTable.getTableHeader();
+        mHeader.setDefaultRenderer(new DefaultTableCellRenderer() {
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
+                    int c) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                l.setFont(new Font("Inter", Font.BOLD, 13));
+                l.setForeground(MAU_SUBTEXT);
+                l.setBackground(MAU_CARD);
+                l.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+                        new EmptyBorder(12, 12, 12, 8)));
+                return l;
+            }
+        });
+
+        // Role column renderer with badge
+        memberTable.getColumnModel().getColumn(4).setCellRenderer(new TableCellRenderer() {
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
+                    int c) {
+                JPanel pnl = new JPanel(new GridBagLayout());
+                pnl.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
+                pnl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
+
+                String role = v != null ? v.toString() : "";
+                Color bg, fg;
+                if (role.contains("Đại Diện")) {
+                    bg = new Color(34, 88, 195);
+                    fg = Color.WHITE;
+                } else if (role.contains("rời")) {
+                    bg = new Color(239, 68, 68);
+                    fg = Color.WHITE;
+                } else {
+                    bg = new Color(226, 232, 240);
+                    fg = new Color(71, 85, 105);
+                }
+
+                JLabel lbl = new JLabel(role) {
+                    protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(bg);
+                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
+                        super.paintComponent(g);
+                        g2.dispose();
+                    }
+                };
+                lbl.setForeground(fg);
+                lbl.setFont(new Font("Inter", Font.BOLD, 11));
+                lbl.setBorder(new EmptyBorder(4, 10, 4, 10));
+
+                GridBagConstraints gbc = new GridBagConstraints();
+                gbc.anchor = GridBagConstraints.WEST;
+                gbc.weightx = 1.0;
+                gbc.insets = new Insets(0, 12, 0, 0);
+                pnl.add(lbl, gbc);
+                return pnl;
+            }
+        });
+
+        // Default renderer for other columns
+        memberTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
+                    int c) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                l.setFont(new Font("Inter", Font.PLAIN, 13));
+                l.setForeground(MAU_TEXT);
+                l.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
+
+                // Kiểm tra nếu người đã rời đi thì hiện chữ xám + gạch ngang
+                int modelRow = t.convertRowIndexToModel(r);
+                String vaiTro = String.valueOf(memberModel.getValueAt(modelRow, 4));
+                if (vaiTro.contains("rời")) {
+                    l.setForeground(new Color(148, 163, 184));
+                }
+
+                l.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
+                        new EmptyBorder(0, 12, 0, 8)));
+                return l;
+            }
+        });
+
+        // Load data
+        Runnable loadMembers = () -> {
+            memberModel.setRowCount(0);
+            ArrayList<entity.HopDongKhachThue> dsTV = HDKHdao.getAllThanhVienByMaHopDong(maHopDong);
+            for (entity.HopDongKhachThue hdkt : dsTV) {
+                entity.KhachHang kh = hdkt.getKhachHang();
+                memberModel.addRow(new Object[] {
+                        hdkt.getMaHDKT(),
+                        kh.getHoTen(),
+                        kh.getSoDienThoai() != null ? kh.getSoDienThoai() : "",
+                        kh.getSoCCCD() != null ? kh.getSoCCCD() : "",
+                        hdkt.getVaiTro().getTen()
+                });
+            }
+        };
+        loadMembers.run();
+
+        JScrollPane scrollMembers = new JScrollPane(memberTable);
+        scrollMembers.setBorder(BorderFactory.createEmptyBorder());
+        scrollMembers.getViewport().setBackground(MAU_CARD);
+
+        RoundedPanel cardMembers = new RoundedPanel(12);
+        cardMembers.setBackground(MAU_CARD);
+        cardMembers.setLayout(new BorderLayout());
+        cardMembers.setBorder(new EmptyBorder(4, 0, 4, 0));
+        cardMembers.add(scrollMembers, BorderLayout.CENTER);
+
+        pnlBg.add(cardMembers, BorderLayout.CENTER);
+
+        // Footer buttons
+        JPanel pnlFooter = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
+        pnlFooter.setOpaque(false);
+
+        JButton btnRoiDi = primaryButton.makePrimaryButton("Đánh dấu rời đi");
+        btnRoiDi.setBackground(new Color(239, 68, 68));
+        btnRoiDi.setBorder(new EmptyBorder(10, 18, 10, 18));
+        btnRoiDi.addActionListener(e -> {
+            int selRow = memberTable.getSelectedRow();
+            if (selRow < 0) {
+                showToast("Vui lòng chọn một thành viên");
+                return;
+            }
+            int mRow = memberTable.convertRowIndexToModel(selRow);
+            String maHDKT = String.valueOf(memberModel.getValueAt(mRow, 0));
+            String tenKH = String.valueOf(memberModel.getValueAt(mRow, 1));
+            String vaiTro = String.valueOf(memberModel.getValueAt(mRow, 4));
+
+            if (vaiTro.contains("rời")) {
+                showToast("Thành viên này đã rời đi rồi");
+                return;
+            }
+
+            boolean laDaiDien = vaiTro.contains("Đại Diện");
+
+            // Đếm số thành viên còn hoạt động (không phải đã rời đi)
+            int soConLai = 0;
+            ArrayList<String[]> danhSachConLai = new ArrayList<>();
+            for (int i = 0; i < memberModel.getRowCount(); i++) {
+                String vt = String.valueOf(memberModel.getValueAt(i, 4));
+                String hdkt = String.valueOf(memberModel.getValueAt(i, 0));
+                String ten = String.valueOf(memberModel.getValueAt(i, 1));
+                if (!vt.contains("rời") && !hdkt.equals(maHDKT)) {
+                    soConLai++;
+                    danhSachConLai.add(new String[] { hdkt, ten });
+                }
+            }
+
+            if (laDaiDien && soConLai == 0) {
+                int confirm = JOptionPane.showConfirmDialog(dialog,
+                        "'" + tenKH + "' là người đại diện duy nhất.\n" +
+                                "Đánh dấu rời đi sẽ khiến hợp đồng không còn người đại diện.\n\n" +
+                                "Bạn có chắc chắn muốn tiếp tục?",
+                        "Cảnh báo", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (confirm != JOptionPane.YES_OPTION)
+                    return;
+
+                boolean ok = HDKHdao.thanhVienRoiDi(maHDKT, maPhong);
+                if (ok) {
+                    loadMembers.run();
+                    loadDataToTable();
+                    showToast("Đã đánh dấu '" + tenKH + "' rời đi");
+                } else {
+                    showToast("Thao tác thất bại");
+                }
+                return;
+            }
+
+            if (laDaiDien) {
+                // Phải chọn người đại diện mới trước
+                String[] options = new String[danhSachConLai.size()];
+                for (int i = 0; i < danhSachConLai.size(); i++) {
+                    options[i] = danhSachConLai.get(i)[1];
+                }
+
+                String chosen = (String) JOptionPane.showInputDialog(dialog,
+                        "'" + tenKH + "' là người đại diện.\nVui lòng chọn người đại diện mới:",
+                        "Chọn người đại diện mới",
+                        JOptionPane.QUESTION_MESSAGE, null, options,
+                        options.length > 0 ? options[0] : null);
+
+                if (chosen == null)
+                    return;
+
+                // Tìm maHDKT của người được chọn
+                String maHDKT_Moi = null;
+                for (String[] item : danhSachConLai) {
+                    if (item[1].equals(chosen)) {
+                        maHDKT_Moi = item[0];
+                        break;
+                    }
+                }
+
+                boolean ok = HDKHdao.roiDiVaDoiDaiDien(maHDKT, maHopDong, maHDKT_Moi, maPhong);
+                if (ok) {
+                    loadMembers.run();
+                    loadDataToTable();
+                    showToast("Đã đánh dấu '" + tenKH + "' rời đi và '" + chosen + "' là người đại diện mới");
+                } else {
+                    showToast("Thao tác thất bại");
+                }
+            } else {
+                // Thành viên thường rời đi
+                int confirm = JOptionPane.showConfirmDialog(dialog,
+                        "Bạn có chắc chắn muốn đánh dấu '" + tenKH + "' đã rời đi?",
+                        "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                if (confirm != JOptionPane.YES_OPTION)
+                    return;
+
+                boolean ok = HDKHdao.thanhVienRoiDi(maHDKT, maPhong);
+                if (ok) {
+                    loadMembers.run();
+                    loadDataToTable();
+                    showToast("Đã đánh dấu '" + tenKH + "' rời đi");
+                } else {
+                    showToast("Thao tác thất bại");
+                }
+            }
+        });
+
+        JButton btnDoiDaiDien = primaryButton.makePrimaryButton("Đổi người đại diện");
+        btnDoiDaiDien.setBorder(new EmptyBorder(10, 18, 10, 18));
+        btnDoiDaiDien.addActionListener(e -> {
+            // Tìm danh sách thành viên còn hoạt động (không phải đại diện, không phải đã
+            // rời)
+            ArrayList<String[]> danhSachTV = new ArrayList<>();
+            for (int i = 0; i < memberModel.getRowCount(); i++) {
+                String vt = String.valueOf(memberModel.getValueAt(i, 4));
+                if (!vt.contains("Đại Diện") && !vt.contains("rời")) {
+                    danhSachTV.add(new String[] {
+                            String.valueOf(memberModel.getValueAt(i, 0)),
+                            String.valueOf(memberModel.getValueAt(i, 1))
+                    });
+                }
+            }
+
+            if (danhSachTV.isEmpty()) {
+                showToast("Không có thành viên nào khả dụng để đổi");
+                return;
+            }
+
+            String[] options = new String[danhSachTV.size()];
+            for (int i = 0; i < danhSachTV.size(); i++) {
+                options[i] = danhSachTV.get(i)[1];
+            }
+
+            String chosen = (String) JOptionPane.showInputDialog(dialog,
+                    "Chọn người đại diện mới:",
+                    "Đổi người đại diện",
+                    JOptionPane.QUESTION_MESSAGE, null, options,
+                    options[0]);
+
+            if (chosen == null)
+                return;
+
+            String maHDKT_Moi = null;
+            for (String[] item : danhSachTV) {
+                if (item[1].equals(chosen)) {
+                    maHDKT_Moi = item[0];
+                    break;
+                }
+            }
+
+            boolean ok = HDKHdao.doiNguoiDaiDien(maHopDong, maHDKT_Moi);
+            if (ok) {
+                loadMembers.run();
+                loadDataToTable();
+                showToast("Đã đổi người đại diện thành '" + chosen + "'");
+            } else {
+                showToast("Thao tác thất bại");
+            }
+        });
+
+        RoundedButton btnDong = ButtonStyles.createSecondary(
+                "Đóng", new Font("Inter", Font.BOLD, 13),
+                MAU_TEXT, Color.WHITE, new Color(226, 232, 240), 8,
+                new EmptyBorder(10, 22, 10, 22));
+        btnDong.addActionListener(e -> dialog.dispose());
+
+        pnlFooter.add(btnDoiDaiDien);
+        pnlFooter.add(btnRoiDi);
+        pnlFooter.add(btnDong);
+        pnlBg.add(pnlFooter, BorderLayout.SOUTH);
+
+        dialog.add(pnlBg);
+        if (parent != null)
+            overlay.setVisible(true);
+        dialog.setVisible(true);
+        overlay.dispose();
     }
 
     private void showToast(String message) {

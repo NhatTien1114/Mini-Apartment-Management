@@ -139,6 +139,28 @@ public class DichVuUI {
             }
         };
 
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
+                    int c) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                l.setFont(new Font("Inter", Font.PLAIN, 13));
+                l.setForeground(MAU_TEXT);
+                l.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
+                l.setOpaque(true);
+
+                if (c == 0) {
+                    l.setForeground(new Color(37, 99, 235));
+                    l.setFont(new Font("Inter", Font.BOLD, 13));
+                }
+
+                l.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
+                        new EmptyBorder(0, 16, 0, 8)));
+                return l;
+            }
+        });
+
         JTableHeader header = table.getTableHeader();
         header.setFont(FONT_SMALL);
         header.setForeground(MAU_MUTED);
@@ -151,8 +173,6 @@ public class DichVuUI {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int r, int c) {
                 super.getTableCellRendererComponent(t, v, sel, foc, r, c);
-                setBackground(MAU_CARD);
-                setForeground(MAU_MUTED);
                 setFont(FONT_SMALL);
                 setBorder(new EmptyBorder(0, 16, 0, 8));
                 return this;
@@ -175,7 +195,6 @@ public class DichVuUI {
         table.getColumnModel().getColumn(2).setPreferredWidth(160);
         table.getColumnModel().getColumn(3).setPreferredWidth(220);
 
-        table.getColumnModel().getColumn(0).setCellRenderer(plainPaddedRenderer());
         table.getColumnModel().getColumn(1).setCellRenderer(boldPaddedRenderer());
         table.getColumnModel().getColumn(2).setCellRenderer(plainPaddedRenderer());
         table.getColumnModel().getColumn(3).setCellRenderer(new PriceBadgeRenderer());

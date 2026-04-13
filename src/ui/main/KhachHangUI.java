@@ -66,6 +66,7 @@ import javax.swing.text.MaskFormatter;
 import service.KhachHangService;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
+import ui.util.RoundedTextField;
 
 public class KhachHangUI {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -85,7 +86,7 @@ public class KhachHangUI {
     private JTable table;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
-    private JTextField txtTimKiem;
+    private RoundedTextField txtTimKiem;
     private JComboBox<String> cboFilterPhong;
 
     public JPanel getPanel() {
@@ -130,12 +131,31 @@ public class KhachHangUI {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         bar.setBackground(AppColors.WHITE);
 
-        txtTimKiem = new JTextField();
-        txtTimKiem.setPreferredSize(new Dimension(280, 36));
+        txtTimKiem = new RoundedTextField(8) {
+            @Override
+            public void paint(Graphics g) {
+                super.paint(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(148, 163, 184));
+                g2.setStroke(new BasicStroke(1.5f));
+                int cx = 18;
+                int cy = getHeight() / 2 - 2;
+                g2.drawOval(cx - 4, cy - 4, 8, 8);
+                g2.drawLine(cx + 2, cy + 2, cx + 7, cy + 7);
+
+                if (isFocusOwner()) {
+                    g2.setColor(new Color(37, 99, 235));
+                    g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 8, 8);
+                }
+                g2.dispose();
+            }
+        };
+
+        txtTimKiem.setBorder(new EmptyBorder(8, 36, 8, 12));
+        txtTimKiem.setPlaceholder("Tìm kiếm khách hàng...");
+        txtTimKiem.setPreferredSize(new Dimension(280, 40));
         txtTimKiem.setFont(FONT_PLAIN);
-        txtTimKiem.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(AppColors.SLATE_200, 1, true),
-                new EmptyBorder(7, 10, 7, 10)));
         txtTimKiem.setToolTipText("Tìm theo mã, họ tên, số điện thoại, CCCD");
 
         JButton btnTimKiem = primaryButton.makePrimaryButton("Tìm kiếm");
@@ -198,6 +218,28 @@ public class KhachHangUI {
             }
         };
 
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
+                    int c) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                l.setFont(new Font("Inter", Font.PLAIN, 13));
+                l.setForeground(AppColors.SLATE_900);
+                l.setBackground(isSel ? t.getSelectionBackground() : AppColors.WHITE);
+                l.setOpaque(true);
+
+                if (c == 0) {
+                    l.setForeground(new Color(37, 99, 235));
+                    l.setFont(new Font("Inter", Font.BOLD, 13));
+                }
+
+                l.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
+                        new EmptyBorder(0, 16, 0, 8)));
+                return l;
+            }
+        });
+
         JTableHeader header = table.getTableHeader();
         header.setReorderingAllowed(false);
         header.setPreferredSize(new Dimension(0, 42));
@@ -253,9 +295,11 @@ public class KhachHangUI {
             }
         };
 
-        for (int i = 0; i < 7; i++) {
+        for (int i = 2; i < 7; i++) {
             table.getColumnModel().getColumn(i).setCellRenderer(paddedCell);
         }
+
+        table.getColumnModel().getColumn(1).setCellRenderer(boldPaddedRenderer());
 
         // --- Right-click context menu ---
         JPopupMenu contextMenu = new JPopupMenu();
@@ -339,6 +383,21 @@ public class KhachHangUI {
 
         card.add(sp, BorderLayout.CENTER);
         return card;
+    }
+
+    private TableCellRenderer boldPaddedRenderer() {
+        return new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int r, int c) {
+                super.getTableCellRendererComponent(t, v, sel, foc, r, c);
+                setFont(FONT_BOLD);
+                setForeground(AppColors.SLATE_900);
+                setBorder(BorderFactory.createCompoundBorder(
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 16, 0, 8)));
+                return this;
+            }
+        };
     }
 
     private void applyFilter() {
