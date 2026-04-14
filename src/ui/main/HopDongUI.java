@@ -17,10 +17,13 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 
+import dao.DichVuDAO;
 import dao.GiaDetailDAO;
 import dao.HopDongDAO;
 import dao.HopDongKhachHangDAO;
+import dao.PhongDichVuDAO;
 import dao.QuanLyPhongDAO;
+import entity.DichVu;
 import entity.GiaDetail;
 import entity.HopDong;
 import entity.KhachHang;
@@ -1130,238 +1133,409 @@ public class HopDongUI {
         JDialog dialog = new JDialog(parent, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
         dialog.setBackground(new Color(0, 0, 0, 0));
-        dialog.setSize(620, 750);
+        dialog.setSize(1200, 920);
         dialog.setLocationRelativeTo(pnlRoot);
 
         final boolean[] accepted = { false };
 
-        RoundedPanel root = new RoundedPanel(12);
-        root.setBackground(Color.WHITE);
-        root.setLayout(new BorderLayout());
-        root.setBorder(new EmptyBorder(14, 14, 14, 14));
+        RoundedPanel rootPanel = new RoundedPanel(12);
+        rootPanel.setBackground(Color.WHITE);
+        rootPanel.setLayout(new BorderLayout());
+        rootPanel.setBorder(new EmptyBorder(14, 14, 14, 14));
 
+        // --- Header ---
         JPanel head = new JPanel(new BorderLayout());
         head.setOpaque(false);
-        JLabel title = new JLabel("Xem trước hợp đồng");
-        title.setFont(new Font("Inter", Font.BOLD, 20));
-        title.setForeground(MAU_TEXT);
-        JButton btnClose = new JButton("x");
-        btnClose.setFont(new Font("Inter", Font.PLAIN, 18));
-        btnClose.setForeground(MAU_SUBTEXT);
+        JLabel titleLbl = new JLabel("Xem trước hợp đồng", SwingConstants.CENTER);
+        titleLbl.setFont(new Font("Inter", Font.BOLD, 20));
+        titleLbl.setForeground(MAU_TEXT);
+        JButton btnClose = new JButton("X") {
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? MAU_TEXT : MAU_SUBTEXT);
+                g2.setStroke(new BasicStroke(1.5f));
+                int cx = getWidth() / 2, cy = getHeight() / 2;
+                g2.drawLine(cx - 4, cy - 4, cx + 4, cy + 4);
+                g2.drawLine(cx - 4, cy + 4, cx + 4, cy - 4);
+                g2.dispose();
+            }
+        };
+        btnClose.setPreferredSize(new Dimension(24, 24));
         btnClose.setBorderPainted(false);
         btnClose.setContentAreaFilled(false);
         btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnClose.addActionListener(e -> dialog.dispose());
-        head.add(title, BorderLayout.WEST);
+        head.add(titleLbl, BorderLayout.CENTER);
         head.add(btnClose, BorderLayout.EAST);
         head.setBorder(new EmptyBorder(0, 0, 10, 0));
-        root.add(head, BorderLayout.NORTH);
+        rootPanel.add(head, BorderLayout.NORTH);
 
-        // ===== Contract document =====
-        JPanel doc = new JPanel();
-        doc.setOpaque(true);
-        doc.setBackground(Color.WHITE);
-        doc.setLayout(new BoxLayout(doc, BoxLayout.Y_AXIS));
-        doc.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                new EmptyBorder(28, 32, 28, 32)));
+        // --- Load service data ---
+        DichVuDAO dvAllDAO = new DichVuDAO();
+        java.util.List<DichVu> allDV = dvAllDAO.layTatCa();
+        PhongDichVuDAO phongDvDAO = new PhongDichVuDAO();
+        java.util.List<DichVu> roomDV = phongDvDAO.layDichVuCuaPhong(draft.phong);
 
-        // --- Quốc hiệu ---
-        JLabel lblQuocHieu = new JLabel("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", SwingConstants.CENTER);
-        lblQuocHieu.setFont(new Font("Inter", Font.BOLD, 14));
-        lblQuocHieu.setAlignmentX(Component.CENTER_ALIGNMENT);
-        doc.add(lblQuocHieu);
-        doc.add(Box.createVerticalStrut(2));
+        String giaDien = "Theo quy định", giaNuoc = "Theo quy định";
+        String phiGiuXe = "Miễn phí", phiDichVu = "Theo quy định";
 
-        JLabel lblTieuNgu = new JLabel("Độc lập - Tự do - Hạnh phúc", SwingConstants.CENTER);
-        lblTieuNgu.setFont(new Font("Inter", Font.PLAIN, 13));
-        lblTieuNgu.setAlignmentX(Component.CENTER_ALIGNMENT);
-        doc.add(lblTieuNgu);
-        doc.add(Box.createVerticalStrut(2));
+        for (DichVu dv : allDV) {
+            String ten = dv.getTenDichVu().toLowerCase();
+            if (dv.getDonGia() == null || dv.getDonGia() <= 0)
+                continue;
+            String giaStr = formatCurrency(String.valueOf(Math.round(dv.getDonGia()))) + "đ/"
+                    + (dv.getDonVi() != null ? dv.getDonVi().toLowerCase() : "");
+            if (ten.contains("điện"))
+                giaDien = giaStr;
+            else if (ten.contains("nước"))
+                giaNuoc = giaStr;
+        }
+        for (DichVu dv : roomDV) {
+            String ten = dv.getTenDichVu().toLowerCase();
+            if (dv.getDonGia() == null || dv.getDonGia() <= 0)
+                continue;
+            String giaStr = formatCurrency(String.valueOf(Math.round(dv.getDonGia()))) + "đ/"
+                    + (dv.getDonVi() != null ? dv.getDonVi().toLowerCase() : "");
+            if (ten.contains("xe") || ten.contains("giữ") || ten.contains("gửi"))
+                phiGiuXe = giaStr;
+            else if (ten.contains("wifi") || ten.contains("dịch vụ") || ten.contains("rác") || ten.contains("vệ sinh")
+                    || ten.contains("phí"))
+                phiDichVu = giaStr;
+        }
 
-        JLabel lblLine = new JLabel("─────────────────", SwingConstants.CENTER);
-        lblLine.setFont(new Font("Inter", Font.PLAIN, 12));
-        lblLine.setForeground(MAU_SUBTEXT);
-        lblLine.setAlignmentX(Component.CENTER_ALIGNMENT);
-        doc.add(lblLine);
-        doc.add(Box.createVerticalStrut(16));
-
-        JLabel lblTitleDoc = new JLabel("HỢP ĐỒNG THUÊ PHÒNG", SwingConstants.CENTER);
-        lblTitleDoc.setFont(new Font("Inter", Font.BOLD, 22));
-        lblTitleDoc.setForeground(MAU_TEXT);
-        lblTitleDoc.setAlignmentX(Component.CENTER_ALIGNMENT);
-        doc.add(lblTitleDoc);
-        doc.add(Box.createVerticalStrut(6));
+        // --- Calculate contract duration ---
+        String soThangThue = "";
+        try {
+            java.time.format.DateTimeFormatter fmtDate = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            java.time.LocalDate start = java.time.LocalDate.parse(draft.ngayBatDau, fmtDate);
+            java.time.LocalDate end = java.time.LocalDate.parse(draft.ngayKetThuc, fmtDate);
+            long months = java.time.temporal.ChronoUnit.MONTHS.between(start, end);
+            soThangThue = months + " tháng";
+        } catch (Exception ex) {
+            soThangThue = "N/A";
+        }
 
         java.time.LocalDate today = java.time.LocalDate.now();
-        String todayStr = "Ngày " + today.getDayOfMonth() + " tháng " + today.getMonthValue() + " năm "
-                + today.getYear();
-        JLabel lblDate = new JLabel(todayStr, SwingConstants.CENTER);
-        lblDate.setFont(new Font("Inter", Font.ITALIC, 12));
-        lblDate.setForeground(MAU_SUBTEXT);
-        lblDate.setAlignmentX(Component.CENTER_ALIGNMENT);
-        doc.add(lblDate);
-        doc.add(Box.createVerticalStrut(20));
+        Font docFont = new Font("Be Vietnam Pro", Font.PLAIN, 13);
+        Font docBold = new Font("Be Vietnam Pro", Font.BOLD, 13);
+        Font docItalic = new Font("Be Vietnam Pro", Font.ITALIC, 13);
 
-        // --- Điều 1: Bên cho thuê ---
-        addContractSection(doc, "Điều 1: BÊN CHO THUÊ (Bên A)");
-        addContractDetail(doc, "Chủ chung cư MINI APARTMENT");
-        doc.add(Box.createVerticalStrut(14));
+        // ==================== PAGE 1 ====================
+        JPanel page1 = createDocPage();
 
-        // --- Điều 2: Bên thuê ---
-        addContractSection(doc, "Điều 2: BÊN THUÊ (Bên B)");
-        addContractRow(doc, "Họ và tên", draft.hoTen);
-        addContractRow(doc, "Số CCCD/CMND", draft.cccd);
-        addContractRow(doc, "Số điện thoại", draft.soDienThoai);
-        addContractRow(doc, "Địa chỉ thường trú", draft.diaChi);
+        addDocCenter(page1, "Cộng Hòa Xã Hội Chủ Nghĩa Việt Nam", new Font("Be Vietnam Pro", Font.BOLD, 14));
+        addDocCenter(page1, "Độc Lập \u2013 Tự Do \u2013 Hạnh Phúc", docFont);
+        addDocCenter(page1, "\u2500oOo\u2500", new Font("Be Vietnam Pro", Font.PLAIN, 12));
+        page1.add(Box.createVerticalStrut(14));
+
+        addDocCenter(page1, "HỢP ĐỒNG ĐẶT CỌC", new Font("Be Vietnam Pro", Font.BOLD, 20));
+        page1.add(Box.createVerticalStrut(10));
+
+        addDocLine(page1, "- Căn cứ vào khả năng và nhu cầu của hai bên;", docFont, 0);
+        addDocHtml(page1, "- Hôm nay, Ngày <b>" + today.getDayOfMonth() + "</b> Tháng <b>" + today.getMonthValue()
+                + "</b> Năm <b>" + today.getYear() + "</b> chúng tôi gồm:", docFont, 0);
+        page1.add(Box.createVerticalStrut(8));
+
+        // --- I. BÊN A ---
+        addDocLine(page1, "I. ĐẠI DIỆN BÊN A (Bên nhận cọc)", docBold, 0);
+        addDocFill(page1, "Ông/Bà", "Tống Nguyễn Nhật Tiến", docFont);
+        addDocHtml(page1,
+                "Số CCCD/Hộ chiếu: <b>079205022180</b> &nbsp;&nbsp; Ngày cấp: <b>31/05/2021</b> &nbsp;&nbsp; Nơi cấp: <b>Cục CS QLHC về TTXH</b>",
+                docFont, 0);
+        addDocFill(page1, "Điện thoại", "0357.988.614", docFont);
+        page1.add(Box.createVerticalStrut(8));
+
+        // --- II. BÊN B ---
+        addDocLine(page1, "II. ĐẠI DIỆN BÊN B (Bên đặt cọc)", docBold, 0);
+        addDocFill(page1, "Ông/Bà", draft.hoTen, docFont);
         if (draft.ngaySinh != null && !draft.ngaySinh.trim().isEmpty()) {
-            addContractRow(doc, "Ngày sinh", draft.ngaySinh);
+            addDocFill(page1, "Ngày sinh", draft.ngaySinh, docFont);
         }
-        doc.add(Box.createVerticalStrut(14));
+        addDocFill(page1, "Số CMND/Hộ chiếu", draft.cccd, docFont);
+        addDocFill(page1, "Địa chỉ thường trú", draft.diaChi, docFont);
+        addDocFill(page1, "Điện Thoại", draft.soDienThoai, docFont);
+        page1.add(Box.createVerticalStrut(8));
 
-        // --- Điều 3: Nội dung ---
-        addContractSection(doc, "Điều 3: NỘI DUNG HỢP ĐỒNG");
-        addContractRow(doc, "Phòng cho thuê", draft.phong);
-        addContractRow(doc, "Thời hạn hợp đồng", "Từ " + draft.ngayBatDau + " đến " + draft.ngayKetThuc);
-        addContractRow(doc, "Giá thuê hàng tháng", formatCurrency(draft.giaThueRaw) + " VNĐ/tháng");
-        addContractRow(doc, "Tiền đặt cọc", formatCurrency(draft.tienCocRaw) + " VNĐ");
-        doc.add(Box.createVerticalStrut(14));
+        // --- Điều 1 ---
+        addDocLine(page1, "Điều 1 \u2013 Nội dung thỏa thuận", docBold, 0);
+        addDocHtml(page1,
+                "<b>1.1.</b>&nbsp;&nbsp;Bằng thỏa thuận này, Bên B đồng ý đặt cọc cho bên A và bên A đồng ý nhận cọc "
+                        + "của bên B nhằm mục đích đảm bảo việc giao kết thỏa thuận đặt cọc giữa bên B "
+                        + "\nvà chủ đầu tư để thuê sản phẩm với thông tin như sau:",
+                docFont, 0);
+        page1.add(Box.createVerticalStrut(4));
 
-        // --- Điều 4: Quyền và nghĩa vụ ---
-        addContractSection(doc, "Điều 4: QUYỀN VÀ NGHĨA VỤ");
-        addContractBullet(doc, "Bên B thanh toán tiền thuê đúng hạn vào đầu mỗi tháng.");
-        addContractBullet(doc, "Bên B chịu chi phí điện, nước, dịch vụ theo thực tế sử dụng.");
-        addContractBullet(doc, "Bên A đảm bảo phòng trong tình trạng sử dụng tốt.");
-        addContractBullet(doc, "Bên B không được tự ý sửa chữa, thay đổi kết cấu phòng.");
-        doc.add(Box.createVerticalStrut(14));
+        addDocLine(page1, "a. Thông tin phòng:", docBold, 16);
+        addDocHtml(page1, "Mã phòng: <b>" + draft.phong + "</b>", docFont, 28);
+        addDocHtml(page1, "Giá phòng: <b>" + formatCurrency(draft.giaThueRaw) + " đ</b>", docFont, 28);
+        addDocHtml(page1, "Thời hạn thuê: <b>" + soThangThue + "</b>", docFont, 28);
+        addDocHtml(page1, "Ngày dự kiến dọn vào: <b>" + draft.ngayBatDau + "</b>", docFont, 28);
+        addDocHtml(page1, "Tại địa chỉ: <b>36 Thích Bửu Đăng, P.1, Q. Gò Vấp, TP.HCM</b>", docFont, 28);
+        page1.add(Box.createVerticalStrut(4));
 
-        // --- Điều 5: Chấm dứt hợp đồng ---
-        addContractSection(doc, "Điều 5: CHẤM DỨT HỢP ĐỒNG");
-        addContractBullet(doc, "Hết thời hạn hợp đồng mà không gia hạn.");
-        addContractBullet(doc, "Hai bên thỏa thuận chấm dứt trước hạn.");
-        addContractBullet(doc, "Bên vi phạm hợp đồng phải bồi thường theo quy định.");
-        doc.add(Box.createVerticalStrut(24));
+        addDocLine(page1, "b. Thông tin phí dịch vụ của tòa nhà:", docBold, 16);
+        addDocHtml(page1, "Đơn giá điện: <b>" + giaDien + "</b>", docFont, 28);
+        addDocHtml(page1, "Giá nước: <b>" + giaNuoc + "</b>", docFont, 28);
+        addDocHtml(page1, "Phí giữ xe máy: <b>" + phiGiuXe + "</b>", docFont, 28);
+        addDocHtml(page1, "Phí dịch vụ (Wifi, rác, vệ sinh): <b>" + phiDichVu + "</b>", docFont, 28);
+
+        // ==================== PAGE 2 ====================
+        JPanel page2 = createDocPage();
+
+        // --- 1.2 ---
+        addDocHtml(page2, "<b>1.2.</b>&nbsp;&nbsp;Bên A nhận số tiền đặt cọc giữ phòng là: <b>"
+                + formatCurrency(draft.tienCocRaw) + " đ</b>", docFont, 0);
+        addDocLine(page2, "Hình thức nhận cọc bằng chuyển khoản với thông tin cụ thể như sau:", docItalic, 16);
+        addDocFillIndent(page2, "Ngân hàng", "MBBANK", docFont, 16);
+        addDocFillIndent(page2, "Số tài khoản", "0357988614", docFont, 16);
+        addDocFillIndent(page2, "Tên tài khoản", "Tống Nguyễn Nhật Tiến", docFont, 16);
+        page2.add(Box.createVerticalStrut(8));
+
+        // --- 1.3 ---
+        addDocHtml(page2, "<b>1.3.</b>&nbsp;&nbsp;Hai bên cùng thỏa thuận và cam kết rằng:", docFont, 0);
+        addDocHtml(page2,
+                "<b>a.</b> Bên B cam kết đến kí hợp đồng thuê nhà và dọn vào ở không quá 2 ngày so với ngày dọn vào dự kiến;",
+                docFont, 16);
+        addDocHtml(page2, "<b>b.</b> Bên B cam kết đến kí hợp đồng theo thời gian đã nêu tại điều khoản 1.3.a, "
+                + "đóng đủ tiền nhà và các phí dịch vụ của tòa nhà tháng đầu tiên;", docFont, 16);
+        addDocHtml(page2, "<b>c.</b> Nếu quá thời hạn nêu trên mà bên B vẫn không Ký hợp đồng theo như "
+                + "điều 1.3.a nêu trên thì bên B sẽ mất toàn bộ số tiền đặt cọc;", docFont, 16);
+        addDocHtml(page2, "<b>d.</b> Trong trường hợp tòa nhà có quy định khách hàng được sang nhượng hợp đồng "
+                + "thuê thì bên B có thể tự sang nhượng hoặc nhờ bên A tìm khách \nsang nhượng "
+                + "trên tinh thần tự nguyện. Bên A không có trách nhiệm bắt buộc sang nhượng cho bên B;", docFont, 16);
+        page2.add(Box.createVerticalStrut(10));
+
+        // --- Điều 2 ---
+        addDocLine(page2, "Điều 2 \u2013 Điều khoản chung:", docBold, 0);
+        addDocHtml(page2, "<b>2.1.</b> Thỏa thuận này có hiệu lực từ thời điểm hai bên ký kết. "
+                + "Trường hợp khách hàng đặt cọc bằng hình thức chuyển khoản, hợp đồng này có hiệu lực khi "
+                + "Bên B đã đồng ý \nđặt cọc cho bên A (có xác thực bằng tin nhắn hoặc ghi âm) "
+                + "và đã chuyển khoản tiền cọc cho bên A mà không cần phải có chữ ký của Bên B;", docFont, 0);
+        addDocHtml(page2, "<b>2.2.</b> Thỏa thuận này sẽ chấm dứt hiệu lực trong các trường hợp sau: "
+                + "Bên B không ký hợp đồng và dọn vào ở theo quy định tại điều 1.3.b;", docFont, 0);
+        addDocHtml(page2, "<b>2.3.</b> Bên A không cho bất kì một bên nào khác bên B đặt cọc hoặc thuê phòng "
+                + "là đối tượng được quy định trên hợp đồng này trong thời hạn thỏa thuận;", docFont, 0);
+        addDocHtml(page2, "<b>2.4.</b> Ngay khi bên B ký hợp đồng thuê với chủ đầu tư, toàn bộ số tiền cọc sẽ "
+                + "được chuyển thành tiền ký quỹ trong hợp đồng thuê của Bên B;", docFont, 0);
+        page2.add(Box.createVerticalStrut(36));
 
         // --- Ký tên ---
         JPanel signPanel = new JPanel(new GridLayout(1, 2, 40, 0));
         signPanel.setOpaque(false);
         signPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        signPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+        signPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
 
         JPanel signA = new JPanel();
         signA.setOpaque(false);
         signA.setLayout(new BoxLayout(signA, BoxLayout.Y_AXIS));
-        JLabel lblBenA = new JLabel("BÊN CHO THUÊ (Bên A)");
-        lblBenA.setFont(new Font("Inter", Font.BOLD, 12));
+        JLabel lblBenA = new JLabel("ĐẠI DIỆN BÊN A");
+        lblBenA.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
         lblBenA.setAlignmentX(Component.CENTER_ALIGNMENT);
-        JLabel lblSignA = new JLabel("(Ký, ghi rõ họ tên)");
-        lblSignA.setFont(new Font("Inter", Font.ITALIC, 11));
-        lblSignA.setForeground(MAU_SUBTEXT);
-        lblSignA.setAlignmentX(Component.CENTER_ALIGNMENT);
         signA.add(lblBenA);
+        signA.add(Box.createVerticalStrut(6));
+        // --- Ảnh chữ ký Bên A ---
+        try {
+            java.awt.image.BufferedImage sigOrig = javax.imageio.ImageIO
+                    .read(new java.io.File("img/signature/chuky.jpg"));
+            int sigW = 120, sigH = (int) ((double) sigOrig.getHeight() / sigOrig.getWidth() * sigW);
+            Image sigScaled = sigOrig.getScaledInstance(sigW, sigH, Image.SCALE_SMOOTH);
+            JLabel lblSig = new JLabel(new ImageIcon(sigScaled));
+            lblSig.setAlignmentX(Component.CENTER_ALIGNMENT);
+            signA.add(lblSig);
+        } catch (Exception ex) {
+            signA.add(Box.createVerticalStrut(26));
+        }
         signA.add(Box.createVerticalStrut(4));
-        signA.add(lblSignA);
+        JLabel lblNameA = new JLabel("Tống Nguyễn Nhật Tiến");
+        lblNameA.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
+        lblNameA.setAlignmentX(Component.CENTER_ALIGNMENT);
+        signA.add(lblNameA);
 
         JPanel signB = new JPanel();
         signB.setOpaque(false);
         signB.setLayout(new BoxLayout(signB, BoxLayout.Y_AXIS));
-        JLabel lblBenB = new JLabel("BÊN THUÊ (Bên B)");
-        lblBenB.setFont(new Font("Inter", Font.BOLD, 12));
+        JLabel lblBenB = new JLabel("ĐẠI DIỆN BÊN B");
+        lblBenB.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
         lblBenB.setAlignmentX(Component.CENTER_ALIGNMENT);
-        JLabel lblSignB = new JLabel("(Ký, ghi rõ họ tên)");
-        lblSignB.setFont(new Font("Inter", Font.ITALIC, 11));
-        lblSignB.setForeground(MAU_SUBTEXT);
-        lblSignB.setAlignmentX(Component.CENTER_ALIGNMENT);
         signB.add(lblBenB);
-        signB.add(Box.createVerticalStrut(4));
-        signB.add(lblSignB);
+        signB.add(Box.createVerticalStrut(6));
+        JLabel lblSignHint = new JLabel("(Ký, ghi rõ họ tên)");
+        lblSignHint.setFont(new Font("Be Vietnam Pro", Font.ITALIC, 11));
+        lblSignHint.setForeground(MAU_SUBTEXT);
+        lblSignHint.setAlignmentX(Component.CENTER_ALIGNMENT);
+        signB.add(lblSignHint);
 
         signPanel.add(signA);
         signPanel.add(signB);
-        doc.add(signPanel);
+        page2.add(signPanel);
 
-        JScrollPane scroll = new JScrollPane(doc);
-        scroll.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
-        root.add(scroll, BorderLayout.CENTER);
+        // ==================== CARD LAYOUT ====================
+        CardLayout cardLayout = new CardLayout();
+        JPanel cardPanel = new JPanel(cardLayout);
+        cardPanel.setOpaque(false);
 
-        JPanel footer = new JPanel(new GridLayout(1, 2, 8, 0));
+        JScrollPane scroll1 = new JScrollPane(page1);
+        scroll1.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        scroll1.getVerticalScrollBar().setUnitIncrement(16);
+        scroll1.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll1.getViewport().setBackground(new Color(245, 245, 245));
+
+        JScrollPane scroll2 = new JScrollPane(page2);
+        scroll2.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        scroll2.getVerticalScrollBar().setUnitIncrement(16);
+        scroll2.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll2.getViewport().setBackground(new Color(245, 245, 245));
+
+        cardPanel.add(scroll1, "1");
+        cardPanel.add(scroll2, "2");
+        rootPanel.add(cardPanel, BorderLayout.CENTER);
+
+        // ==================== FOOTER ====================
+        JPanel footer = new JPanel(new BorderLayout(0, 6));
         footer.setOpaque(false);
         footer.setBorder(new EmptyBorder(10, 0, 0, 0));
 
+        JLabel lblPageNum = new JLabel("Trang 1 / 2", SwingConstants.CENTER);
+        lblPageNum.setFont(new Font("Inter", Font.BOLD, 13));
+        lblPageNum.setForeground(MAU_SUBTEXT);
+        lblPageNum.setBorder(new EmptyBorder(4, 0, 4, 0));
+
+        JPanel footerBtns = new JPanel(new BorderLayout(8, 0));
+        footerBtns.setOpaque(false);
+
         RoundedButton btnBack = ButtonStyles.createSecondary(
-                "←   Quay lại sửa",
+                "\u2190  Quay lại sửa",
                 new Font("Inter", Font.BOLD, 13),
-                MAU_TEXT,
-                Color.WHITE,
-                new Color(241, 245, 249),
-                8,
+                MAU_TEXT, Color.WHITE, new Color(241, 245, 249), 8,
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(BORDER_COLOR),
                         new EmptyBorder(10, 12, 10, 12)));
-        btnBack.addActionListener(e -> {
-            accepted[0] = false;
-            dialog.dispose();
-        });
+
+        JButton btnNext = primaryButton.makePrimaryButton("Xem tiếp  \u2192");
+        btnNext.setBorder(new EmptyBorder(10, 16, 10, 16));
 
         JButton btnConfirm = primaryButton.makePrimaryButton("Xác nhận hợp đồng");
         btnConfirm.setBorder(new EmptyBorder(10, 12, 10, 12));
+        btnConfirm.setVisible(false);
+
+        final int[] currentPage = { 1 };
+
+        btnBack.addActionListener(e -> {
+            if (currentPage[0] == 2) {
+                cardLayout.show(cardPanel, "1");
+                currentPage[0] = 1;
+                lblPageNum.setText("Trang 1 / 2");
+                btnNext.setVisible(true);
+                btnConfirm.setVisible(false);
+                btnBack.setText("\u2190  Quay lại sửa");
+            } else {
+                accepted[0] = false;
+                dialog.dispose();
+            }
+        });
+
+        btnNext.addActionListener(e -> {
+            cardLayout.show(cardPanel, "2");
+            currentPage[0] = 2;
+            lblPageNum.setText("Trang 2 / 2");
+            btnNext.setVisible(false);
+            btnConfirm.setVisible(true);
+            btnBack.setText("\u2190  Trang trước");
+        });
+
         btnConfirm.addActionListener(e -> {
             accepted[0] = true;
             dialog.dispose();
         });
 
-        footer.add(btnBack);
-        footer.add(btnConfirm);
-        root.add(footer, BorderLayout.SOUTH);
+        JPanel rightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        rightBtns.setOpaque(false);
+        rightBtns.add(btnNext);
+        rightBtns.add(btnConfirm);
 
-        dialog.setContentPane(root);
+        footerBtns.add(btnBack, BorderLayout.WEST);
+        footerBtns.add(rightBtns, BorderLayout.EAST);
+
+        footer.add(lblPageNum, BorderLayout.NORTH);
+        footer.add(footerBtns, BorderLayout.CENTER);
+        rootPanel.add(footer, BorderLayout.SOUTH);
+
+        dialog.setContentPane(rootPanel);
         dialog.setVisible(true);
         return accepted[0];
     }
 
-    private void addContractSection(JPanel doc, String text) {
+    // ============ Contract document helper methods ============
+
+    private JPanel createDocPage() {
+        JPanel page = new JPanel() {
+            @Override
+            public Dimension getPreferredSize() {
+                // Let width be determined by parent, height by content
+                Dimension d = super.getPreferredSize();
+                if (getParent() != null) {
+                    d.width = getParent().getWidth();
+                }
+                return d;
+            }
+        };
+        page.setBackground(Color.WHITE);
+        page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
+        page.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        new EmptyBorder(8, 8, 8, 8),
+                        BorderFactory.createLineBorder(new Color(210, 215, 220))),
+                new EmptyBorder(28, 36, 28, 36)));
+        return page;
+    }
+
+    private void addDocCenter(JPanel doc, String text, Font font) {
+        JLabel lbl = new JLabel(text, SwingConstants.CENTER);
+        lbl.setFont(font);
+        lbl.setForeground(MAU_TEXT);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setMaximumSize(new Dimension(Integer.MAX_VALUE, lbl.getPreferredSize().height));
+        lbl.setHorizontalAlignment(SwingConstants.CENTER);
+        doc.add(lbl);
+    }
+
+    private void addDocLine(JPanel doc, String text, Font font, int indent) {
         JLabel lbl = new JLabel(text);
-        lbl.setFont(new Font("Inter", Font.BOLD, 14));
+        lbl.setFont(font);
         lbl.setForeground(MAU_TEXT);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        lbl.setBorder(new EmptyBorder(0, 0, 6, 0));
+        lbl.setBorder(new EmptyBorder(2, indent, 2, 0));
         doc.add(lbl);
     }
 
-    private void addContractDetail(JPanel doc, String text) {
-        JLabel lbl = new JLabel("     " + text);
-        lbl.setFont(new Font("Inter", Font.PLAIN, 13));
+    private void addDocHtml(JPanel doc, String html, Font font, int indent) {
+        JLabel lbl = new JLabel("<html>" + html + "</html>");
+        lbl.setFont(font);
         lbl.setForeground(MAU_TEXT);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setBorder(new EmptyBorder(2, indent, 2, 0));
         doc.add(lbl);
     }
 
-    private void addContractRow(JPanel doc, String label, String value) {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 1));
-        row.setOpaque(false);
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
-
-        JLabel lblKey = new JLabel("     " + label + ":  ");
-        lblKey.setFont(new Font("Inter", Font.PLAIN, 13));
-        lblKey.setForeground(MAU_SUBTEXT);
-
-        JLabel lblVal = new JLabel(value != null ? value : "");
-        lblVal.setFont(new Font("Inter", Font.BOLD, 13));
-        lblVal.setForeground(MAU_TEXT);
-
-        row.add(lblKey);
-        row.add(lblVal);
-        doc.add(row);
+    private void addDocFill(JPanel doc, String label, String value, Font font) {
+        addDocFillIndent(doc, label, value, font, 0);
     }
 
-    private void addContractBullet(JPanel doc, String text) {
-        JLabel lbl = new JLabel("     •  " + text);
-        lbl.setFont(new Font("Inter", Font.PLAIN, 13));
+    private void addDocFillIndent(JPanel doc, String label, String value, Font font, int indent) {
+        String safeVal = value != null ? value : "";
+        // Build dotted line that stretches to fill
+        String dots = " ................................................................................";
+        int maxDots = Math.max(5, 50 - label.length() - safeVal.length());
+        String filling = dots.substring(0, Math.min(maxDots, dots.length()));
+        JLabel lbl = new JLabel(
+                "<html>" + label + " :" + filling + "<b>" + safeVal + "</b>"
+                        + filling.substring(0, Math.min(8, filling.length())) + "</html>");
+        lbl.setFont(font);
         lbl.setForeground(MAU_TEXT);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        lbl.setBorder(new EmptyBorder(1, 0, 1, 0));
+        lbl.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        lbl.setBorder(new EmptyBorder(2, indent, 2, 0));
         doc.add(lbl);
     }
 
