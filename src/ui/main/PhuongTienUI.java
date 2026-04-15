@@ -1,9 +1,7 @@
 package ui.main;
 
-import dao.DichVuDAO;
 import dao.KhachHangDAO;
 import dao.PhuongTienDAO;
-import entity.DichVu;
 import entity.KhachHang;
 import entity.PhuongTien;
 import java.awt.*;
@@ -35,7 +33,6 @@ public class PhuongTienUI {
 
     private final PhuongTienDAO phuongTienDAO = new PhuongTienDAO();
     private final KhachHangDAO khachHangDAO = new KhachHangDAO();
-    private final DichVuDAO dichVuDAO = new DichVuDAO();
     private final PrimaryButton primaryButton = new PrimaryButton();
 
     private JTable table;
@@ -377,27 +374,24 @@ public class PhuongTienUI {
 
         JTextField txtPhi = makeField(isEdit ? String.valueOf((long) editPt.getMucPhi()) : "0");
 
-        // Dynamic price matching
+        // Gán giá mặc định theo loại xe
         Runnable updatePrice = () -> {
-            if ("Khác".equals(cboLoaiXe.getSelectedItem())) {
-                txtPhi.setText("0");
-                return;
-            }
-            String type = ((String) cboLoaiXe.getSelectedItem()).toLowerCase();
-            List<DichVu> services = dichVuDAO.layTatCa();
-            boolean found = false;
-            for (DichVu dv : services) {
-                if (dv.getTenDichVu() != null && dv.getTenDichVu().toLowerCase().contains(type)) {
-                    if (dv.getDonGia() != null) {
-                        txtPhi.setText(String.valueOf(dv.getDonGia().longValue()));
-                        found = true;
-                    }
+            String type = (String) cboLoaiXe.getSelectedItem();
+            switch (type) {
+                case "Xe máy":
+                    txtPhi.setText("100000");
                     break;
-                }
+                case "Ô tô":
+                    txtPhi.setText("1000000");
+                    break;
+                case "Xe điện":
+                    txtPhi.setText("50000");
+                    break;
+                default:
+                    txtPhi.setText("0");
+                    break;
             }
-            if (!found) {
-                txtPhi.setText("0");
-            }
+            txtPhi.setEditable("Khác".equals(type));
         };
 
         cboLoaiXe.addItemListener(e -> {

@@ -54,12 +54,21 @@ public class HoaDonDAO {
         }
     }
 
+    private void ensureGuiXeServiceExists(Connection con) throws SQLException {
+        String sql = "IF NOT EXISTS (SELECT 1 FROM DichVu WHERE maDichVu = 'DVXE') "
+                + "INSERT INTO DichVu(maDichVu, tenDichVu, donVi) VALUES ('DVXE', N'Gửi xe', N'xe/tháng')";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.execute();
+        }
+    }
+
     public boolean luuNhieuHoaDonMoi(ArrayList<HoaDonUI.Bill> danhSachBill, String nguoiLap) {
         Connection con = null;
         try {
             con = connectDB.getConnection();
             con.setAutoCommit(false);
             ensureTienPhongServiceExists(con);
+            ensureGuiXeServiceExists(con);
             String nguoiLapHopLe = resolveNguoiLapHopLe(con, nguoiLap);
 
             String sqlHD = "INSERT INTO HoaDon (maHoaDon, maHopDong, maPhong, tuNgay, denNgay, trangThaiThanhToan, nguoiLap, createdAt) "

@@ -382,6 +382,28 @@ public class HoaDonUI {
         tblHistory.getColumnModel().getColumn(4).setCellRenderer(new EyeCellRenderer());
         tblHistory.getColumnModel().getColumn(4).setCellEditor(new HistoryViewEditor());
 
+        tblHistory.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
+                    int c) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                l.setFont(FONT_PLAIN);
+                l.setForeground(AppColors.SLATE_900);
+                l.setBackground(isSel ? t.getSelectionBackground() : AppColors.WHITE);
+                l.setOpaque(true);
+
+                if (c == 2) {
+                    l.setForeground(new Color(22, 163, 74));
+                    l.setFont(FONT_BOLD);
+                }
+
+                l.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
+                        new EmptyBorder(0, 16, 0, 8)));
+                return l;
+            }
+        });
+
         JScrollPane sp = new JScrollPane(tblHistory);
         sp.setBorder(new EmptyBorder(0, 0, 8, 0));
         sp.getViewport().setBackground(MAU_CARD);
@@ -389,6 +411,37 @@ public class HoaDonUI {
         card.add(title, BorderLayout.NORTH);
         card.add(sp, BorderLayout.CENTER);
         return card;
+    }
+
+    private void applySummaryRenderers() {
+        tblSummary.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
+                    int c) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                l.setFont(FONT_PLAIN);
+                l.setForeground(AppColors.SLATE_900);
+                l.setBackground(isSel ? t.getSelectionBackground() : AppColors.WHITE);
+                l.setOpaque(true);
+                l.setHorizontalAlignment(SwingConstants.LEFT);
+
+                if (c == 0) {
+                    l.setForeground(new Color(37, 99, 235));
+                    l.setFont(FONT_BOLD);
+                } else if (c == 5) {
+                    l.setFont(FONT_BOLD);
+                    l.setForeground(new Color(22, 163, 74));
+                    l.setHorizontalAlignment(SwingConstants.RIGHT);
+                } else if (c >= 1 && c <= 4) {
+                    l.setHorizontalAlignment(SwingConstants.RIGHT);
+                }
+
+                l.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 16, 0, 8)));
+                return l;
+            }
+        });
     }
 
     private void showCreateDialog() {
@@ -514,11 +567,11 @@ public class HoaDonUI {
                 d.options.add(op);
             }
 
-            // Thêm phí phương tiện
+            // Thêm phí phương tiện (theo từng xe đăng ký trong phòng)
             for (PhuongTien pt : allVehicles) {
                 if (room.getMaPhong().equals(pt.getMaPhong())) {
                     ServiceOption vop = new ServiceOption();
-                    vop.maDichVu = "DV00";
+                    vop.maDichVu = "DVXE";
                     vop.tenDichVu = "Gửi xe: " + pt.getLoaiXe() + " (" + pt.getBienSo() + ")";
                     vop.donGia = pt.getMucPhi();
                     vop.selected = true;
@@ -637,6 +690,7 @@ public class HoaDonUI {
             tblSummary.setModel(summaryModel);
             tblSummary.getColumnModel().getColumn(6).setCellRenderer(new EyeCellRenderer());
             tblSummary.getColumnModel().getColumn(6).setCellEditor(new SummaryDetailEditor());
+            applySummaryRenderers();
         } else {
             summaryModel = new DefaultTableModel(
                     new String[] { "Phòng", "Tiền phòng", "Điện", "Nước", "Dịch vụ", "Tổng", "Đã TT", "Chi tiết" }, 0) {
@@ -665,6 +719,7 @@ public class HoaDonUI {
             tblSummary.setModel(summaryModel);
             tblSummary.getColumnModel().getColumn(7).setCellRenderer(new EyeCellRenderer());
             tblSummary.getColumnModel().getColumn(7).setCellEditor(new SummaryDetailEditor());
+            applySummaryRenderers();
         }
     }
 

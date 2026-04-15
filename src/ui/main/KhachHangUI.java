@@ -223,14 +223,14 @@ public class KhachHangUI {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
                     int c) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
-                l.setFont(new Font("Inter", Font.PLAIN, 13));
+                l.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
                 l.setForeground(AppColors.SLATE_900);
                 l.setBackground(isSel ? t.getSelectionBackground() : AppColors.WHITE);
                 l.setOpaque(true);
 
                 if (c == 0) {
                     l.setForeground(new Color(37, 99, 235));
-                    l.setFont(new Font("Inter", Font.BOLD, 13));
+                    l.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
                 }
 
                 l.setBorder(BorderFactory.createCompoundBorder(
