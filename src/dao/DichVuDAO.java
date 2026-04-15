@@ -49,7 +49,7 @@ public class DichVuDAO {
                             rs.getString("donVi"),
                             rs.getString("maGiaDetail"),
                             rs.getObject("donGia") != null ? rs.getDouble("donGia") : null);
-                    if (!dv.getMaDichVu().equals("DV00")) {
+                    if (!dv.getMaDichVu().equals("DV00") && !dv.getMaDichVu().equals("DVXE")) {
                         ds.add(dv);
                     }
 
@@ -212,7 +212,7 @@ public class DichVuDAO {
 
     public void ganTatCaDichVuChoPhongNeuChuaCo(String maPhong) {
         String sqlInsertMissing = "INSERT INTO PhongDichVu(maPhong, maDichVu) "
-                + "SELECT ?, maDichVu FROM DichVu WHERE maDichVu <> 'DV00' "
+                + "SELECT ?, maDichVu FROM DichVu WHERE maDichVu NOT IN ('DV00','DVXE') "
                 + "AND maDichVu NOT IN (SELECT maDichVu FROM PhongDichVu WHERE maPhong = ?)";
 
         try (Connection con = connectDB.getConnection()) {

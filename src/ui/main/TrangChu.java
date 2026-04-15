@@ -139,6 +139,7 @@ public class TrangChu extends JFrame {
                 new MenuItem("Quản lý phòng", "img/icons/settings.png", 2),
                 new MenuItem("Khách hàng", "img/icons/user.png", 3),
                 new MenuItem("Phương tiện", "img/icons/bike.png", 4),
+                new MenuItem("Điện nước", "img/icons/electric.png", 10),
                 new MenuItem("Dịch vụ", "img/icons/support.png", 6),
                 new MenuItem("Hóa đơn", "img/icons/bill.png", 7)));
 
@@ -253,6 +254,9 @@ public class TrangChu extends JFrame {
         if (panelIndex == 5) {
             refreshDoanhThuTab();
         }
+        if (panelIndex == 10) {
+            refreshChiSoDienNuocTab();
+        }
 
         cardLayout.show(pnlContent, String.valueOf(panelIndex));
     }
@@ -263,6 +267,7 @@ public class TrangChu extends JFrame {
     private KhachHangUI khachHangUI;
     private DoanhThuUI doanhThuUI;
     private HoaDonUI hoaDonUI;
+    private ChiSoDienNuocUI chiSoDienNuocUI;
 
     private JPanel createMainPanel() {
         JPanel pnlMain = new JPanel(new BorderLayout());
@@ -291,6 +296,8 @@ public class TrangChu extends JFrame {
         pnlContent.add(hoaDonUI.getPanel(), "7");
         pnlContent.add(new BangGiaUI(taiKhoan).getPanel(), "8");
         pnlContent.add(new LoaiPhongUI().getPanel(), "9");
+        chiSoDienNuocUI = new ChiSoDienNuocUI();
+        pnlContent.add(chiSoDienNuocUI.getPanel(), "10");
 
         if (hopDongUI != null) {
             hopDongUI.setOnContractCreated(() -> {
@@ -337,6 +344,12 @@ public class TrangChu extends JFrame {
     private void refreshDoanhThuTab() {
         if (doanhThuUI != null) {
             doanhThuUI.refresh();
+        }
+    }
+
+    private void refreshChiSoDienNuocTab() {
+        if (chiSoDienNuocUI != null) {
+            chiSoDienNuocUI.refresh();
         }
     }
 
