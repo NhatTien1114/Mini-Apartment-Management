@@ -5,6 +5,8 @@ import dao.PhuongTienDAO;
 import entity.KhachHang;
 import entity.PhuongTien;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -20,9 +22,14 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
 import ui.util.RoundedTextField;
+import ui.util.ValidationPopup;
 
 public class PhuongTienUI {
     private final Font FONT_TITLE = new Font("Be Vietnam Pro", Font.BOLD, 24);
@@ -342,6 +349,31 @@ public class PhuongTienUI {
         if (isEdit)
             txtBienSo.setEnabled(false); // Primary key locked on edit
 
+        // --- Auto-format biển số: uppercase, auto-dash, auto-dot ---
+        if (!isEdit) {
+            applyBienSoFilter(txtBienSo);
+
+            txtBienSo.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    if (e.isTemporary())
+                        return;
+                    SwingUtilities.invokeLater(() -> {
+                        String val = txtBienSo.getText().trim();
+                        if (val.isEmpty()) {
+                            ValidationPopup.show(txtBienSo, "Biển số xe không được để trống");
+                        } else if (!val.matches("^\\d{2}[A-Z]\\d?-\\d{3}\\.\\d{2}$")
+                                && !val.matches("^\\d{2}[A-Z]\\d?-\\d{4}$")) {
+                            ValidationPopup.show(txtBienSo,
+                                    "Biển số không đúng định dạng (VD: 59A-123.45 hoặc 59A1-1234)");
+                        } else if (phuongTienDAO.kiemTraBienSoTonTai(val)) {
+                            ValidationPopup.show(txtBienSo, "Biển số này đã tồn tại trong hệ thống");
+                        }
+                    });
+                }
+            });
+        }
+
         JComboBox<String> cboLoaiXe = new JComboBox<>(new String[] { "Xe máy", "Ô tô", "Xe điện", "Khác" });
         cboLoaiXe.setFont(FONT_PLAIN);
         cboLoaiXe.setBackground(AppColors.WHITE);
@@ -417,11 +449,11 @@ public class PhuongTienUI {
             }
         });
 
-        form.add(wrapField("Biển số (BSX)", txtBienSo));
+        form.add(wrapField("Biển số (BSX) *", txtBienSo));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Họ Tên Chủ", cboKhachHang));
+        form.add(wrapField("Họ Tên Chủ *", cboKhachHang));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Loại phương tiện", cboLoaiXe));
+        form.add(wrapField("Loại phương tiện *", cboLoaiXe));
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Thuộc phòng", txtPhong));
         form.add(Box.createVerticalStrut(10));
@@ -439,11 +471,29 @@ public class PhuongTienUI {
         btnLuu.addActionListener(e -> {
             String bsx = txtBienSo.getText().trim();
             if (bsx.isEmpty()) {
-                JOptionPane.showMessageDialog(dlg, "Vui lòng nhập biển số xe.");
+                ValidationPopup.show(txtBienSo, "Biển số xe không được để trống");
+                txtBienSo.requestFocus();
                 return;
+            }
+            if (!isEdit) {
+                if (!bsx.matches("^\\d{2}[A-Z]\\d?-\\d{3}\\.\\d{2}$") && !bsx.matches("^\\d{2}[A-Z]\\d?-\\d{4}$")) {
+                    ValidationPopup.show(txtBienSo, "Biển số không đúng định dạng (VD: 59A-123.45 hoặc 59A1-1234)");
+                    txtBienSo.requestFocus();
+                    return;
+                }
+                if (phuongTienDAO.kiemTraBienSoTonTai(bsx)) {
+                    ValidationPopup.show(txtBienSo, "Biển số này đã tồn tại trong hệ thống");
+                    txtBienSo.requestFocus();
+                    return;
+                }
             }
             KhachHangItem khItem = (KhachHangItem) cboKhachHang.getSelectedItem();
             String maKH = khItem != null && !khItem.maKH.isEmpty() ? khItem.maKH : null;
+            if (maKH == null) {
+                ValidationPopup.show(cboKhachHang, "Vui lòng chọn khách hàng");
+                cboKhachHang.requestFocus();
+                return;
+            }
             String loai = (String) cboLoaiXe.getSelectedItem();
             String phong = txtPhong.getText().trim();
             if (phong.isEmpty())
@@ -452,7 +502,8 @@ public class PhuongTienUI {
             try {
                 phi = Double.parseDouble(txtPhi.getText().trim());
             } catch (Exception exx) {
-                JOptionPane.showMessageDialog(dlg, "Phí đóng phải là số hợp lệ.");
+                ValidationPopup.show(txtPhi, "Phí đóng phải là số hợp lệ");
+                txtPhi.requestFocus();
                 return;
             }
 
@@ -492,6 +543,108 @@ public class PhuongTienUI {
         field.setPreferredSize(new Dimension(0, 38));
         field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
         return field;
+    }
+
+    /**
+     * Auto-format biển số: uppercase letters, auto-insert dash and dot.
+     * Format: 59A-123.45 (5 số) hoặc 59A1-1234 (4 số)
+     */
+    private void applyBienSoFilter(JTextField field) {
+        ((AbstractDocument) field.getDocument()).setDocumentFilter(new DocumentFilter() {
+            private boolean updating = false;
+
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+                    throws BadLocationException {
+                super.insertString(fb, offset, string != null ? string.toUpperCase() : null, attr);
+                if (!updating)
+                    autoFormat(fb);
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+                    throws BadLocationException {
+                super.replace(fb, offset, length, text != null ? text.toUpperCase() : null, attrs);
+                if (!updating)
+                    autoFormat(fb);
+            }
+
+            @Override
+            public void remove(FilterBypass fb, int offset, int length) throws BadLocationException {
+                super.remove(fb, offset, length);
+            }
+
+            private void autoFormat(FilterBypass fb) throws BadLocationException {
+                updating = true;
+                try {
+                    String raw = fb.getDocument().getText(0, fb.getDocument().getLength());
+                    // Strip all formatting chars to get raw input
+                    String digits = raw.replace("-", "").replace(".", "");
+
+                    // Build formatted string
+                    StringBuilder formatted = new StringBuilder();
+                    int dashPos = -1;
+                    for (int i = 0; i < digits.length(); i++) {
+                        char c = digits.charAt(i);
+                        formatted.append(c);
+                        // After prefix part (2 digits + letter + optional digit), insert dash
+                        if (dashPos < 0 && formatted.length() >= 3) {
+                            // Check if we have the pattern: digit digit letter [digit]
+                            String prefix = formatted.toString();
+                            if (prefix.length() == 3 && Character.isLetter(prefix.charAt(2)) && i + 1 < digits.length()
+                                    && Character.isDigit(digits.charAt(i + 1))) {
+                                // Could be 59A- or 59A1-, peek next
+                                // If next is digit and the one after is also digit, it's 59A1-
+                                // Just continue, dash will be inserted when we have enough chars
+                            }
+                            if (prefix.length() == 3 && Character.isLetter(prefix.charAt(2))) {
+                                // Check if next char is a digit that's part of the prefix (like 59A1)
+                                if (i + 1 < digits.length() && Character.isDigit(digits.charAt(i + 1))) {
+                                    // Peek: could be 59A1-xxxx or 59A-xxx.xx
+                                    // We need to decide: if total remaining digits after letter = 5+, it's 59A1-
+                                    int remainingDigits = 0;
+                                    for (int j = i + 1; j < digits.length(); j++) {
+                                        if (Character.isDigit(digits.charAt(j)))
+                                            remainingDigits++;
+                                    }
+                                    if (remainingDigits >= 5) {
+                                        // 59A1-xxxx format, don't insert dash yet
+                                        continue;
+                                    }
+                                }
+                                formatted.append('-');
+                                dashPos = formatted.length();
+                            }
+                            if (prefix.length() == 4 && Character.isLetter(prefix.charAt(2))
+                                    && Character.isDigit(prefix.charAt(3)) && dashPos < 0) {
+                                formatted.append('-');
+                                dashPos = formatted.length();
+                            }
+                        }
+                    }
+
+                    // Auto-insert dot for 5-digit suffix: xxx.xx
+                    if (dashPos > 0) {
+                        int dashIdx = formatted.indexOf("-");
+                        if (dashIdx >= 0) {
+                            String suffix = formatted.substring(dashIdx + 1).replace(".", "");
+                            if (suffix.length() == 5) {
+                                formatted = new StringBuilder(formatted.substring(0, dashIdx + 1));
+                                formatted.append(suffix.substring(0, 3)).append('.').append(suffix.substring(3));
+                            }
+                        }
+                    }
+
+                    String result = formatted.toString();
+                    if (!result.equals(raw)) {
+                        fb.remove(0, fb.getDocument().getLength());
+                        fb.insertString(0, result, null);
+                    }
+                } finally {
+                    updating = false;
+                }
+            }
+        });
     }
 
     private JButton makeOutlineButton(String text) {

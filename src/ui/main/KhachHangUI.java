@@ -62,11 +62,16 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableRowSorter;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import javax.swing.text.MaskFormatter;
 import service.KhachHangService;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
 import ui.util.RoundedTextField;
+import ui.util.ValidationPopup;
 
 public class KhachHangUI {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -177,7 +182,7 @@ public class KhachHangUI {
         bar.add(cboFilterPhong);
         card.add(bar, BorderLayout.NORTH);
 
-        String[] cols = { "Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Phòng" };
+        String[] cols = { "Mã KH", "Họ tên", "SĐT", "CCCD", "Ngày sinh", "Địa chỉ", "Phòng", "Trạng thái" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -224,12 +229,22 @@ public class KhachHangUI {
                     int c) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
                 l.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
-                l.setForeground(AppColors.SLATE_900);
                 l.setBackground(isSel ? t.getSelectionBackground() : AppColors.WHITE);
                 l.setOpaque(true);
 
+                // Check if this row is "Đã rời đi"
+                int modelRow = t.convertRowIndexToModel(r);
+                Object statusVal = t.getModel().getValueAt(modelRow, 7);
+                boolean daRoiDi = "Đã rời đi".equals(statusVal);
+
+                if (daRoiDi) {
+                    l.setForeground(new Color(156, 163, 175)); // gray text
+                } else {
+                    l.setForeground(AppColors.SLATE_900);
+                }
+
                 if (c == 0) {
-                    l.setForeground(new Color(37, 99, 235));
+                    l.setForeground(daRoiDi ? new Color(156, 163, 175) : new Color(37, 99, 235));
                     l.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
                 }
 
@@ -274,12 +289,13 @@ public class KhachHangUI {
         table.setSelectionForeground(AppColors.SLATE_900);
 
         table.getColumnModel().getColumn(0).setPreferredWidth(80);
-        table.getColumnModel().getColumn(1).setPreferredWidth(220);
+        table.getColumnModel().getColumn(1).setPreferredWidth(180);
         table.getColumnModel().getColumn(2).setPreferredWidth(110);
         table.getColumnModel().getColumn(3).setPreferredWidth(130);
-        table.getColumnModel().getColumn(4).setPreferredWidth(110);
-        table.getColumnModel().getColumn(5).setPreferredWidth(220);
-        table.getColumnModel().getColumn(6).setPreferredWidth(90);
+        table.getColumnModel().getColumn(4).setPreferredWidth(100);
+        table.getColumnModel().getColumn(5).setPreferredWidth(180);
+        table.getColumnModel().getColumn(6).setPreferredWidth(80);
+        table.getColumnModel().getColumn(7).setPreferredWidth(110);
 
         DefaultTableCellRenderer paddedCell = new DefaultTableCellRenderer() {
             @Override
@@ -290,7 +306,10 @@ public class KhachHangUI {
                         new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
                         new EmptyBorder(0, 10, 0, 8)));
                 setFont(col == 1 ? FONT_BOLD : FONT_PLAIN);
-                setForeground(AppColors.SLATE_900);
+                int modelRow = t.convertRowIndexToModel(row);
+                Object statusVal = t.getModel().getValueAt(modelRow, 7);
+                boolean daRoiDi = "Đã rời đi".equals(statusVal);
+                setForeground(daRoiDi ? new Color(156, 163, 175) : AppColors.SLATE_900);
                 return this;
             }
         };
@@ -300,6 +319,36 @@ public class KhachHangUI {
         }
 
         table.getColumnModel().getColumn(1).setCellRenderer(boldPaddedRenderer());
+
+        // Status column renderer (badge style)
+        table.getColumnModel().getColumn(7).setCellRenderer(new TableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSel, boolean hasFocus,
+                    int row, int col) {
+                String status = value != null ? value.toString() : "";
+                boolean daRoiDi = "Đã rời đi".equals(status);
+
+                JLabel badge = new JLabel(status, SwingConstants.CENTER);
+                badge.setOpaque(true);
+                badge.setFont(new Font("Be Vietnam Pro", Font.BOLD, 11));
+
+                if (daRoiDi) {
+                    badge.setForeground(new Color(239, 68, 68));
+                    badge.setBackground(new Color(254, 226, 226));
+                } else {
+                    badge.setForeground(new Color(22, 163, 74));
+                    badge.setBackground(new Color(220, 252, 231));
+                }
+
+                badge.setBorder(new EmptyBorder(4, 8, 4, 8));
+
+                JPanel cell = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 10));
+                cell.setBackground(isSel ? t.getSelectionBackground() : AppColors.WHITE);
+                cell.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
+                cell.add(badge);
+                return cell;
+            }
+        });
 
         // --- Right-click context menu ---
         JPopupMenu contextMenu = new JPopupMenu();
@@ -391,7 +440,10 @@ public class KhachHangUI {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int r, int c) {
                 super.getTableCellRendererComponent(t, v, sel, foc, r, c);
                 setFont(FONT_BOLD);
-                setForeground(AppColors.SLATE_900);
+                int modelRow = t.convertRowIndexToModel(r);
+                Object statusVal = t.getModel().getValueAt(modelRow, 7);
+                boolean daRoiDi = "Đã rời đi".equals(statusVal);
+                setForeground(daRoiDi ? new Color(156, 163, 175) : AppColors.SLATE_900);
                 setBorder(BorderFactory.createCompoundBorder(
                         new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
                         new EmptyBorder(0, 16, 0, 8)));
@@ -427,6 +479,7 @@ public class KhachHangUI {
             List<KhachHang> danhSach = khachHangService.layDanhSachKhachHang();
             for (KhachHang kh : danhSach) {
                 String maPhong = khachHangService.layMaPhongHienTaiTheoKhach(kh.getMaKhachHang());
+                boolean daRoiDi = khachHangService.kiemTraDaRoiDi(kh.getMaKhachHang());
                 tableModel.addRow(new Object[] {
                         kh.getMaKhachHang(),
                         kh.getHoTen(),
@@ -435,7 +488,7 @@ public class KhachHangUI {
                         kh.getNgaySinh() == null ? "" : DATE_FORMAT.format(kh.getNgaySinh()),
                         nullSafe(kh.getDiaChi()),
                         nullSafe(maPhong),
-                        "ACT"
+                        daRoiDi ? "Đã rời đi" : "Đang ở"
                 });
             }
         } catch (RuntimeException ex) {
@@ -490,6 +543,96 @@ public class KhachHangUI {
         JTextField txtCccd = makeField(cccdValue);
         JTextArea txtDiaChi = makeTextArea(diaChiValue);
 
+        // --- Number-only filter for SĐT and CCCD ---
+        applyNumberFilter(txtSdt);
+        applyNumberFilter(txtCccd);
+
+        // --- Focus-lost validation ---
+        txtHoTen.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (e.isTemporary())
+                    return;
+                SwingUtilities.invokeLater(() -> {
+                    String val = txtHoTen.getText().trim();
+                    if (val.isEmpty()) {
+                        ValidationPopup.show(txtHoTen, "Họ tên không được để trống");
+                    } else if (val.split("\\s+").length < 2) {
+                        ValidationPopup.show(txtHoTen, "Họ tên phải có ít nhất 2 từ");
+                    }
+                });
+            }
+        });
+        txtSdt.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (e.isTemporary())
+                    return;
+                SwingUtilities.invokeLater(() -> {
+                    String val = txtSdt.getText().trim();
+                    if (val.isEmpty()) {
+                        ValidationPopup.show(txtSdt, "Số điện thoại không được để trống");
+                    } else if (!val.matches("^0[0-9]{9}$")) {
+                        ValidationPopup.show(txtSdt, "SĐT phải gồm 10 số và bắt đầu bằng số 0");
+                    }
+                });
+            }
+        });
+        txtCccd.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (e.isTemporary())
+                    return;
+                SwingUtilities.invokeLater(() -> {
+                    String val = txtCccd.getText().trim();
+                    if (val.isEmpty()) {
+                        ValidationPopup.show(txtCccd, "Số CCCD không được để trống");
+                    } else if (!val.matches("^[0-9]{12}$")) {
+                        ValidationPopup.show(txtCccd, "Số CCCD phải đủ 12 số");
+                    } else if (khachHangService.kiemTraCCCDTonTai(val, isEdit ? maKhachHangEditFinal : null)) {
+                        ValidationPopup.show(txtCccd, "Số CCCD này đã tồn tại trong hệ thống");
+                    }
+                });
+            }
+        });
+        txtNgaySinh.setFocusLostBehavior(JFormattedTextField.PERSIST);
+        txtNgaySinh.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (e.isTemporary())
+                    return;
+                SwingUtilities.invokeLater(() -> {
+                    String raw = txtNgaySinh.getText().replace("_", "").replace("/", "").trim();
+                    if (raw.isEmpty()) {
+                        ValidationPopup.show(txtNgaySinh, "Ngày sinh không được để trống");
+                    } else {
+                        String fullText = txtNgaySinh.getText().replace("_", "").trim();
+                        if (fullText.length() >= 10) {
+                            try {
+                                DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/uuuu")
+                                        .withResolverStyle(java.time.format.ResolverStyle.STRICT);
+                                LocalDate.parse(fullText, fmt);
+                            } catch (Exception ex) {
+                                ValidationPopup.show(txtNgaySinh, "Ngày sinh không hợp lệ");
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        txtDiaChi.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (e.isTemporary())
+                    return;
+                SwingUtilities.invokeLater(() -> {
+                    if (txtDiaChi.getText().trim().isEmpty()) {
+                        ValidationPopup.show(txtDiaChi, "Địa chỉ không được để trống");
+                    }
+                });
+            }
+        });
+
         List<String> dsPhongDisplay = new ArrayList<>();
         for (Phong phong : phongDAO.getAllPhongDaThue()) {
             dsPhongDisplay.add(phong.getMaPhong());
@@ -518,13 +661,13 @@ public class KhachHangUI {
         form.add(Box.createVerticalStrut(10));
         form.add(wrapField("Họ tên *", txtHoTen));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Số điện thoại", txtSdt));
+        form.add(wrapField("Số điện thoại *", txtSdt));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Ngày sinh (dd/MM/yyyy)", txtNgaySinh));
+        form.add(wrapField("Ngày sinh (dd/MM/yyyy) *", txtNgaySinh));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("CCCD", txtCccd));
+        form.add(wrapField("CCCD *", txtCccd));
         form.add(Box.createVerticalStrut(10));
-        form.add(wrapField("Địa chỉ", new JScrollPane(txtDiaChi)));
+        form.add(wrapField("Địa chỉ *", new JScrollPane(txtDiaChi)));
 
         card.add(form, BorderLayout.CENTER);
 
@@ -537,28 +680,76 @@ public class KhachHangUI {
         JButton btnLuu = primaryButton.makePrimaryButton(isEdit ? "Cập nhật" : "Thêm");
         btnLuu.addActionListener(e -> {
             try {
+                // --- Validate all fields ---
                 String hoTen = txtHoTen.getText().trim();
                 if (hoTen.isEmpty()) {
-                    JOptionPane.showMessageDialog(dlg, "Họ tên không được để trống.", "Thiếu thông tin",
-                            JOptionPane.WARNING_MESSAGE);
+                    ValidationPopup.show(txtHoTen, "Họ tên không được để trống");
+                    txtHoTen.requestFocus();
+                    return;
+                }
+                if (hoTen.split("\\s+").length < 2) {
+                    ValidationPopup.show(txtHoTen, "Họ tên phải có ít nhất 2 từ");
                     txtHoTen.requestFocus();
                     return;
                 }
 
-                LocalDate ngaySinh = null;
+                String sdt = txtSdt.getText().trim();
+                if (sdt.isEmpty()) {
+                    ValidationPopup.show(txtSdt, "Số điện thoại không được để trống");
+                    txtSdt.requestFocus();
+                    return;
+                }
+                if (!sdt.matches("^0[0-9]{9}$")) {
+                    ValidationPopup.show(txtSdt, "SĐT phải gồm 10 số và bắt đầu bằng số 0");
+                    txtSdt.requestFocus();
+                    return;
+                }
+
                 String ngaySinhRaw = txtNgaySinh.getText().replace("_", "").trim();
-                if (!ngaySinhRaw.isEmpty() && ngaySinhRaw.length() >= 10) {
+                if (ngaySinhRaw.isEmpty() || ngaySinhRaw.replace("/", "").trim().isEmpty()) {
+                    ValidationPopup.show(txtNgaySinh, "Ngày sinh không được để trống");
+                    txtNgaySinh.requestFocus();
+                    return;
+                }
+                LocalDate ngaySinh = null;
+                if (ngaySinhRaw.length() >= 10) {
                     try {
                         DateTimeFormatter ddMMyyyyFmt = DateTimeFormatter.ofPattern("dd/MM/uuuu")
                                 .withResolverStyle(java.time.format.ResolverStyle.STRICT);
                         ngaySinh = LocalDate.parse(ngaySinhRaw, ddMMyyyyFmt);
                     } catch (DateTimeParseException ex) {
-                        JOptionPane.showMessageDialog(dlg, "Ngày sinh không đúng định dạng dd/MM/yyyy.",
-                                "Sai định dạng",
-                                JOptionPane.WARNING_MESSAGE);
+                        ValidationPopup.show(txtNgaySinh, "Ngày sinh không hợp lệ");
                         txtNgaySinh.requestFocus();
                         return;
                     }
+                } else {
+                    ValidationPopup.show(txtNgaySinh, "Ngày sinh không đúng định dạng dd/MM/yyyy");
+                    txtNgaySinh.requestFocus();
+                    return;
+                }
+
+                String cccd = txtCccd.getText().trim();
+                if (cccd.isEmpty()) {
+                    ValidationPopup.show(txtCccd, "Số CCCD không được để trống");
+                    txtCccd.requestFocus();
+                    return;
+                }
+                if (!cccd.matches("^[0-9]{12}$")) {
+                    ValidationPopup.show(txtCccd, "Số CCCD phải đủ 12 số");
+                    txtCccd.requestFocus();
+                    return;
+                }
+                if (khachHangService.kiemTraCCCDTonTai(cccd, isEdit ? maKhachHangEditFinal : null)) {
+                    ValidationPopup.show(txtCccd, "Số CCCD này đã tồn tại trong hệ thống");
+                    txtCccd.requestFocus();
+                    return;
+                }
+
+                String diaChi = txtDiaChi.getText().trim();
+                if (diaChi.isEmpty()) {
+                    ValidationPopup.show(txtDiaChi, "Địa chỉ không được để trống");
+                    txtDiaChi.requestFocus();
+                    return;
                 }
 
                 KhachHang payload = new KhachHang();
@@ -566,10 +757,10 @@ public class KhachHangUI {
                     payload.setMaKhachHang(maKhachHangEditFinal);
                 }
                 payload.setHoTen(hoTen);
-                payload.setSoDienThoai(txtSdt.getText().trim());
+                payload.setSoDienThoai(sdt);
                 payload.setNgaySinh(ngaySinh);
-                payload.setSoCCCD(txtCccd.getText().trim());
-                payload.setDiaChi(txtDiaChi.getText().trim());
+                payload.setSoCCCD(cccd);
+                payload.setDiaChi(diaChi);
 
                 if (isEdit) {
                     boolean ok = khachHangService.capNhatKhachHang(payload);
@@ -641,6 +832,26 @@ public class KhachHangUI {
                 new EmptyBorder(7, 10, 7, 10)));
         area.setPreferredSize(new Dimension(0, 90));
         return area;
+    }
+
+    private void applyNumberFilter(JTextField field) {
+        ((AbstractDocument) field.getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+                    throws BadLocationException {
+                if (string != null && string.matches("[0-9]*")) {
+                    super.insertString(fb, offset, string, attr);
+                }
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+                    throws BadLocationException {
+                if (text != null && text.matches("[0-9]*")) {
+                    super.replace(fb, offset, length, text, attrs);
+                }
+            }
+        });
     }
 
     private JComponent wrapField(String label, JComponent field) {

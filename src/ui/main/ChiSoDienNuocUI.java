@@ -519,23 +519,71 @@ public class ChiSoDienNuocUI {
                 dienMoi = Integer.parseInt(valDien.toString().trim());
             } catch (NumberFormatException e) {
                 errors.add(data.maPhong + ": Số điện mới không hợp lệ");
-                continue;
+                table.scrollRectToVisible(table.getCellRect(i, 3, true));
+                table.changeSelection(i, 3, false, false);
+                table.editCellAt(i, 3);
+                JOptionPane.showMessageDialog(root,
+                        "Phòng " + data.maPhong + ": Số điện mới không hợp lệ, vui lòng nhập số nguyên.",
+                        "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                return;
             }
             try {
                 Object valNuoc = tableModel.getValueAt(i, 6);
                 nuocMoi = Integer.parseInt(valNuoc.toString().trim());
             } catch (NumberFormatException e) {
                 errors.add(data.maPhong + ": Số nước mới không hợp lệ");
-                continue;
+                table.scrollRectToVisible(table.getCellRect(i, 6, true));
+                table.changeSelection(i, 6, false, false);
+                table.editCellAt(i, 6);
+                JOptionPane.showMessageDialog(root,
+                        "Phòng " + data.maPhong + ": Số nước mới không hợp lệ, vui lòng nhập số nguyên.",
+                        "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                return;
             }
 
             if (dienMoi < data.dienCu) {
-                errors.add(data.maPhong + ": Số điện mới (" + dienMoi + ") < số cũ (" + data.dienCu + ")");
-                continue;
+                table.scrollRectToVisible(table.getCellRect(i, 3, true));
+                table.changeSelection(i, 3, false, false);
+                table.editCellAt(i, 3);
+                JOptionPane.showMessageDialog(root,
+                        "Phòng " + data.maPhong + ": Số điện mới (" + dienMoi + ") không được nhỏ hơn số cũ ("
+                                + data.dienCu + ").",
+                        "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                return;
             }
             if (nuocMoi < data.nuocCu) {
-                errors.add(data.maPhong + ": Số nước mới (" + nuocMoi + ") < số cũ (" + data.nuocCu + ")");
-                continue;
+                table.scrollRectToVisible(table.getCellRect(i, 6, true));
+                table.changeSelection(i, 6, false, false);
+                table.editCellAt(i, 6);
+                JOptionPane.showMessageDialog(root,
+                        "Phòng " + data.maPhong + ": Số nước mới (" + nuocMoi + ") không được nhỏ hơn số cũ ("
+                                + data.nuocCu + ").",
+                        "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            int tieuThuDien = dienMoi - data.dienCu;
+            int tieuThuNuoc = nuocMoi - data.nuocCu;
+
+            if (tieuThuDien <= 0) {
+                table.scrollRectToVisible(table.getCellRect(i, 3, true));
+                table.changeSelection(i, 3, false, false);
+                table.editCellAt(i, 3);
+                JOptionPane.showMessageDialog(root,
+                        "Phòng " + data.maPhong + ": Tiêu thụ điện phải lớn hơn 0.\nSố điện cũ: " + data.dienCu
+                                + " → Vui lòng nhập số điện mới lớn hơn " + data.dienCu + ".",
+                        "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (tieuThuNuoc <= 0) {
+                table.scrollRectToVisible(table.getCellRect(i, 6, true));
+                table.changeSelection(i, 6, false, false);
+                table.editCellAt(i, 6);
+                JOptionPane.showMessageDialog(root,
+                        "Phòng " + data.maPhong + ": Tiêu thụ nước phải lớn hơn 0.\nSố nước cũ: " + data.nuocCu
+                                + " → Vui lòng nhập số nước mới lớn hơn " + data.nuocCu + ".",
+                        "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                return;
             }
 
             ChiSoDienNuoc cs = new ChiSoDienNuoc(data.maPhong, thang, nam, dienMoi, nuocMoi);
