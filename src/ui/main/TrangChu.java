@@ -924,6 +924,7 @@ public class TrangChu extends JFrame {
         }
         return dem;
     }
+    
 
     // ================= MAIN =================
     public static void main(String[] args) {

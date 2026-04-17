@@ -8,6 +8,8 @@ import entity.HopDong;
 import entity.KhachHang;
 import entity.Phong;
 import java.awt.*;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
@@ -66,7 +68,7 @@ public class PhongInfo {
         pnlContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         // --- Thông tin phòng ---
-        String giaThue = String.valueOf(donGiaDAO.getDonGiaByMa(phong.getMaGiaDetail()).getDonGia());
+        String giaThue = formatCurrency(donGiaDAO.getDonGiaByMa(phong.getMaGiaDetail()).getDonGia());
         String tang = phong.getMaTang() != null ? phong.getMaTang().getTenTang() : "";
         String toa = (phong.getMaTang() != null && phong.getMaTang().getToa() != null)
                 ? phong.getMaTang().getToa().getTenToa()
@@ -121,7 +123,7 @@ public class PhongInfo {
         pnlContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         // --- Thông tin phòng ---
-        String giaThue = String.valueOf(donGiaDAO.getDonGiaByMa(phong.getMaGiaDetail()).getDonGia());
+        String giaThue = formatCurrency(donGiaDAO.getDonGiaByMa(phong.getMaGiaDetail()).getDonGia());
         String tang = phong.getMaTang() != null ? phong.getMaTang().getTenTang() : "";
         String toa = (phong.getMaTang() != null && phong.getMaTang().getToa() != null)
                 ? phong.getMaTang().getToa().getTenToa()
@@ -195,7 +197,7 @@ public class PhongInfo {
 
         JTextField txtStartDateLocal = new JTextField(String.valueOf(hd.getNgayBatDau()));
         JTextField txtEndDateLocal = new JTextField(String.valueOf(hd.getNgayKetThuc()));
-        JTextField txtDepositLocal = new JTextField(String.valueOf(hd.getTienCoc()));
+        JTextField txtDepositLocal = new JTextField(formatCurrency(hd.getTienCoc()));
         txtStartDateLocal.setEditable(false);
         txtEndDateLocal.setEditable(false);
         txtDepositLocal.setEditable(false);
@@ -207,7 +209,7 @@ public class PhongInfo {
         JPanel pnlRow3 = new JPanel(new GridLayout(1, 2, 15, 0));
         pnlRow3.setBackground(Color.WHITE);
 
-        JTextField txtMonthlyRentLocal = new JTextField(String.valueOf(hd.getTienThueThang()));
+        JTextField txtMonthlyRentLocal = new JTextField(formatCurrency(hd.getTienThueThang()));
         txtMonthlyRentLocal.setEditable(false);
         JComboBox<String> cboConditionLocal = new JComboBox<>(new String[] { "Đã thuê" });
 
@@ -254,6 +256,13 @@ public class PhongInfo {
 
     private void extracted(JComponent field) {
         field.setAlignmentX(Component.LEFT_ALIGNMENT);
+    }
+
+    private String formatCurrency(double amount) {
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+        symbols.setGroupingSeparator('.');
+        DecimalFormat df = new DecimalFormat("#,###", symbols);
+        return df.format((long) amount) + "đ";
     }
 
     // ================= BOTTOM PANEL =================

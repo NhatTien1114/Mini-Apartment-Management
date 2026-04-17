@@ -646,6 +646,14 @@ public class HopDongUI {
         applyNumberFilter(txtSoDienThoai);
         applyNumberFilter(txtCccd);
 
+        addValidationOnFocusLost(txtKhach, "^[\\p{L} .'-]{2,}$", "Họ tên phải có ít nhất 2 ký tự");
+        addValidationOnFocusLost(txtSoDienThoai, "^0[0-9]{9}$", "Số điện thoại không hợp lệ (VD: 0901234567)");
+        addValidationOnFocusLost(txtCccd, "^([0-9]{9}|[0-9]{12})$", "CCCD phải có 12 số, CMND phải có 9 số");
+        addValidationOnFocusLost(txtDiaChi, "^.{3,}$", "Địa chỉ không được để trống");
+        addDateValidationOnFocusLost(txtNgaySinh, "Ngày sinh");
+        addDateValidationOnFocusLost(txtBatDau, "Ngày bắt đầu");
+        addDateValidationOnFocusLost(txtKetThuc, "Ngày kết thúc");
+
         txtThue.setEditable(false);
         txtCoc.setEditable(false);
 
@@ -1086,6 +1094,40 @@ public class HopDongUI {
                     throws BadLocationException {
                 if (text == null || text.matches("\\d+"))
                     super.replace(fb, o, len, text, attr);
+            }
+        });
+    }
+
+    private void addValidationOnFocusLost(JTextField field, String regex, String errorMessage) {
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                String val = field.getText().trim();
+                if (!val.isEmpty() && !val.matches(regex)) {
+                    ui.util.ValidationPopup.show(field, errorMessage);
+                }
+            }
+        });
+    }
+
+    private void addDateValidationOnFocusLost(JFormattedTextField field, String label) {
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                String val = field.getText().trim();
+                if (val.isEmpty() || val.equals("__/__/____")) return;
+                if (val.contains("_")) {
+                    ui.util.ValidationPopup.show(field, label + " chưa nhập đầy đủ (dd/MM/yyyy)");
+                    return;
+                }
+                try {
+                    java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
+                            .ofPattern("dd/MM/uuuu")
+                            .withResolverStyle(java.time.format.ResolverStyle.STRICT);
+                    java.time.LocalDate.parse(val, fmt);
+                } catch (Exception ex) {
+                    ui.util.ValidationPopup.show(field, label + " không hợp lệ (dd/MM/yyyy)");
+                }
             }
         });
     }
