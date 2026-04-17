@@ -226,6 +226,27 @@ public class KhachHangDAO {
 		}
 	}
 
+	public boolean kiemTraDaRoiDi(String maKhachHang) {
+		String sql = "SELECT TOP 1 hdkh.vaiTro FROM HopDongKhachHang hdkh "
+				+ "JOIN HopDong hd ON hdkh.maHopDong = hd.maHopDong "
+				+ "WHERE hdkh.maKhachHang = ? "
+				+ "ORDER BY hd.ngayBatDau DESC";
+		try {
+			Connection con = connectDB.getConnection();
+			try (PreparedStatement ps = con.prepareStatement(sql)) {
+				ps.setString(1, maKhachHang);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) {
+						return rs.getInt("vaiTro") == 2;
+					}
+					return false;
+				}
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException("Loi khi kiem tra trang thai khach hang.", e);
+		}
+	}
+
 	public boolean capNhatKhachHang(KhachHang khachHang) {
 		String sql = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, ngaySinh = ?, soCCCD = ?, diaChiThuongTru = ? "
 				+ "WHERE maKhachHang = ?";
@@ -344,6 +365,25 @@ public class KhachHangDAO {
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException("Loi khi tim khach hang theo ma.", e);
+		}
+	}
+
+	public boolean kiemTraCCCDTonTai(String soCCCD, String maKhachHangHienTai) {
+		String sql = "SELECT COUNT(*) FROM KhachHang WHERE soCCCD = ?" +
+				(maKhachHangHienTai != null ? " AND maKhachHang != ?" : "");
+		try {
+			Connection con = connectDB.getConnection();
+			try (PreparedStatement ps = con.prepareStatement(sql)) {
+				ps.setString(1, soCCCD);
+				if (maKhachHangHienTai != null) {
+					ps.setString(2, maKhachHangHienTai);
+				}
+				try (ResultSet rs = ps.executeQuery()) {
+					return rs.next() && rs.getInt(1) > 0;
+				}
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException("Loi khi kiem tra CCCD trung.", e);
 		}
 	}
 

@@ -646,10 +646,13 @@ public class HopDongUI {
         applyNumberFilter(txtSoDienThoai);
         applyNumberFilter(txtCccd);
 
-        addValidationOnFocusLost(txtKhach, "^[\\p{L} .'-]{2,}$", "Họ tên phải có ít nhất 2 ký tự");
-        addValidationOnFocusLost(txtSoDienThoai, "^0[0-9]{9}$", "Số điện thoại không hợp lệ (VD: 0901234567)");
-        addValidationOnFocusLost(txtCccd, "^([0-9]{9}|[0-9]{12})$", "CCCD phải có 12 số, CMND phải có 9 số");
-        addValidationOnFocusLost(txtDiaChi, "^.{3,}$", "Địa chỉ không được để trống");
+        addValidationOnFocusLost(txtKhach, "^[\\p{L} .'-]{2,}$", "Họ tên không được để trống",
+                "Họ tên phải có ít nhất 2 ký tự");
+        addValidationOnFocusLost(txtSoDienThoai, "^0[0-9]{9}$", "Số điện thoại không được để trống",
+                "SĐT phải gồm 10 số và bắt đầu bằng số 0");
+        addValidationOnFocusLost(txtCccd, "^([0-9]{9}|[0-9]{12})$", "CCCD/CMND không được để trống",
+                "CCCD phải có 12 số, CMND phải có 9 số");
+        addValidationOnFocusLost(txtDiaChi, "^.{3,}$", "Địa chỉ không được để trống", "Địa chỉ không được để trống");
         addDateValidationOnFocusLost(txtNgaySinh, "Ngày sinh");
         addDateValidationOnFocusLost(txtBatDau, "Ngày bắt đầu");
         addDateValidationOnFocusLost(txtKetThuc, "Ngày kết thúc");
@@ -698,26 +701,26 @@ public class HopDongUI {
         if (isEdit) {
             JPanel pnlPhong = FormFieldStyles.createLabeledField("Phòng", txtPhongEdit, MAU_TEXT, labelFont, 52);
             pnlContent.add(pnlPhong, BorderLayout.NORTH);
-            pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê", txtKhach, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại", txtSoDienThoai, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND", txtCccd, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Địa chỉ", txtDiaChi, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày bắt đầu", txtBatDau, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc", txtKetThuc, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê *", txtKhach, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại *", txtSoDienThoai, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND *", txtCccd, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Địa chỉ *", txtDiaChi, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày bắt đầu *", txtBatDau, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc *", txtKetThuc, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
 
             pnlContent.add(pnlGrid, BorderLayout.CENTER);
 
         } else {
-            pnlGrid.add(FormFieldStyles.createLabeledField("Phòng", cboPhong, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê", txtKhach, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại", txtSoDienThoai, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND", txtCccd, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Địa chỉ", txtDiaChi, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày sinh", txtNgaySinh, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày bắt đầu", txtBatDau, MAU_TEXT, labelFont, 52));
-            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc", txtKetThuc, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Phòng *", cboPhong, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê *", txtKhach, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại *", txtSoDienThoai, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND *", txtCccd, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Địa chỉ *", txtDiaChi, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày sinh *", txtNgaySinh, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày bắt đầu *", txtBatDau, MAU_TEXT, labelFont, 52));
+            pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc *", txtKetThuc, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
 
@@ -758,37 +761,89 @@ public class HopDongUI {
 
             // ---------------------------
 
-            if (phongCode.isEmpty() || txtKhach.getText().trim().isEmpty() || txtSoDienThoai.getText().trim().isEmpty()
-                    ||
-                    txtCccd.getText().trim().isEmpty() || txtDiaChi.getText().trim().isEmpty() ||
-                    bDau.length() < 10 || kThuc.length() < 10) {
-                showToast("Vui lòng nhập đầy đủ thông tin");
+            // --- Validate all fields ---
+            if (txtKhach.getText().trim().isEmpty()) {
+                ui.util.ValidationPopup.show(txtKhach, "Họ tên không được để trống");
+                txtKhach.requestFocus();
                 return;
             }
-            String cccdValue = txtCccd.getText().trim();
-            String regexCMND = "^[0-9]{9}$";
-            String regexCCCD = "^[0-9]{12}$";
+            if (!txtKhach.getText().trim().matches("^[\\p{L} .'-]{2,}$")) {
+                ui.util.ValidationPopup.show(txtKhach, "Họ tên phải có ít nhất 2 ký tự");
+                txtKhach.requestFocus();
+                return;
+            }
 
-            if (!cccdValue.matches(regexCMND) && !cccdValue.matches(regexCCCD)) {
-                showToast("CCCD/CMND không hợp lệ! Vui lòng nhập lại 9 số đối với CMND và 12 số đối với CCCD.");
+            String sdtVal = txtSoDienThoai.getText().trim();
+            if (sdtVal.isEmpty()) {
+                ui.util.ValidationPopup.show(txtSoDienThoai, "Số điện thoại không được để trống");
+                txtSoDienThoai.requestFocus();
+                return;
+            }
+            if (!sdtVal.matches("^0[0-9]{9}$")) {
+                ui.util.ValidationPopup.show(txtSoDienThoai, "SĐT phải gồm 10 số và bắt đầu bằng số 0");
+                txtSoDienThoai.requestFocus();
+                return;
+            }
+
+            String cccdValue = txtCccd.getText().trim();
+            if (cccdValue.isEmpty()) {
+                ui.util.ValidationPopup.show(txtCccd, "CCCD/CMND không được để trống");
                 txtCccd.requestFocus();
+                return;
+            }
+            if (!cccdValue.matches("^([0-9]{9}|[0-9]{12})$")) {
+                ui.util.ValidationPopup.show(txtCccd, "CCCD phải có 12 số, CMND phải có 9 số");
+                txtCccd.requestFocus();
+                return;
+            }
+
+            if (txtDiaChi.getText().trim().isEmpty()) {
+                ui.util.ValidationPopup.show(txtDiaChi, "Địa chỉ không được để trống");
+                txtDiaChi.requestFocus();
                 return;
             }
 
             java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")
                     .withResolverStyle(java.time.format.ResolverStyle.STRICT);
-            try {
-                if (!isEdit && !ngaySinhRaw.isEmpty()) {
-                    java.time.LocalDate.parse(txtNgaySinh.getText(), fmt);
+
+            if (!isEdit) {
+                String ngaySinhCheck = txtNgaySinh.getText().replace("_", "").replace("/", "").trim();
+                if (ngaySinhCheck.isEmpty()) {
+                    ui.util.ValidationPopup.show(txtNgaySinh, "Ngày sinh không được để trống");
+                    txtNgaySinh.requestFocus();
+                    return;
                 }
-                java.time.LocalDate start = java.time.LocalDate.parse(txtBatDau.getText(), fmt);
-                java.time.LocalDate end = java.time.LocalDate.parse(txtKetThuc.getText(), fmt);
+                try {
+                    java.time.LocalDate.parse(txtNgaySinh.getText().trim(), fmt);
+                } catch (Exception ex) {
+                    ui.util.ValidationPopup.show(txtNgaySinh, "Ngày sinh không hợp lệ (dd/MM/yyyy)");
+                    txtNgaySinh.requestFocus();
+                    return;
+                }
+            }
+
+            if (bDau.length() < 10 || bDau.replace("/", "").trim().isEmpty()) {
+                ui.util.ValidationPopup.show(txtBatDau, "Ngày bắt đầu không được để trống");
+                txtBatDau.requestFocus();
+                return;
+            }
+            if (kThuc.length() < 10 || kThuc.replace("/", "").trim().isEmpty()) {
+                ui.util.ValidationPopup.show(txtKetThuc, "Ngày kết thúc không được để trống");
+                txtKetThuc.requestFocus();
+                return;
+            }
+
+            try {
+                java.time.LocalDate start = java.time.LocalDate.parse(txtBatDau.getText().trim(), fmt);
+                java.time.LocalDate end = java.time.LocalDate.parse(txtKetThuc.getText().trim(), fmt);
                 if (start.isAfter(end)) {
-                    showToast("Ngày bắt đầu không được lớn hơn ngày kết thúc");
+                    ui.util.ValidationPopup.show(txtKetThuc, "Ngày kết thúc phải sau ngày bắt đầu");
+                    txtKetThuc.requestFocus();
                     return;
                 }
             } catch (Exception ex) {
-                showToast("Ngày sai định dạng dd/MM/yyyy");
+                ui.util.ValidationPopup.show(txtBatDau, "Ngày sai định dạng dd/MM/yyyy");
+                txtBatDau.requestFocus();
                 return;
             }
 
@@ -1098,36 +1153,51 @@ public class HopDongUI {
         });
     }
 
-    private void addValidationOnFocusLost(JTextField field, String regex, String errorMessage) {
+    private void addValidationOnFocusLost(JTextField field, String regex, String emptyMessage, String errorMessage) {
         field.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                String val = field.getText().trim();
-                if (!val.isEmpty() && !val.matches(regex)) {
-                    ui.util.ValidationPopup.show(field, errorMessage);
-                }
+                if (e.isTemporary())
+                    return;
+                SwingUtilities.invokeLater(() -> {
+                    String val = field.getText().trim();
+                    if (val.isEmpty()) {
+                        ui.util.ValidationPopup.show(field, emptyMessage);
+                    } else if (!val.matches(regex)) {
+                        ui.util.ValidationPopup.show(field, errorMessage);
+                    }
+                });
             }
         });
     }
 
     private void addDateValidationOnFocusLost(JFormattedTextField field, String label) {
+        field.setFocusLostBehavior(JFormattedTextField.PERSIST);
         field.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                String val = field.getText().trim();
-                if (val.isEmpty() || val.equals("__/__/____")) return;
-                if (val.contains("_")) {
-                    ui.util.ValidationPopup.show(field, label + " chưa nhập đầy đủ (dd/MM/yyyy)");
+                if (e.isTemporary())
                     return;
-                }
-                try {
-                    java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
-                            .ofPattern("dd/MM/uuuu")
-                            .withResolverStyle(java.time.format.ResolverStyle.STRICT);
-                    java.time.LocalDate.parse(val, fmt);
-                } catch (Exception ex) {
-                    ui.util.ValidationPopup.show(field, label + " không hợp lệ (dd/MM/yyyy)");
-                }
+                SwingUtilities.invokeLater(() -> {
+                    String val = field.getText().trim();
+                    String raw = val.replace("_", "").replace("/", "").trim();
+                    if (raw.isEmpty() || val.equals("__/__/____")) {
+                        ui.util.ValidationPopup.show(field, label + " không được để trống");
+                        return;
+                    }
+                    if (val.contains("_")) {
+                        ui.util.ValidationPopup.show(field, label + " chưa nhập đầy đủ (dd/MM/yyyy)");
+                        return;
+                    }
+                    try {
+                        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
+                                .ofPattern("dd/MM/uuuu")
+                                .withResolverStyle(java.time.format.ResolverStyle.STRICT);
+                        java.time.LocalDate.parse(val, fmt);
+                    } catch (Exception ex) {
+                        ui.util.ValidationPopup.show(field, label + " không hợp lệ (dd/MM/yyyy)");
+                    }
+                });
             }
         });
     }
@@ -1175,8 +1245,15 @@ public class HopDongUI {
         JDialog dialog = new JDialog(parent, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
         dialog.setBackground(new Color(0, 0, 0, 0));
-        dialog.setSize(1200, 920);
-        dialog.setLocationRelativeTo(pnlRoot);
+
+        // Responsive sizing: fit within screen bounds
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(
+                GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration());
+        int maxW = screenSize.width - screenInsets.left - screenInsets.right - 40;
+        int maxH = screenSize.height - screenInsets.top - screenInsets.bottom - 40;
+        dialog.setSize(Math.min(1200, maxW), Math.min(920, maxH));
+        dialog.setLocationRelativeTo(null);
 
         final boolean[] accepted = { false };
 
@@ -1220,7 +1297,7 @@ public class HopDongUI {
         java.util.List<DichVu> roomDV = phongDvDAO.layDichVuCuaPhong(draft.phong);
 
         String giaDien = "Theo quy định", giaNuoc = "Theo quy định";
-        String phiGiuXe = "Miễn phí", phiDichVu = "Theo quy định";
+        String phiGiuXe = "Miễn phí", phiGiuXeDapDien = "Miễn phí", phiDichVu = "Theo quy định";
 
         for (DichVu dv : allDV) {
             String ten = dv.getTenDichVu().toLowerCase();
@@ -1319,7 +1396,8 @@ public class HopDongUI {
         addDocLine(page1, "b. Thông tin phí dịch vụ của tòa nhà:", docBold, 16);
         addDocHtml(page1, "Đơn giá điện: <b>" + giaDien + "</b>", docFont, 28);
         addDocHtml(page1, "Giá nước: <b>" + giaNuoc + "</b>", docFont, 28);
-        addDocHtml(page1, "Phí giữ xe máy: <b>" + phiGiuXe + "</b>", docFont, 28);
+        addDocHtml(page1, "Phí giữ xe máy: <b>100.000đ</b>", docFont, 28);
+        addDocHtml(page1, "Phí giữ xe đạp điện: <b>50.000đ</b>", docFont, 28);
         addDocHtml(page1, "Phí dịch vụ (Wifi, rác, vệ sinh): <b>" + phiDichVu + "</b>", docFont, 28);
 
         // ==================== PAGE 2 ====================
@@ -1543,10 +1621,11 @@ public class HopDongUI {
     }
 
     private void addDocLine(JPanel doc, String text, Font font, int indent) {
-        JLabel lbl = new JLabel(text);
+        JLabel lbl = new JLabel("<html>" + text + "</html>");
         lbl.setFont(font);
         lbl.setForeground(MAU_TEXT);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         lbl.setBorder(new EmptyBorder(2, indent, 2, 0));
         doc.add(lbl);
     }
@@ -1556,6 +1635,7 @@ public class HopDongUI {
         lbl.setFont(font);
         lbl.setForeground(MAU_TEXT);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         lbl.setBorder(new EmptyBorder(2, indent, 2, 0));
         doc.add(lbl);
     }

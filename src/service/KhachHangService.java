@@ -57,4 +57,18 @@ public class KhachHangService {
 		return khachHangDAO.layMaPhongHienTaiTheoKhach(maKhachHang.trim());
 	}
 
+	public boolean kiemTraDaRoiDi(String maKhachHang) {
+		if (maKhachHang == null || maKhachHang.trim().isEmpty()) {
+			return false;
+		}
+		return khachHangDAO.kiemTraDaRoiDi(maKhachHang.trim());
+	}
+
+	public boolean kiemTraCCCDTonTai(String soCCCD, String maKhachHangHienTai) {
+		if (soCCCD == null || soCCCD.trim().isEmpty()) {
+			return false;
+		}
+		return khachHangDAO.kiemTraCCCDTonTai(soCCCD.trim(), maKhachHangHienTai);
+	}
+
 }
