@@ -257,6 +257,9 @@ public class TrangChu extends JFrame {
         if (panelIndex == 10) {
             refreshChiSoDienNuocTab();
         }
+        if (panelIndex == 7) {
+            hoaDonUI.refresh();
+        }
 
         cardLayout.show(pnlContent, String.valueOf(panelIndex));
     }

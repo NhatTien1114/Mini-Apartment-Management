@@ -226,6 +226,10 @@ public class HoaDonUI {
     private JPanel pnlCalcView;
     private CardLayout mainCardLayout;
 
+    public void refresh() {
+        rebuildSummaryModel();
+    }
+
     public JPanel getPanel() {
         pnlRoot = new JPanel(new BorderLayout());
         pnlRoot.setBackground(MAU_NEN);

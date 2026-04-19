@@ -1,6 +1,8 @@
 package dao;
 
 import database.connectDB;
+import entity.Phong;
+
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -15,6 +17,7 @@ import ui.main.HoaDonUI;
 
 public class HoaDonDAO {
     HopDongDAO hdDAO = new HopDongDAO();
+    QuanLyPhongDAO phongDAO = new QuanLyPhongDAO();
 
     private String resolveNguoiLapHopLe(Connection con, String nguoiLap) throws SQLException {
         String sqlCheck = "SELECT TOP 1 maTaiKhoan FROM TaiKhoan WHERE maTaiKhoan = ?";
@@ -372,13 +375,14 @@ public class HoaDonDAO {
 
     public boolean daCoHoaDonThang(int month, int year) {
         String sql = "SELECT COUNT(*) FROM HoaDon WHERE MONTH(tuNgay) = ? AND YEAR(tuNgay) = ?";
+        ArrayList<Phong> dsPhong = phongDAO.getAllPhongDaThue();
         try (Connection con = connectDB.getConnection();
                 PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, month);
             ps.setInt(2, year);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt(1) > 0;
+                    return rs.getInt(1) == dsPhong.size();
                 }
             }
         } catch (SQLException e) {
@@ -590,5 +594,75 @@ public class HoaDonDAO {
             System.err.println("Lỗi getDoanhThuTheoNamTrongKhoang: " + e.getMessage());
         }
         return result;
+    }
+
+    public boolean luuHoaDonKetThucHopDong(HoaDonUI.Bill bill, java.time.LocalDate tuNgay,
+            java.time.LocalDate denNgay, String maHopDong) {
+        Connection con = null;
+        try {
+            con = connectDB.getConnection();
+            con.setAutoCommit(false);
+            ensureTienPhongServiceExists(con);
+            ensureGuiXeServiceExists(con);
+            String nguoiLap = resolveNguoiLapHopLe(con, "AD01");
+
+            String maHoaDon = taoMaTheoThoiGian("HD");
+            String sqlHD = "INSERT INTO HoaDon (maHoaDon, maHopDong, maPhong, tuNgay, denNgay, "
+                    + "trangThaiThanhToan, nguoiLap, createdAt) VALUES (?,?,?,?,?,0,?,GETDATE())";
+            try (PreparedStatement ps = con.prepareStatement(sqlHD)) {
+                ps.setString(1, maHoaDon);
+                ps.setString(2, maHopDong);
+                ps.setString(3, bill.phong);
+                ps.setDate(4, java.sql.Date.valueOf(tuNgay));
+                ps.setDate(5, java.sql.Date.valueOf(denNgay));
+                ps.setString(6, nguoiLap);
+                ps.executeUpdate();
+            }
+
+            String sqlDetail = "INSERT INTO HoaDonDetail (maChiTiet, maHoaDon, maDichVu, soLuong, tenKhoan, donGia) "
+                    + "VALUES (?,?,?,?,?,?)";
+            try (PreparedStatement ps = con.prepareStatement(sqlDetail)) {
+                ps.setString(1, taoMaTheoThoiGian("CT")); ps.setString(2, maHoaDon);
+                ps.setString(3, "DV00"); ps.setInt(4, 1);
+                ps.setString(5, "Tiền thuê phòng (theo ngày)"); ps.setDouble(6, bill.tienPhong);
+                ps.addBatch();
+
+                if (bill.tongTieuThuD > 0) {
+                    ps.setString(1, taoMaTheoThoiGian("CT")); ps.setString(2, maHoaDon);
+                    ps.setString(3, bill.maDichVuDien); ps.setInt(4, bill.tongTieuThuD);
+                    ps.setString(5, "Tiền điện"); ps.setDouble(6, bill.donGiaDien);
+                    ps.addBatch();
+                }
+
+                if (bill.tongTieuThuN > 0) {
+                    ps.setString(1, taoMaTheoThoiGian("CT")); ps.setString(2, maHoaDon);
+                    ps.setString(3, bill.maDichVuNuoc); ps.setInt(4, bill.tongTieuThuN);
+                    ps.setString(5, "Tiền nước"); ps.setDouble(6, bill.donGiaNuoc);
+                    ps.addBatch();
+                }
+
+                if (bill.dichVuKhac != null) {
+                    for (HoaDonUI.BillServiceItem item : bill.dichVuKhac) {
+                        if (item == null || item.maDichVu == null || item.maDichVu.isEmpty()) continue;
+                        ps.setString(1, taoMaTheoThoiGian("CT")); ps.setString(2, maHoaDon);
+                        ps.setString(3, item.maDichVu); ps.setInt(4, Math.max(1, item.soLuong));
+                        ps.setString(5, item.tenKhoan == null ? "Dịch vụ" : item.tenKhoan);
+                        ps.setDouble(6, item.donGia);
+                        ps.addBatch();
+                    }
+                }
+
+                ps.executeBatch();
+            }
+
+            con.commit();
+            return true;
+        } catch (SQLException e) {
+            if (con != null) try { con.rollback(); } catch (SQLException ignored) {}
+            System.err.println("Lỗi lưu hóa đơn kết thúc hợp đồng: " + e.getMessage());
+            return false;
+        } finally {
+            if (con != null) try { con.setAutoCommit(true); } catch (SQLException ignored) {}
+        }
     }
 }

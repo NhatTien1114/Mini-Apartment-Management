@@ -353,4 +353,33 @@ public class HopDongDAO {
         }
         return Double.parseDouble(digits);
     }
+
+    public boolean ketThucHopDong(String maHopDong, String maPhong) {
+        Connection con = null;
+        try {
+            con = connectDB.getConnection();
+            con.setAutoCommit(false);
+
+            String sqlHD = "UPDATE HopDong SET trangThai = 0 WHERE maHopDong = ?";
+            try (PreparedStatement ps = con.prepareStatement(sqlHD)) {
+                ps.setString(1, maHopDong);
+                ps.executeUpdate();
+            }
+
+            String sqlPhong = "UPDATE Phong SET trangThaiPhong = 0, soNguoiHienTai = 0 WHERE maPhong = ?";
+            try (PreparedStatement ps = con.prepareStatement(sqlPhong)) {
+                ps.setString(1, maPhong);
+                ps.executeUpdate();
+            }
+
+            con.commit();
+            return true;
+        } catch (SQLException e) {
+            if (con != null) try { con.rollback(); } catch (SQLException ignored) {}
+            lastError = e.getMessage();
+            return false;
+        } finally {
+            if (con != null) try { con.setAutoCommit(true); } catch (SQLException ignored) {}
+        }
+    }
 }
