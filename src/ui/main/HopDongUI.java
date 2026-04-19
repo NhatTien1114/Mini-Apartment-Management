@@ -252,11 +252,14 @@ public class HopDongUI {
         JPopupMenu contextMenu = new JPopupMenu();
         JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
         JMenuItem miMembers = new JMenuItem("Quản lý thành viên");
+        JMenuItem miThanhToan = new JMenuItem("Thanh toán hợp đồng");
         JMenuItem miDelete = new JMenuItem("Xóa");
         miDelete.setForeground(new Color(239, 68, 68));
         contextMenu.add(miEdit);
         contextMenu.add(miMembers);
+        contextMenu.add(miThanhToan);
         contextMenu.add(miDelete);
+        
 
         miMembers.addActionListener(e -> {
             int row = table.getSelectedRow();
@@ -273,6 +276,15 @@ public class HopDongUI {
             if (row >= 0)
                 showContractForm(true, table.convertRowIndexToModel(row));
         });
+        miThanhToan.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row < 0) return;
+            int modelRow = table.convertRowIndexToModel(row);
+            String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
+            String maPhong = String.valueOf(model.getValueAt(modelRow, 1));
+            showThanhToanHopDongDialog(maHopDong, maPhong);
+        });
+
         miDelete.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row < 0)
@@ -1693,6 +1705,240 @@ public class HopDongUI {
 
     private String formatCurrencyValue(long amount) {
         return VN_MONEY.format(amount);
+    }
+
+    private void showThanhToanHopDongDialog(String maHopDong, String maPhong) {
+        dao.HopDongDAO hopDongDAO = new dao.HopDongDAO();
+        entity.HopDong hd = hopDongDAO.getHopDongByMaPhong(maPhong);
+        if (hd == null) { showToast("Không tìm thấy hợp đồng."); return; }
+
+        dao.ChiSoDienNuocDAO chiSoDAO = new dao.ChiSoDienNuocDAO();
+        dao.DichVuDAO dvDAO2 = new dao.DichVuDAO();
+        dao.GiaDetailDAO gdDAO = new dao.GiaDetailDAO();
+        dao.PhongDichVuDAO phongDvDAO = new dao.PhongDichVuDAO();
+        dao.PhuongTienDAO ptDAO = new dao.PhuongTienDAO();
+        dao.HoaDonDAO hoaDonDAO = new dao.HoaDonDAO();
+
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate ngayBD = hd.getNgayBatDau();
+        java.time.LocalDate ngayDauThang = today.withDayOfMonth(1);
+        java.time.LocalDate ngayBDHieuQua = ngayBD.isAfter(ngayDauThang) ? ngayBD : ngayDauThang;
+        long soNgay = java.time.temporal.ChronoUnit.DAYS.between(ngayBDHieuQua, today) + 1;
+        long soNgayTrongThang = today.lengthOfMonth();
+
+        double tienThueThang = hd.getTienThueThang();
+        double tienPhongProRated = Math.round(tienThueThang * soNgay / (double) soNgayTrongThang);
+
+        entity.DichVu dvDien = dvDAO2.getDichVuByTen("Điện");
+        entity.DichVu dvNuoc = dvDAO2.getDichVuByTen("Nước");
+        final double donGiaDien;
+        final double donGiaNuoc;
+        String maDichVuDien = dvDien != null ? dvDien.getMaDichVu() : null;
+        String maDichVuNuoc = dvNuoc != null ? dvNuoc.getMaDichVu() : null;
+        {
+            double tmp = 0;
+            if (dvDien != null && dvDien.getMaGiaDetail() != null) {
+                entity.GiaDetail gd = gdDAO.getDonGiaByMa(dvDien.getMaGiaDetail());
+                if (gd != null) tmp = gd.getDonGia();
+            }
+            donGiaDien = tmp;
+            tmp = 0;
+            if (dvNuoc != null && dvNuoc.getMaGiaDetail() != null) {
+                entity.GiaDetail gd = gdDAO.getDonGiaByMa(dvNuoc.getMaGiaDetail());
+                if (gd != null) tmp = gd.getDonGia();
+            }
+            donGiaNuoc = tmp;
+        }
+
+        int[] chiSoCu = chiSoDAO.layChiSoThangTruoc(maPhong, today.getMonthValue(), today.getYear());
+        int[] chiSoMoi = chiSoDAO.layChiSoTheoThang(maPhong, today.getMonthValue(), today.getYear());
+        boolean daCoChiSo = chiSoMoi != null;
+
+        java.util.List<HoaDonUI.BillServiceItem> dichVuKhac = new java.util.ArrayList<>();
+        for (entity.DichVu dv : phongDvDAO.layDichVuCuaPhong(maPhong)) {
+            if (dv.getTenDichVu() == null) continue;
+            String ten = dv.getTenDichVu().toLowerCase();
+            if (ten.contains("điện") || ten.contains("nước")) continue;
+            HoaDonUI.BillServiceItem si = new HoaDonUI.BillServiceItem();
+            si.maDichVu = dv.getMaDichVu(); si.tenKhoan = dv.getTenDichVu(); si.soLuong = 1;
+            si.donGia = dv.getDonGia() != null
+                    ? Math.round(dv.getDonGia() * soNgay / (double) soNgayTrongThang) : 0;
+            dichVuKhac.add(si);
+        }
+        for (entity.PhuongTien pt : ptDAO.getAllPhuongTien()) {
+            if (!maPhong.equals(pt.getMaPhong())) continue;
+            HoaDonUI.BillServiceItem si = new HoaDonUI.BillServiceItem();
+            si.maDichVu = "DVXE"; si.tenKhoan = "Gửi xe: " + pt.getLoaiXe() + " (" + pt.getBienSo() + ")";
+            si.soLuong = 1;
+            si.donGia = Math.round(pt.getMucPhi() * soNgay / (double) soNgayTrongThang);
+            dichVuKhac.add(si);
+        }
+
+        final int[] tieuThuD = { daCoChiSo ? Math.max(0, chiSoMoi[0] - chiSoCu[0]) : 0 };
+        final int[] tieuThuN = { daCoChiSo ? Math.max(0, chiSoMoi[1] - chiSoCu[1]) : 0 };
+        final double[] tienDien = { tieuThuD[0] * donGiaDien };
+        final double[] tienNuoc = { tieuThuN[0] * donGiaNuoc };
+
+        // ===== DIALOG =====
+        Window parent2 = SwingUtilities.getWindowAncestor(pnlRoot);
+        JDialog dialog = new JDialog(parent2, Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+        dialog.setSize(520, daCoChiSo ? 480 : 540);
+        dialog.setLocationRelativeTo(pnlRoot);
+        dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "ESC");
+        dialog.getRootPane().getActionMap().put("ESC", new AbstractAction() {
+            public void actionPerformed(ActionEvent ev) { dialog.dispose(); }
+        });
+
+        RoundedPanel pnlBg = new RoundedPanel(16);
+        pnlBg.setBackground(Color.WHITE);
+        pnlBg.setLayout(new BorderLayout(0, 10));
+        pnlBg.setBorder(new EmptyBorder(18, 22, 18, 22));
+
+        JPanel pnlHead = new JPanel(new BorderLayout());
+        pnlHead.setOpaque(false);
+        JLabel lblTitle2 = new JLabel("Thanh toán & Kết thúc – Phòng " + maPhong);
+        lblTitle2.setFont(new Font("Inter", Font.BOLD, 16));
+        lblTitle2.setForeground(MAU_TEXT);
+        JButton btnX = new JButton("✕");
+        btnX.setFont(new Font("Inter", Font.PLAIN, 14)); btnX.setBorderPainted(false);
+        btnX.setContentAreaFilled(false); btnX.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnX.addActionListener(ev -> dialog.dispose());
+        pnlHead.add(lblTitle2, BorderLayout.WEST); pnlHead.add(btnX, BorderLayout.EAST);
+
+        JPanel pnlBody = new JPanel();
+        pnlBody.setOpaque(false);
+        pnlBody.setLayout(new BoxLayout(pnlBody, BoxLayout.Y_AXIS));
+        Font fLbl = new Font("Inter", Font.BOLD, 12);
+        Font fVal = new Font("Inter", Font.PLAIN, 13);
+
+        java.util.function.BiConsumer<String, String> addRow = (lbl, val) -> {
+            JPanel r = new JPanel(new BorderLayout(8, 0)); r.setOpaque(false);
+            r.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            JLabel jl = new JLabel(lbl); jl.setFont(fLbl); jl.setForeground(MAU_SUBTEXT);
+            JLabel jv = new JLabel(val); jv.setFont(fVal); jv.setForeground(MAU_TEXT);
+            jv.setHorizontalAlignment(SwingConstants.RIGHT);
+            r.add(jl, BorderLayout.WEST); r.add(jv, BorderLayout.EAST);
+            pnlBody.add(r); pnlBody.add(Box.createVerticalStrut(5));
+        };
+
+        addRow.accept("Kỳ tính:", String.format("%d/%d – %d/%d/%d  (%d/%d ngày)",
+                ngayBDHieuQua.getDayOfMonth(), ngayBDHieuQua.getMonthValue(),
+                today.getDayOfMonth(), today.getMonthValue(), today.getYear(),
+                soNgay, soNgayTrongThang));
+
+        JLabel lblSec1 = new JLabel("Tiền phòng & Dịch vụ (theo ngày)");
+        lblSec1.setFont(new Font("Inter", Font.BOLD, 12)); lblSec1.setForeground(new Color(37, 99, 235));
+        lblSec1.setBorder(new EmptyBorder(6, 0, 2, 0)); pnlBody.add(lblSec1);
+        addRow.accept("Tiền phòng:", formatMoneyDisplay(tienPhongProRated));
+        for (HoaDonUI.BillServiceItem si : dichVuKhac)
+            addRow.accept(si.tenKhoan + ":", formatMoneyDisplay(si.donGia));
+
+        JLabel lblSec2 = new JLabel("Điện / Nước");
+        lblSec2.setFont(new Font("Inter", Font.BOLD, 12)); lblSec2.setForeground(new Color(37, 99, 235));
+        lblSec2.setBorder(new EmptyBorder(6, 0, 2, 0)); pnlBody.add(lblSec2);
+
+        JTextField txtDienMoi = null, txtNuocMoi = null;
+        if (daCoChiSo) {
+            addRow.accept("Điện (" + tieuThuD[0] + " kWh):", formatMoneyDisplay(tienDien[0]));
+            addRow.accept("Nước (" + tieuThuN[0] + " m³):", formatMoneyDisplay(tienNuoc[0]));
+        } else {
+            JLabel lblNote = new JLabel("Chưa có chỉ số tháng này – nhập chỉ số mới:");
+            lblNote.setFont(new Font("Inter", Font.ITALIC, 12)); lblNote.setForeground(new Color(239, 68, 68));
+            pnlBody.add(lblNote); pnlBody.add(Box.createVerticalStrut(4));
+            JPanel grid = new JPanel(new java.awt.GridLayout(2, 2, 8, 6));
+            grid.setOpaque(false); grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
+            JLabel lD = new JLabel("Điện mới (cũ: " + chiSoCu[0] + " kWh):"); lD.setFont(fLbl);
+            JLabel lN = new JLabel("Nước mới (cũ: " + chiSoCu[1] + " m³):"); lN.setFont(fLbl);
+            txtDienMoi = new JTextField(String.valueOf(chiSoCu[0]));
+            txtNuocMoi = new JTextField(String.valueOf(chiSoCu[1]));
+            txtDienMoi.setFont(fVal); txtNuocMoi.setFont(fVal);
+            grid.add(lD); grid.add(txtDienMoi); grid.add(lN); grid.add(txtNuocMoi);
+            pnlBody.add(grid); pnlBody.add(Box.createVerticalStrut(6));
+        }
+
+        pnlBody.add(Box.createVerticalStrut(6));
+        JSeparator sep2 = new JSeparator(); sep2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        pnlBody.add(sep2); pnlBody.add(Box.createVerticalStrut(6));
+
+        double tongTamTinh = tienPhongProRated + dichVuKhac.stream().mapToDouble(s -> s.donGia).sum()
+                + tienDien[0] + tienNuoc[0];
+        JPanel rowTong = new JPanel(new BorderLayout()); rowTong.setOpaque(false);
+        rowTong.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        JLabel lTL = new JLabel("TỔNG CỘNG:"); lTL.setFont(new Font("Inter", Font.BOLD, 14));
+        JLabel lTV = new JLabel(formatMoneyDisplay(tongTamTinh));
+        lTV.setFont(new Font("Inter", Font.BOLD, 14)); lTV.setForeground(new Color(22, 163, 74));
+        lTV.setHorizontalAlignment(SwingConstants.RIGHT);
+        rowTong.add(lTL, BorderLayout.WEST); rowTong.add(lTV, BorderLayout.EAST);
+        pnlBody.add(rowTong);
+
+        // Footer
+        JPanel pnlFoot = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        pnlFoot.setOpaque(false);
+        JButton btnHuy = new JButton("Hủy");
+        btnHuy.setFont(new Font("Inter", Font.BOLD, 13));
+        btnHuy.setBorder(new EmptyBorder(9, 20, 9, 20));
+        btnHuy.addActionListener(ev -> dialog.dispose());
+        JButton btnXacNhan = primaryButton.makePrimaryButton("Xác nhận thanh toán");
+        btnXacNhan.setBorder(new EmptyBorder(9, 16, 9, 16));
+
+        final JTextField fDien = txtDienMoi, fNuoc = txtNuocMoi;
+        btnXacNhan.addActionListener(ev -> {
+            if (!daCoChiSo) {
+                try {
+                    int dm = Integer.parseInt(fDien.getText().trim());
+                    int nm = Integer.parseInt(fNuoc.getText().trim());
+                    if (dm < chiSoCu[0] || nm < chiSoCu[1]) {
+                        showToast("Chỉ số mới không được nhỏ hơn chỉ số cũ.");
+                        return;
+                    }
+                    tieuThuD[0] = dm - chiSoCu[0];
+                    tieuThuN[0] = nm - chiSoCu[1];
+                    tienDien[0] = tieuThuD[0] * donGiaDien;
+                    tienNuoc[0] = tieuThuN[0] * donGiaNuoc;
+                    entity.ChiSoDienNuoc cs = new entity.ChiSoDienNuoc(
+                            maPhong, today.getMonthValue(), today.getYear(), dm, nm);
+                    chiSoDAO.luuHoacCapNhat(cs);
+                } catch (NumberFormatException ex) {
+                    showToast("Chỉ số điện/nước phải là số nguyên.");
+                    return;
+                }
+            }
+
+            HoaDonUI.Bill bill = new HoaDonUI.Bill();
+            bill.phong = maPhong; bill.daThanhToan = true;
+            bill.tienPhong = tienPhongProRated;
+            bill.tongTieuThuD = tieuThuD[0]; bill.donGiaDien = donGiaDien; bill.tienDien = tienDien[0];
+            bill.maDichVuDien = maDichVuDien;
+            bill.tongTieuThuN = tieuThuN[0]; bill.donGiaNuoc = donGiaNuoc; bill.tienNuoc = tienNuoc[0];
+            bill.maDichVuNuoc = maDichVuNuoc;
+            bill.month = String.valueOf(today.getMonthValue());
+            bill.year = String.valueOf(today.getYear());
+            bill.dichVuKhac = dichVuKhac;
+
+            boolean savedBill = hoaDonDAO.luuHoaDonKetThucHopDong(bill, ngayBDHieuQua, today, maHopDong);
+            boolean ended = hopDongDAO.ketThucHopDong(maHopDong, maPhong);
+            dialog.dispose();
+            if (savedBill && ended) {
+                loadDataToTable();
+                if (onContractCreated != null) onContractCreated.run();
+                showToast("Thanh toán thành công – Phòng " + maPhong + " đã chuyển về Trống.");
+            } else {
+                showToast("Có lỗi xảy ra. Vui lòng kiểm tra lại.");
+            }
+        });
+
+        pnlFoot.add(btnHuy); pnlFoot.add(btnXacNhan);
+        JScrollPane sp = new JScrollPane(pnlBody);
+        sp.setBorder(BorderFactory.createEmptyBorder());
+        sp.getViewport().setOpaque(false); sp.setOpaque(false);
+        pnlBg.add(pnlHead, BorderLayout.NORTH);
+        pnlBg.add(sp, BorderLayout.CENTER);
+        pnlBg.add(pnlFoot, BorderLayout.SOUTH);
+        dialog.add(pnlBg);
+        dialog.setVisible(true);
     }
 
     private void showMemberManagementDialog(String maHopDong, String maPhong) {
