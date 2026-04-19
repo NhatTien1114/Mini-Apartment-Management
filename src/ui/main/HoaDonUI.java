@@ -4,11 +4,13 @@ import dao.ChiSoDienNuocDAO;
 import dao.DichVuDAO;
 import dao.GiaDetailDAO;
 import dao.HoaDonDAO;
+import dao.HopDongKhachHangDAO;
 import dao.PhuongTienDAO;
 import dao.QuanLyPhongDAO;
 import entity.ChiSoDienNuoc;
 import entity.DichVu;
 import entity.GiaDetail;
+import entity.KhachHang;
 import entity.Phong;
 import entity.PhuongTien;
 import java.awt.BorderLayout;
@@ -24,6 +26,8 @@ import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Window;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.text.NumberFormat;
@@ -49,8 +53,10 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
@@ -87,6 +93,7 @@ public class HoaDonUI {
 
     private final ChiSoDienNuocDAO dienNuocDAO = new ChiSoDienNuocDAO();
     private final QuanLyPhongDAO phongDAO = new QuanLyPhongDAO();
+    private final HopDongKhachHangDAO hdkhDAO = new HopDongKhachHangDAO();
     private final GiaDetailDAO giaDetailDAO = new GiaDetailDAO();
     private final DichVuDAO dvDAO = new DichVuDAO();
     private final HoaDonDAO hdDAO = new HoaDonDAO();
@@ -151,6 +158,7 @@ public class HoaDonUI {
 
     private static class MonthlyRoomDraft {
         String maPhong;
+        String tenKhach = "";
         int soDienCu;
         int soDienMoi;
         int soNuocCu;
@@ -159,6 +167,8 @@ public class HoaDonUI {
         double donGiaNuoc;
         double tienPhong;
         boolean daThanhToan;
+        boolean isExisting = false; // true = loaded from DB (read-only, not re-saved)
+        boolean hasChiSoMoi = false; // true = ChiSoDienNuoc for month already in DB
         double tienDienOverride = -1;
         double tienNuocOverride = -1;
         List<ServiceOption> options = new ArrayList<>();
@@ -211,6 +221,7 @@ public class HoaDonUI {
     }
 
     public static class RoomMonthSummary {
+        public String maHoaDon = "";
         public String maPhong;
         public double tienPhong;
         public int tieuThuDien;
@@ -227,6 +238,7 @@ public class HoaDonUI {
     private CardLayout mainCardLayout;
 
     public void refresh() {
+        loadHistory();
         rebuildSummaryModel();
     }
 
@@ -367,11 +379,11 @@ public class HoaDonUI {
         title.setForeground(MAU_TEXT);
         title.setBorder(new EmptyBorder(14, 16, 0, 16));
 
-        String[] cols = { "Tháng/Năm", "Số phòng", "Tổng doanh thu", "Ngày tạo", "Xem" };
+        String[] cols = { "Tháng/Năm", "Số phòng", "Tổng doanh thu", "Ngày tạo" };
         historyModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 4;
+                return false;
             }
         };
         tblHistory = new JTable(historyModel);
@@ -383,8 +395,18 @@ public class HoaDonUI {
         tblHistory.getTableHeader().setBackground(new Color(248, 250, 252));
         tblHistory.getTableHeader().setReorderingAllowed(false);
 
-        tblHistory.getColumnModel().getColumn(4).setCellRenderer(new EyeCellRenderer());
-        tblHistory.getColumnModel().getColumn(4).setCellEditor(new HistoryViewEditor());
+        tblHistory.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    int row = tblHistory.rowAtPoint(e.getPoint());
+                    if (row >= 0 && row < historyItems.size()) {
+                        loadMonthFromHistory(historyItems.get(row).monthYear);
+                    }
+                }
+            }
+        });
+        tblHistory.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         tblHistory.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
@@ -536,6 +558,47 @@ public class HoaDonUI {
         int m = Integer.parseInt(month);
         int y = Integer.parseInt(year);
 
+        // 1. Tải hoá đơn đã có trong tháng (vd: thanh lý hợp đồng giữa tháng) làm draft
+        // read-only
+        for (RoomMonthSummary existS : hdDAO.getRoomSummariesTheoThang(m, y)) {
+            MonthlyRoomDraft ed = new MonthlyRoomDraft();
+            ed.maPhong = existS.maPhong;
+            ed.donGiaDien = existS.donGiaDien;
+            ed.donGiaNuoc = existS.donGiaNuoc;
+            ed.tienPhong = existS.tienPhong;
+            ed.daThanhToan = existS.daThanhToan;
+            ed.isExisting = true;
+            // Lấy chỉ số thực tế từ ChiSoDienNuoc
+            int[] curFull = dienNuocDAO.layChiSoTheoThangVoiNgay(existS.maPhong, m, y);
+            if (curFull != null) {
+                int[] old = dienNuocDAO.layChiSoTruocNgay(existS.maPhong, m, y, curFull[0]);
+                ed.soDienCu = old[0];
+                ed.soNuocCu = old[1];
+                ed.soDienMoi = curFull[1];
+                ed.soNuocMoi = curFull[2];
+            } else {
+                ed.soDienCu = 0;
+                ed.soDienMoi = existS.tieuThuDien;
+                ed.soNuocCu = 0;
+                ed.soNuocMoi = existS.tieuThuNuoc;
+            }
+            ed.tienDienOverride = existS.tieuThuDien * existS.donGiaDien;
+            ed.tienNuocOverride = existS.tieuThuNuoc * existS.donGiaNuoc;
+            // Tên người đại diện
+            KhachHang khEx = hdkhDAO.getNguoiDaiDienByMaHopDong(existS.maHoaDon);
+            ed.tenKhach = (khEx != null) ? khEx.getHoTen() : "";
+            for (BillServiceItem si : existS.services) {
+                ServiceOption op = new ServiceOption();
+                op.maDichVu = si.maDichVu;
+                op.tenDichVu = si.tenKhoan;
+                op.donGia = si.donGia * si.soLuong; // tổng tiền để hiển thị đúng
+                op.selected = true;
+                ed.options.add(op);
+            }
+            currentDrafts.add(ed);
+        }
+
+        // 2. Tạo draft mới cho tất cả phòng đang thuê
         List<PhuongTien> allVehicles = ptDAO.getAllPhuongTien();
 
         for (Phong room : rooms) {
@@ -546,13 +609,18 @@ public class HoaDonUI {
             d.maPhong = room.getMaPhong();
             d.donGiaDien = donGiaDien;
             d.donGiaNuoc = donGiaNuoc;
+            KhachHang khNew = hdkhDAO.getNguoiDaiDienByMaPhong(room.getMaPhong());
+            d.tenKhach = (khNew != null) ? khNew.getHoTen() : "";
 
-            int[] old = dienNuocDAO.layChiSoThangTruoc(room.getMaPhong(), m, y);
-            int[] cur = dienNuocDAO.layChiSoTheoThang(room.getMaPhong(), m, y);
+            int[] curFull = dienNuocDAO.layChiSoTheoThangVoiNgay(room.getMaPhong(), m, y);
+            d.hasChiSoMoi = curFull != null;
+            int[] old = curFull != null
+                    ? dienNuocDAO.layChiSoTruocNgay(room.getMaPhong(), m, y, curFull[0])
+                    : dienNuocDAO.layChiSoThangTruoc(room.getMaPhong(), m, y);
             d.soDienCu = old[0];
             d.soNuocCu = old[1];
-            d.soDienMoi = cur == null ? old[0] : cur[0];
-            d.soNuocMoi = cur == null ? old[1] : cur[1];
+            d.soDienMoi = curFull == null ? old[0] : curFull[1];
+            d.soNuocMoi = curFull == null ? old[1] : curFull[2];
 
             if (room.getMaGiaDetail() != null) {
                 GiaDetail gdPhong = giaDetailDAO.getDonGiaByMa(room.getMaGiaDetail());
@@ -604,7 +672,11 @@ public class HoaDonUI {
 
         List<String> loiChiSo = new ArrayList<>();
         for (MonthlyRoomDraft d : currentDrafts) {
-            ChiSoDienNuoc chiSo = new ChiSoDienNuoc(d.maPhong, thang, nam, d.soDienMoi, d.soNuocMoi);
+            // Bỏ qua draft đã có trong DB hoặc đã có chỉ số trong tháng
+            if (d.isExisting || d.hasChiSoMoi)
+                continue;
+            int ngayHD = java.time.LocalDate.of(nam, thang, 1).lengthOfMonth();
+            ChiSoDienNuoc chiSo = new ChiSoDienNuoc(d.maPhong, thang, nam, ngayHD, d.soDienMoi, d.soNuocMoi);
             String err = dienNuocDAO.luuHoacCapNhat(chiSo);
             if (err != null) {
                 loiChiSo.add(d.maPhong + ": " + err);
@@ -621,6 +693,8 @@ public class HoaDonUI {
         DichVu dvNuoc = dvDAO.getDichVuByTen("Nước");
         ArrayList<Bill> bills = new ArrayList<>();
         for (MonthlyRoomDraft d : currentDrafts) {
+            if (d.isExisting)
+                continue; // Bỏ qua draft đã tồn tại trong DB
             Bill b = new Bill();
             b.phong = d.maPhong;
             b.month = currentMonth;
@@ -656,9 +730,14 @@ public class HoaDonUI {
 
     private void rebuildSummaryModel() {
         summaryModel = new DefaultTableModel(
-                new String[] { "Phòng", "Tiền phòng", "Điện", "Nước", "Dịch vụ", "Tổng", "Đã TT", "Chi tiết", "Cài đặt" }, 0) {
+                new String[] { "Phòng", "Tiền phòng", "Điện", "Nước", "Dịch vụ", "Tổng", "Đã TT" },
+                0) {
             @Override
             public boolean isCellEditable(int row, int col) {
+                // Khóa checkbox "Dã TT" và cài đặt cho hóa đơn đã tồn tại (read-only)
+                if (row >= 0 && row < currentDrafts.size() && currentDrafts.get(row).isExisting) {
+                    return col == 7; // chỉ cho xem chi tiết
+                }
                 return col == 6 || col == 7 || col == 8;
             }
 
@@ -671,7 +750,8 @@ public class HoaDonUI {
         summaryModel.addTableModelListener(e -> {
             int row = e.getFirstRow(), col = e.getColumn();
             if (row >= 0 && row < currentDrafts.size() && col == 6) {
-                if (updating[0]) return;
+                if (updating[0])
+                    return;
                 boolean paid = Boolean.TRUE.equals(summaryModel.getValueAt(row, 6));
                 MonthlyRoomDraft d = currentDrafts.get(row);
                 String action = paid ? "xác nhận đã thanh toán" : "hủy thanh toán";
@@ -695,15 +775,50 @@ public class HoaDonUI {
             }
         });
         tblSummary.setModel(summaryModel);
-        tblSummary.getColumnModel().getColumn(7).setCellRenderer(new EyeCellRenderer());
-        tblSummary.getColumnModel().getColumn(7).setCellEditor(new SummaryDetailEditor());
-        tblSummary.getColumnModel().getColumn(7).setPreferredWidth(54);
-        tblSummary.getColumnModel().getColumn(7).setMaxWidth(54);
-        tblSummary.getColumnModel().getColumn(8).setCellRenderer(new GearCellRenderer());
-        tblSummary.getColumnModel().getColumn(8).setCellEditor(new GearDetailEditor());
-        tblSummary.getColumnModel().getColumn(8).setPreferredWidth(54);
-        tblSummary.getColumnModel().getColumn(8).setMaxWidth(54);
         tblSummary.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+
+        // Right-click context menu
+        JPopupMenu summaryMenu = new JPopupMenu();
+        JMenuItem miXemHoaDon = new JMenuItem("Xem hóa đơn");
+        JMenuItem miCaiDat = new JMenuItem("Cài đặt");
+        summaryMenu.add(miXemHoaDon);
+        summaryMenu.add(miCaiDat);
+
+        tblSummary.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger())
+                    showSummaryMenu(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger())
+                    showSummaryMenu(e);
+            }
+
+            private void showSummaryMenu(MouseEvent e) {
+                int row = tblSummary.rowAtPoint(e.getPoint());
+                if (row < 0)
+                    return;
+                tblSummary.setRowSelectionInterval(row, row);
+                boolean isExisting = row < currentDrafts.size() && currentDrafts.get(row).isExisting;
+                miCaiDat.setEnabled(!isExisting);
+                summaryMenu.show(tblSummary, e.getX(), e.getY());
+            }
+        });
+
+        miXemHoaDon.addActionListener(e -> {
+            int row = tblSummary.getSelectedRow();
+            if (row >= 0)
+                showInvoicePreviewDialog(row);
+        });
+        miCaiDat.addActionListener(e -> {
+            int row = tblSummary.getSelectedRow();
+            if (row >= 0)
+                showRoomDetailDialog(row);
+        });
+
         applySummaryRenderers();
     }
 
@@ -717,16 +832,15 @@ public class HoaDonUI {
         summaryCard.setVisible(true);
         lblSummaryTitle.setText("Hóa đơn tháng " + currentMonth + "/" + currentYear);
         for (MonthlyRoomDraft d : currentDrafts) {
+            String tenPhong = d.isExisting ? "(cũ) " + d.maPhong : d.maPhong;
             summaryModel.addRow(new Object[] {
-                    d.maPhong,
+                    tenPhong,
                     formatMoney(d.tienPhong),
                     formatMoney(d.getTienDien()) + " (" + d.tieuThuDien() + " kWh)",
                     formatMoney(d.getTienNuoc()) + " (" + d.tieuThuNuoc() + " m³)",
                     formatMoney(d.tienDichVuKhac()),
                     formatMoney(d.tongTien()),
-                    d.daThanhToan,
-                    "",
-                    ""
+                    d.daThanhToan
             });
         }
     }
@@ -764,13 +878,25 @@ public class HoaDonUI {
             d.donGiaNuoc = s.donGiaNuoc;
             d.tienPhong = s.tienPhong;
             d.daThanhToan = s.daThanhToan;
-
-            int[] old = dienNuocDAO.layChiSoThangTruoc(s.maPhong, m, y);
-            int[] cur = dienNuocDAO.layChiSoTheoThang(s.maPhong, m, y);
-            d.soDienCu = old[0];
-            d.soNuocCu = old[1];
-            d.soDienMoi = cur == null ? (old[0] + s.tieuThuDien) : cur[0];
-            d.soNuocMoi = cur == null ? (old[1] + s.tieuThuNuoc) : cur[1];
+            // Lấy chỉ số thực tế từ ChiSoDienNuoc
+            int[] curFull = dienNuocDAO.layChiSoTheoThangVoiNgay(s.maPhong, m, y);
+            if (curFull != null) {
+                int[] old = dienNuocDAO.layChiSoTruocNgay(s.maPhong, m, y, curFull[0]);
+                d.soDienCu = old[0];
+                d.soNuocCu = old[1];
+                d.soDienMoi = curFull[1];
+                d.soNuocMoi = curFull[2];
+            } else {
+                d.soDienCu = 0;
+                d.soDienMoi = s.tieuThuDien;
+                d.soNuocCu = 0;
+                d.soNuocMoi = s.tieuThuNuoc;
+            }
+            d.tienDienOverride = s.tieuThuDien * s.donGiaDien;
+            d.tienNuocOverride = s.tieuThuNuoc * s.donGiaNuoc;
+            // Tên người đại diện
+            KhachHang khDB = hdkhDAO.getNguoiDaiDienByMaHopDong(s.maHoaDon);
+            d.tenKhach = (khDB != null) ? khDB.getHoTen() : "";
 
             for (BillServiceItem si : s.services) {
                 ServiceOption op = new ServiceOption();
@@ -799,8 +925,7 @@ public class HoaDonUI {
                     item.monthYear,
                     item.soPhong + " phòng",
                     formatMoney(item.tongDoanhThu),
-                    item.ngayTao == null ? "" : DF.format(item.ngayTao),
-                    ""
+                    item.ngayTao == null ? "" : DF.format(item.ngayTao)
             });
         }
     }
@@ -1434,7 +1559,8 @@ public class HoaDonUI {
         hdRow.setBackground(Color.WHITE);
         hdRow.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(borderC, 1), new EmptyBorder(7, 10, 7, 10)));
-        JLabel lblMaPhong = new JLabel("MÃ PHÒNG:   " + d.maPhong);
+        String tenKhachDisplay = (d.tenKhach != null && !d.tenKhach.isEmpty()) ? "   —   " + d.tenKhach : "";
+        JLabel lblMaPhong = new JLabel("MÃ PHÒNG:   " + d.maPhong + tenKhachDisplay);
         lblMaPhong.setFont(fBold);
         JLabel lblThang = new JLabel("Tháng " + currentMonth + "/" + currentYear);
         lblThang.setFont(fNormal);
