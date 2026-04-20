@@ -622,6 +622,7 @@ public class QuanLyPhongUI {
 
         root.add(form, BorderLayout.CENTER);
 
+        txtGia.setEditable(false);
         JButton btnSave = primaryButtonHelper.makePrimaryButton("Thêm phòng");
         btnSave.addActionListener(e -> {
             String ma = txtMa.getText().trim().toUpperCase();

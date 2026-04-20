@@ -119,9 +119,14 @@ public class HoaDonUI {
     private String currentYear = "";
 
     private Runnable onInvoiceSaved;
+    private Runnable onNavigateToChiSo;
 
     public void setOnInvoiceSaved(Runnable callback) {
         this.onInvoiceSaved = callback;
+    }
+
+    public void setOnNavigateToChiSo(Runnable callback) {
+        this.onNavigateToChiSo = callback;
     }
 
     public static class BillServiceItem {
@@ -503,6 +508,24 @@ public class HoaDonUI {
                 JOptionPane.showMessageDialog(dlg,
                         "Tháng " + month + "/" + year + " đã có hóa đơn trong hệ thống.",
                         "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            // Kiểm tra chỉ số điện/nước
+            java.util.List<String> phongChuaNhap = new java.util.ArrayList<>();
+            for (Phong p : phongDAO.getAllPhongDaThue()) {
+                if (dienNuocDAO.layChiSoTheoThangVoiNgay(p.getMaPhong(), m, y) == null) {
+                    phongChuaNhap.add(p.getMaPhong());
+                }
+            }
+            if (!phongChuaNhap.isEmpty()) {
+                JOptionPane.showMessageDialog(dlg,
+                        "Các phòng sau chưa nhập chỉ số điện/nước tháng " + month + "/" + year + ":\n"
+                                + String.join(", ", phongChuaNhap)
+                                + "\nVui lòng nhập chỉ số trước khi tính hóa đơn.",
+                        "Chưa nhập chỉ số điện/nước", JOptionPane.WARNING_MESSAGE);
+                dlg.dispose();
+                if (onNavigateToChiSo != null)
+                    onNavigateToChiSo.run();
                 return;
             }
             calculateDraft(month, year);

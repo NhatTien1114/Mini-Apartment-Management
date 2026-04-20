@@ -185,8 +185,8 @@ public class LoginUI extends JFrame {
 
         card.add(pnlForm);
 
-        txtEmail.setText("tien@gmail.com");
-        txtPass.setText("*Tien1408");
+        txtEmail.setText("admin@gmail.com");
+        txtPass.setText("*Admin123");
 
         return card;
     }

@@ -362,10 +362,9 @@ public class PhuongTienUI {
                         String val = txtBienSo.getText().trim();
                         if (val.isEmpty()) {
                             ValidationPopup.show(txtBienSo, "Biển số xe không được để trống");
-                        } else if (!val.matches("^\\d{2}[A-Z]\\d?-\\d{3}\\.\\d{2}$")
-                                && !val.matches("^\\d{2}[A-Z]\\d?-\\d{4}$")) {
+                        } else if (!val.matches("^\\d{2}[A-Z]\\d-\\d{5}$")) {
                             ValidationPopup.show(txtBienSo,
-                                    "Biển số không đúng định dạng (VD: 59A-123.45 hoặc 59A1-1234)");
+                                    "Biển số không đúng định dạng (VD: 59A1-12345)");
                         } else if (phuongTienDAO.kiemTraBienSoTonTai(val)) {
                             ValidationPopup.show(txtBienSo, "Biển số này đã tồn tại trong hệ thống");
                         }
@@ -392,7 +391,17 @@ public class PhuongTienUI {
         KhachHangItem selectedKH = null;
         cboKhachHang.addItem(new KhachHangItem("", "-- Chọn Khách Hàng --"));
         for (KhachHang kh : dskh) {
-            KhachHangItem item = new KhachHangItem(kh.getMaKhachHang(), kh.getMaKhachHang() + " - " + kh.getHoTen());
+            String maPhongHienTai = khachHangDAO.layMaPhongHienTaiTheoKhach(kh.getMaKhachHang());
+            boolean dangO = maPhongHienTai != null && !maPhongHienTai.trim().isEmpty();
+            boolean laKhachDangSua = isEdit && kh.getMaKhachHang().equals(editPt.getMaKhachHang());
+            if (!dangO && !laKhachDangSua) {
+                continue;
+            }
+
+            KhachHangItem item = new KhachHangItem(
+                    kh.getMaKhachHang(),
+                    kh.getMaKhachHang() + " - " + kh.getHoTen(),
+                    dangO ? maPhongHienTai.trim() : (editPt.getMaPhong() != null ? editPt.getMaPhong() : ""));
             cboKhachHang.addItem(item);
             if (isEdit && kh.getMaKhachHang().equals(editPt.getMaKhachHang())) {
                 selectedKH = item;
@@ -441,7 +450,7 @@ public class PhuongTienUI {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 KhachHangItem it = (KhachHangItem) cboKhachHang.getSelectedItem();
                 if (it != null && !it.maKH.isEmpty()) {
-                    String p = khachHangDAO.layMaPhongHienTaiTheoKhach(it.maKH);
+                    String p = it.maPhong;
                     txtPhong.setText(p != null ? p : "");
                 } else {
                     txtPhong.setText("");
@@ -469,15 +478,16 @@ public class PhuongTienUI {
 
         JButton btnLuu = primaryButton.makePrimaryButton(isEdit ? "Cập nhật" : "Lưu dữ liệu");
         btnLuu.addActionListener(e -> {
-            String bsx = txtBienSo.getText().trim();
+            String bsx = normalizeBienSo(txtBienSo.getText().trim());
+            txtBienSo.setText(bsx);
             if (bsx.isEmpty()) {
                 ValidationPopup.show(txtBienSo, "Biển số xe không được để trống");
                 txtBienSo.requestFocus();
                 return;
             }
             if (!isEdit) {
-                if (!bsx.matches("^\\d{2}[A-Z]\\d?-\\d{3}\\.\\d{2}$") && !bsx.matches("^\\d{2}[A-Z]\\d?-\\d{4}$")) {
-                    ValidationPopup.show(txtBienSo, "Biển số không đúng định dạng (VD: 59A-123.45 hoặc 59A1-1234)");
+                if (!isBienSoHopLe(bsx)) {
+                    ValidationPopup.show(txtBienSo, "Biển số không đúng định dạng (VD: 59Y3-628.59 hoặc 60B2-1234)");
                     txtBienSo.requestFocus();
                     return;
                 }
@@ -547,7 +557,7 @@ public class PhuongTienUI {
 
     /**
      * Auto-format biển số: uppercase letters, auto-insert dash and dot.
-     * Format: 59A-123.45 (5 số) hoặc 59A1-1234 (4 số)
+     * Format: 59Y3-628.59 (đuôi 5 số) hoặc 60B2-1234 (đuôi 4 số)
      */
     private void applyBienSoFilter(JTextField field) {
         ((AbstractDocument) field.getDocument()).setDocumentFilter(new DocumentFilter() {
@@ -578,61 +588,15 @@ public class PhuongTienUI {
                 updating = true;
                 try {
                     String raw = fb.getDocument().getText(0, fb.getDocument().getLength());
-                    // Strip all formatting chars to get raw input
-                    String digits = raw.replace("-", "").replace(".", "");
+                    String stripped = raw.replace("-", "");
+                    if (stripped.length() > 9)
+                        stripped = stripped.substring(0, 9);
 
-                    // Build formatted string
                     StringBuilder formatted = new StringBuilder();
-                    int dashPos = -1;
-                    for (int i = 0; i < digits.length(); i++) {
-                        char c = digits.charAt(i);
-                        formatted.append(c);
-                        // After prefix part (2 digits + letter + optional digit), insert dash
-                        if (dashPos < 0 && formatted.length() >= 3) {
-                            // Check if we have the pattern: digit digit letter [digit]
-                            String prefix = formatted.toString();
-                            if (prefix.length() == 3 && Character.isLetter(prefix.charAt(2)) && i + 1 < digits.length()
-                                    && Character.isDigit(digits.charAt(i + 1))) {
-                                // Could be 59A- or 59A1-, peek next
-                                // If next is digit and the one after is also digit, it's 59A1-
-                                // Just continue, dash will be inserted when we have enough chars
-                            }
-                            if (prefix.length() == 3 && Character.isLetter(prefix.charAt(2))) {
-                                // Check if next char is a digit that's part of the prefix (like 59A1)
-                                if (i + 1 < digits.length() && Character.isDigit(digits.charAt(i + 1))) {
-                                    // Peek: could be 59A1-xxxx or 59A-xxx.xx
-                                    // We need to decide: if total remaining digits after letter = 5+, it's 59A1-
-                                    int remainingDigits = 0;
-                                    for (int j = i + 1; j < digits.length(); j++) {
-                                        if (Character.isDigit(digits.charAt(j)))
-                                            remainingDigits++;
-                                    }
-                                    if (remainingDigits >= 5) {
-                                        // 59A1-xxxx format, don't insert dash yet
-                                        continue;
-                                    }
-                                }
-                                formatted.append('-');
-                                dashPos = formatted.length();
-                            }
-                            if (prefix.length() == 4 && Character.isLetter(prefix.charAt(2))
-                                    && Character.isDigit(prefix.charAt(3)) && dashPos < 0) {
-                                formatted.append('-');
-                                dashPos = formatted.length();
-                            }
-                        }
-                    }
-
-                    // Auto-insert dot for 5-digit suffix: xxx.xx
-                    if (dashPos > 0) {
-                        int dashIdx = formatted.indexOf("-");
-                        if (dashIdx >= 0) {
-                            String suffix = formatted.substring(dashIdx + 1).replace(".", "");
-                            if (suffix.length() == 5) {
-                                formatted = new StringBuilder(formatted.substring(0, dashIdx + 1));
-                                formatted.append(suffix.substring(0, 3)).append('.').append(suffix.substring(3));
-                            }
-                        }
+                    for (int i = 0; i < stripped.length(); i++) {
+                        if (i == 4)
+                            formatted.append('-');
+                        formatted.append(stripped.charAt(i));
                     }
 
                     String result = formatted.toString();
@@ -645,6 +609,48 @@ public class PhuongTienUI {
                 }
             }
         });
+    }
+
+    private String normalizeBienSo(String input) {
+        String cleaned = input == null ? "" : input.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        if (cleaned.length() > 9) {
+            cleaned = cleaned.substring(0, 9);
+        }
+
+        int prefixLen = 0;
+        if (cleaned.length() >= 4
+                && Character.isDigit(cleaned.charAt(0))
+                && Character.isDigit(cleaned.charAt(1))
+                && Character.isLetter(cleaned.charAt(2))
+                && Character.isDigit(cleaned.charAt(3))) {
+            prefixLen = 4;
+        } else if (cleaned.length() >= 3
+                && Character.isDigit(cleaned.charAt(0))
+                && Character.isDigit(cleaned.charAt(1))
+                && Character.isLetter(cleaned.charAt(2))) {
+            prefixLen = 3;
+        }
+
+        if (prefixLen == 0 || cleaned.length() <= prefixLen) {
+            return cleaned;
+        }
+
+        String prefix = cleaned.substring(0, prefixLen);
+        String suffix = cleaned.substring(prefixLen);
+        if (suffix.length() > 5) {
+            suffix = suffix.substring(0, 5);
+        }
+
+        if (suffix.length() <= 4) {
+            return prefix + "-" + suffix;
+        }
+        return prefix + "-" + suffix.substring(0, 3) + "." + suffix.substring(3);
+    }
+
+    private boolean isBienSoHopLe(String bsx) {
+        return bsx != null
+                && (bsx.matches("^\\d{2}[A-Z]\\d-\\d{3}\\.\\d{2}$")
+                        || bsx.matches("^\\d{2}[A-Z]\\d-\\d{4}$"));
     }
 
     private JButton makeOutlineButton(String text) {
@@ -674,10 +680,16 @@ public class PhuongTienUI {
     static class KhachHangItem {
         String maKH;
         String display;
+        String maPhong;
 
         KhachHangItem(String maKH, String display) {
+            this(maKH, display, "");
+        }
+
+        KhachHangItem(String maKH, String display, String maPhong) {
             this.maKH = maKH;
             this.display = display;
+            this.maPhong = maPhong;
         }
 
         @Override

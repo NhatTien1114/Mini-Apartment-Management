@@ -210,7 +210,7 @@ public class KhachHangDAO {
 	public String layMaPhongHienTaiTheoKhach(String maKhachHang) {
 		String sql = "SELECT TOP 1 hd.maPhong FROM HopDongKhachHang hdkh "
 				+ "JOIN HopDong hd ON hdkh.maHopDong = hd.maHopDong "
-				+ "WHERE hdkh.maKhachHang = ? AND hd.trangThai = 1 "
+				+ "WHERE hdkh.maKhachHang = ? AND hd.trangThai = 1 AND hdkh.vaiTro <> 2 "
 				+ "ORDER BY hd.ngayBatDau DESC";
 
 		try {
@@ -246,19 +246,26 @@ public class KhachHangDAO {
 	}
 
 	public boolean kiemTraDaRoiDi(String maKhachHang) {
-		String sql = "SELECT TOP 1 hd.trangThai FROM HopDongKhachHang hdkh "
+		String sqlDangO = "SELECT TOP 1 1 FROM HopDongKhachHang hdkh "
 				+ "JOIN HopDong hd ON hdkh.maHopDong = hd.maHopDong "
-				+ "WHERE hdkh.maKhachHang = ? "
-				+ "ORDER BY hd.ngayBatDau DESC";
+				+ "WHERE hdkh.maKhachHang = ? AND hd.trangThai = 1 AND hdkh.vaiTro <> 2";
+
+		String sqlDaTungThamGia = "SELECT TOP 1 1 FROM HopDongKhachHang WHERE maKhachHang = ?";
 		try {
 			Connection con = connectDB.getConnection();
-			try (PreparedStatement ps = con.prepareStatement(sql)) {
-				ps.setString(1, maKhachHang);
-				try (ResultSet rs = ps.executeQuery()) {
-					if (rs.next()) {
-						return rs.getInt("trangThai") == 0;
+			try (PreparedStatement psDangO = con.prepareStatement(sqlDangO)) {
+				psDangO.setString(1, maKhachHang);
+				try (ResultSet rsDangO = psDangO.executeQuery()) {
+					if (rsDangO.next()) {
+						return false;
 					}
-					return false;
+				}
+			}
+
+			try (PreparedStatement psDaTungThamGia = con.prepareStatement(sqlDaTungThamGia)) {
+				psDaTungThamGia.setString(1, maKhachHang);
+				try (ResultSet rsDaTungThamGia = psDaTungThamGia.executeQuery()) {
+					return rsDaTungThamGia.next();
 				}
 			}
 		} catch (SQLException e) {
