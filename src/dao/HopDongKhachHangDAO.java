@@ -267,6 +267,39 @@ public class HopDongKhachHangDAO {
         }
     }
 
+    public ArrayList<HopDongKhachThue> layTatCaThanhVienByMaPhong(String maPhong) {
+        ArrayList<HopDongKhachThue> list = new ArrayList<>();
+        if (maPhong == null || maPhong.trim().isEmpty())
+            return list;
+
+        String sql = "SELECT hdkh.maHDKT, hdkh.vaiTro, " +
+                "k.maKhachHang, k.hoTen, k.soDienThoai, k.ngaySinh, k.soCCCD, k.diaChiThuongTru " +
+                "FROM HopDongKhachHang hdkh " +
+                "JOIN KhachHang k ON hdkh.maKhachHang = k.maKhachHang " +
+                "JOIN HopDong hd ON hdkh.maHopDong = hd.maHopDong " +
+                "WHERE hd.maPhong = ? AND hd.trangThai = 1 AND hdkh.vaiTro <> 2 " +
+                "ORDER BY hdkh.vaiTro ASC";
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String maHDKT = rs.getString("maHDKT");
+                    int vaiTroInt = rs.getInt("vaiTro");
+                    KhachHang kh = mapKhachHang(rs);
+                    HopDongKhachThue hdkt = new HopDongKhachThue(
+                            maHDKT, null, kh,
+                            HopDongKhachThue.VaiTro.fromInt(vaiTroInt));
+                    list.add(hdkt);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     private KhachHang mapKhachHang(ResultSet rs) throws SQLException {
         String maKH = rs.getString("maKhachHang");
         String hoTen = rs.getString("hoTen");

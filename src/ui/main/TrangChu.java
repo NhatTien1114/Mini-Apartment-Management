@@ -296,6 +296,10 @@ public class TrangChu extends JFrame {
         pnlContent.add(new DichVuUI().getPanel(), "6");
         hoaDonUI = new HoaDonUI();
         hoaDonUI.setOnInvoiceSaved(() -> refreshDoanhThuTab());
+        hoaDonUI.setOnNavigateToChiSo(() -> {
+            cardLayout.show(pnlContent, "10");
+            refreshChiSoDienNuocTab();
+        });
         pnlContent.add(hoaDonUI.getPanel(), "7");
         pnlContent.add(new BangGiaUI(taiKhoan).getPanel(), "8");
         pnlContent.add(new LoaiPhongUI().getPanel(), "9");

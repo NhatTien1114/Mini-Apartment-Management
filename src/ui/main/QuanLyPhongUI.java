@@ -12,6 +12,7 @@ import entity.ChiSoDienNuoc;
 import entity.DichVu;
 import entity.GiaDetail;
 import entity.GiaHeader;
+import entity.HopDongKhachThue;
 import entity.KhachHang;
 import entity.LoaiPhong;
 import entity.Phong;
@@ -491,7 +492,6 @@ public class QuanLyPhongUI {
     private void showKhachThueDialog(String maPhong) {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
         JDialog dlg = new JDialog(owner, "Khách thuê phòng " + maPhong, Dialog.ModalityType.APPLICATION_MODAL);
-        dlg.setSize(320, 220);
         dlg.setLocationRelativeTo(owner);
         dlg.setResizable(false);
 
@@ -505,26 +505,35 @@ public class QuanLyPhongUI {
         lblTitle.setBorder(new EmptyBorder(0, 0, 12, 0));
         root.add(lblTitle, BorderLayout.NORTH);
 
-        // Dùng HopDongKhachHangDAO để lấy người đại diện (vaiTro=0)
-        KhachHang kh = hopDongKhachHangDAO.getNguoiDaiDienByMaPhong(maPhong);
+        java.util.List<HopDongKhachThue> dsThanhVien = hopDongKhachHangDAO.layTatCaThanhVienByMaPhong(maPhong);
 
         JPanel pnlList = new JPanel();
         pnlList.setBackground(AppColors.WHITE);
         pnlList.setLayout(new BoxLayout(pnlList, BoxLayout.Y_AXIS));
 
-        if (kh == null) {
+        if (dsThanhVien.isEmpty()) {
             JLabel lbl = new JLabel("Không tìm thấy thông tin khách thuê.");
             lbl.setFont(FONT_PLAIN);
             lbl.setForeground(AppColors.SLATE_500);
             pnlList.add(lbl);
         } else {
-            JLabel lblTen = new JLabel("• " + kh.getHoTen());
-            lblTen.setFont(FONT_PLAIN);
-            lblTen.setForeground(AppColors.SLATE_900);
-            pnlList.add(lblTen);
+            for (HopDongKhachThue hdkt : dsThanhVien) {
+                KhachHang kh = hdkt.getKhachHang();
+                String vaiTroTen = hdkt.getVaiTro() != null ? hdkt.getVaiTro().getTen() : "";
+                JLabel lblTen = new JLabel("• " + kh.getHoTen() + " (" + vaiTroTen + ")");
+                lblTen.setFont(FONT_PLAIN);
+                lblTen.setForeground(
+                        hdkt.getVaiTro() == HopDongKhachThue.VaiTro.DAI_DIEN
+                                ? AppColors.SLATE_900
+                                : AppColors.SLATE_500);
+                lblTen.setBorder(new EmptyBorder(0, 0, 4, 0));
+                pnlList.add(lblTen);
+            }
         }
 
         root.add(pnlList, BorderLayout.CENTER);
+        int height = Math.max(180, 80 + dsThanhVien.size() * 26);
+        dlg.setSize(320, height);
 
         JButton btnClose = primaryButtonHelper.makePrimaryButton("Đóng");
         btnClose.addActionListener(e -> dlg.dispose());
@@ -613,6 +622,7 @@ public class QuanLyPhongUI {
 
         root.add(form, BorderLayout.CENTER);
 
+        txtGia.setEditable(false);
         JButton btnSave = primaryButtonHelper.makePrimaryButton("Thêm phòng");
         btnSave.addActionListener(e -> {
             String ma = txtMa.getText().trim().toUpperCase();
@@ -702,25 +712,10 @@ public class QuanLyPhongUI {
         // ── Giá thuê ──
         RoundedTextField txtGia = new RoundedTextField(6);
         txtGia.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        boolean[] userEdited = { false };
-        txtGia.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                userEdited[0] = true;
-            }
-
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                userEdited[0] = true;
-            }
-
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-            }
-        });
+        txtGia.setEditable(false);
+        txtGia.setBackground(AppColors.SLATE_100);
         fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
-        cLoai.addActionListener(e -> {
-            userEdited[0] = false;
-            fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem());
-            userEdited[0] = false;
-        });
+        cLoai.addActionListener(e -> fillGia(txtGia, (LoaiPhong) cLoai.getSelectedItem()));
 
         // ── Trạng thái: không cho chọn "Đã thuê" (phải qua hợp đồng) ──
         JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đang sửa" });
@@ -848,13 +843,8 @@ public class QuanLyPhongUI {
         form.add(wrapField("Giá thuê (VNĐ/tháng)", txtGia));
         form.add(Box.createVerticalStrut(10));
 
-        boolean isTrong = phong.getTrangThai() == Phong.TrangThai.TRONG;
         if (!isDaThue) {
             form.add(wrapField("Trạng thái", cTT));
-            if (!isTrong) {
-                form.add(Box.createVerticalStrut(12));
-                form.add(pnlDichVu);
-            }
         } else {
             // Khi đã thuê: hiển thị trạng thái dạng label (không cho đổi)
             JLabel lblTT = new JLabel("Trạng thái");
@@ -879,7 +869,7 @@ public class QuanLyPhongUI {
 
         root.add(form, BorderLayout.CENTER);
 
-        dlg.setSize(440, isDaThue ? 660 : (isTrong ? 380 : 560));
+        dlg.setSize(440, isDaThue ? 660 : 380);
         dlg.setLocationRelativeTo(owner);
 
         // ── Nút Lưu ──
@@ -922,7 +912,6 @@ public class QuanLyPhongUI {
                     JOptionPane.showMessageDialog(dlg, errCs, "Lỗi", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                // Giá thuê vẫn cập nhật được kể cả đang thuê
                 LoaiPhong loaiChon = (LoaiPhong) cLoai.getSelectedItem();
                 dao.capNhat(phong.getMaPhong(), loaiChon, gia, "Đã thuê", new ArrayList<>());
             } else {

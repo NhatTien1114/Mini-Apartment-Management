@@ -96,6 +96,8 @@ public class HopDongDAO {
     }
 
     public ArrayList<HopDong> getAllHopDongDangHieuLuc() {
+        capNhatHopDongHetHanTuDong();
+
         String sql = "SELECT maHopDong, maPhong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang FROM HopDong WHERE trangThai = 1 ORDER BY maHopDong";
         ArrayList<HopDong> listHD = new ArrayList<>();
 
@@ -123,6 +125,99 @@ public class HopDongDAO {
             return listHD;
         } catch (SQLException e) {
             throw new RuntimeException("Lỗi khi lấy danh sách hợp đồng.", e);
+        }
+    }
+
+    public ArrayList<HopDong> getAllHopDong() {
+        capNhatHopDongHetHanTuDong();
+
+        String sql = "SELECT maHopDong, maPhong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang, trangThai "
+                + "FROM HopDong ORDER BY maHopDong";
+        ArrayList<HopDong> listHD = new ArrayList<>();
+
+        try {
+            Connection con = connectDB.getConnection();
+            try (PreparedStatement ps = con.prepareStatement(sql);
+                    ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String maHopDong = rs.getString("maHopDong");
+                    String maPhong = rs.getString("maPhong");
+                    LocalDate ngayBatDau = rs.getObject("ngayBatDau", LocalDate.class);
+                    LocalDate ngayKetThuc = rs.getObject("ngayKetThuc", LocalDate.class);
+                    double tienCoc = rs.getDouble("tienCoc");
+                    double tienThueThang = rs.getDouble("tienThueThang");
+                    int trangThaiInt = rs.getInt("trangThai");
+                    HopDong.TrangThai trangThai = HopDong.TrangThai.fromInt(trangThaiInt);
+
+                    entity.Phong phong = new Phong(maPhong);
+
+                    listHD.add(
+                            new HopDong(maHopDong, phong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang, trangThai));
+                }
+            }
+            return listHD;
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi khi lấy toàn bộ danh sách hợp đồng.", e);
+        }
+    }
+
+    public int capNhatHopDongHetHanTuDong() {
+        Connection con = null;
+        try {
+            con = connectDB.getConnection();
+            con.setAutoCommit(false);
+
+            // 1) Thành viên thuộc hợp đồng hết hạn -> rời đi (vaiTro = 2)
+            String sqlRoiDi = "UPDATE hdkh SET hdkh.vaiTro = 2 "
+                    + "FROM HopDongKhachHang hdkh "
+                    + "JOIN HopDong hd ON hd.maHopDong = hdkh.maHopDong "
+                    + "WHERE hd.trangThai = 1 "
+                    + "AND hd.ngayKetThuc <= CAST(GETDATE() AS DATE) "
+                    + "AND hdkh.vaiTro <> 2";
+            try (PreparedStatement ps = con.prepareStatement(sqlRoiDi)) {
+                ps.executeUpdate();
+            }
+
+            // 2) Phòng của hợp đồng hết hạn -> trống
+            String sqlPhongTrong = "UPDATE p SET p.trangThaiPhong = 0, p.soNguoiHienTai = 0 "
+                    + "FROM Phong p "
+                    + "WHERE EXISTS ("
+                    + "SELECT 1 FROM HopDong hd "
+                    + "WHERE hd.maPhong = p.maPhong "
+                    + "AND hd.trangThai = 1 "
+                    + "AND hd.ngayKetThuc <= CAST(GETDATE() AS DATE))";
+            try (PreparedStatement ps = con.prepareStatement(sqlPhongTrong)) {
+                ps.executeUpdate();
+            }
+
+            // 3) Hợp đồng đến hạn -> trạng thái hết hạn (0)
+            int soHopDongHetHan;
+            String sqlHetHan = "UPDATE HopDong "
+                    + "SET trangThai = 0 "
+                    + "WHERE trangThai = 1 "
+                    + "AND ngayKetThuc <= CAST(GETDATE() AS DATE)";
+            try (PreparedStatement ps = con.prepareStatement(sqlHetHan)) {
+                soHopDongHetHan = ps.executeUpdate();
+            }
+
+            con.commit();
+            return soHopDongHetHan;
+        } catch (SQLException e) {
+            if (con != null) {
+                try {
+                    con.rollback();
+                } catch (SQLException ignored) {
+                }
+            }
+            System.err.println("Loi cap nhat hop dong het han tu dong: " + e.getMessage());
+            return 0;
+        } finally {
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                } catch (SQLException ignored) {
+                }
+            }
         }
     }
 
@@ -185,13 +280,9 @@ public class HopDongDAO {
                 }
             }
 
-            con.commit();
+            new DichVuDAO().ganDichVuTrongTransaction(con, draft.phong);
 
-            try {
-                new DichVuDAO().ganTatCaDichVuChoPhongNeuChuaCo(draft.phong);
-            } catch (RuntimeException ex) {
-                System.err.println("Canh bao gan dich vu mac dinh that bai: " + ex.getMessage());
-            }
+            con.commit();
 
             return true;
         } catch (SQLException | RuntimeException e) {

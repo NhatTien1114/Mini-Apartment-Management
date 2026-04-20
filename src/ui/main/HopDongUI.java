@@ -2,6 +2,7 @@ package ui.main;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.print.*;
 import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -50,11 +51,8 @@ public class HopDongUI {
     private JComboBox<String> cboFilterHanHopDong;
 
     HopDongDAO HopDongDao = new HopDongDAO();
-
     HopDongKhachHangDAO HDKHdao = new HopDongKhachHangDAO();
-
     QuanLyPhongDAO PhongDAO = new QuanLyPhongDAO();
-
     GiaDetailDAO giaDetailDAO = new GiaDetailDAO();
 
     private PrimaryButton primaryButton = new PrimaryButton();
@@ -80,53 +78,35 @@ public class HopDongUI {
     public void loadDataToTable() {
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         model.setRowCount(0);
-
-        ArrayList<HopDong> listHD = HopDongDao.getAllHopDongDangHieuLuc();
-
+        ArrayList<HopDong> listHD = HopDongDao.getAllHopDong();
         for (HopDong row : listHD) {
             String tenNguoiDaiDien = "";
             entity.KhachHang nguoiDaiDien = HDKHdao
                     .getNguoiDaiDienByMaPhong(String.valueOf(row.getPhong().getMaPhong()));
-            if (nguoiDaiDien != null) {
+            if (nguoiDaiDien != null)
                 tenNguoiDaiDien = nguoiDaiDien.getHoTen();
-            }
             model.addRow(new Object[] {
-                    row.getMaHopDong(),
-                    row.getPhong().getMaPhong(),
-                    tenNguoiDaiDien,
-                    row.getNgayBatDau(),
-                    row.getNgayKetThuc(),
-                    formatMoneyDisplay(row.getTienCoc()),
-                    formatMoneyDisplay(row.getTienThueThang()),
+                    row.getMaHopDong(), row.getPhong().getMaPhong(), tenNguoiDaiDien,
+                    row.getNgayBatDau(), row.getNgayKetThuc(),
+                    formatMoneyDisplay(row.getTienCoc()), formatMoneyDisplay(row.getTienThueThang()),
                     row.getTrangThai()
-
             });
-
         }
     }
 
     private String formatToDDMMYYYY(Object dateObj) {
-        if (dateObj == null || dateObj.toString().trim().isEmpty()) {
+        if (dateObj == null || dateObj.toString().trim().isEmpty())
             return "";
-        }
         String dateStr = dateObj.toString().trim();
-
-        // Nếu đã đúng chuẩn dd/MM/yyyy thì trả về luôn
-        if (dateStr.matches("\\d{2}/\\d{2}/\\d{4}")) {
+        if (dateStr.matches("\\d{2}/\\d{2}/\\d{4}"))
             return dateStr;
-        }
-
-        // Nếu là chuẩn SQL yyyy-MM-dd thì convert lại
         try {
-            // Cắt lấy phần ngày (nếu có kèm giờ phút giây yyyy-MM-dd HH:mm:ss)
-            if (dateStr.length() > 10) {
+            if (dateStr.length() > 10)
                 dateStr = dateStr.substring(0, 10);
-            }
             java.time.LocalDate date = java.time.LocalDate.parse(dateStr);
-            java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            return date.format(formatter);
+            return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         } catch (Exception e) {
-            return dateStr; // Trả về chuỗi gốc nếu không thể parse
+            return dateStr;
         }
     }
 
@@ -136,35 +116,26 @@ public class HopDongUI {
         pnlRoot.setBackground(MAU_NEN);
         table = new JTable();
 
-        // --- HEADER ---
         JPanel pnlHeader = new JPanel(new BorderLayout());
         pnlHeader.setOpaque(false);
-
         JLabel lblTitle = new JLabel("Quản lý hợp đồng");
         lblTitle.setFont(new Font("Inter", Font.BOLD, 20));
         lblTitle.setForeground(MAU_TEXT);
-
         JButton btnAdd = primaryButton.makePrimaryButton("Tạo Hợp Đồng");
         btnAdd.setBorder(new EmptyBorder(8, 16, 8, 16));
         btnAdd.addActionListener(e -> showContractForm(false, -1));
-
         JPanel pnlHeaderRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         pnlHeaderRight.setOpaque(false);
         pnlHeaderRight.add(btnAdd);
-
         pnlHeader.add(lblTitle, BorderLayout.WEST);
         pnlHeader.add(pnlHeaderRight, BorderLayout.EAST);
-
         pnlRoot.add(pnlHeader, BorderLayout.NORTH);
 
-        // --- MAIN CONTENT ---
         JPanel pnlMainContent = new JPanel(new BorderLayout(0, 20));
         pnlMainContent.setOpaque(false);
 
-        // --- Search Bar ---
         JPanel pnlToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         pnlToolbar.setOpaque(false);
-
         txtSearch = new RoundedTextField(8) {
             @Override
             public void paint(Graphics g) {
@@ -173,11 +144,9 @@ public class HopDongUI {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(new Color(148, 163, 184));
                 g2.setStroke(new BasicStroke(1.5f));
-                int cx = 18;
-                int cy = getHeight() / 2 - 2;
+                int cx = 18, cy = getHeight() / 2 - 2;
                 g2.drawOval(cx - 4, cy - 4, 8, 8);
                 g2.drawLine(cx + 2, cy + 2, cx + 7, cy + 7);
-
                 if (isFocusOwner()) {
                     g2.setColor(new Color(37, 99, 235));
                     g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 8, 8);
@@ -203,14 +172,13 @@ public class HopDongUI {
         btnTimKiem.setPreferredSize(new Dimension(110, 40));
         btnTimKiem.addActionListener(e -> applyContractFilter());
 
-        cboFilterHanHopDong = new JComboBox<>(new String[] { "Tất cả", "Sắp hết hạn", "Đã hết hạn" });
+        cboFilterHanHopDong = new JComboBox<>(new String[] { "Tất cả", "Đang hiệu lực", "Đã hết hạn" });
         cboFilterHanHopDong.setPreferredSize(new Dimension(150, 40));
         cboFilterHanHopDong.setFont(new Font("Inter", Font.PLAIN, 14));
         cboFilterHanHopDong.setBackground(Color.WHITE);
         cboFilterHanHopDong.addItemListener(e -> {
-            if (e.getStateChange() == ItemEvent.ITEM_STATE_CHANGED) {
+            if (e.getStateChange() == ItemEvent.ITEM_STATE_CHANGED)
                 applyContractFilter();
-            }
         });
 
         pnlToolbar.add(txtSearch);
@@ -218,28 +186,23 @@ public class HopDongUI {
         pnlToolbar.add(cboFilterHanHopDong);
         pnlMainContent.add(pnlToolbar, BorderLayout.NORTH);
 
-        // --- Data Table Card ---
         RoundedPanel card = new RoundedPanel(12);
         card.setBackground(MAU_CARD);
         card.setLayout(new BorderLayout());
-
         JPanel cardMargin = new JPanel(new BorderLayout());
         cardMargin.setOpaque(false);
         cardMargin.setBorder(new EmptyBorder(4, 24, 24, 24));
 
-        String[] columnNames = { "Mã HĐ", "Phòng", "Khách thuê", "Ngày bắt đầu", "Ngày kết thúc", "Tiền cọc",
-                "Tiền thuê/tháng", "Trạng thái" };
-
+        String[] columnNames = { "Mã HĐ", "Phòng", "Khách thuê", "Ngày bắt đầu", "Ngày kết thúc",
+                "Tiền cọc", "Tiền thuê/tháng", "Trạng thái" };
         this.model = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
-        this.table = new JTable(this.model); // Sử dụng biến class
-
+        this.table = new JTable(this.model);
         loadDataToTable();
-
         table = new JTable(model);
         table.setRowHeight(56);
         table.setShowGrid(false);
@@ -248,7 +211,6 @@ public class HopDongUI {
         table.setSelectionBackground(new Color(241, 245, 249));
         table.setBorder(null);
 
-        // --- Right-click context menu (must be created before mouse listeners) ---
         JPopupMenu contextMenu = new JPopupMenu();
         JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
         JMenuItem miMembers = new JMenuItem("Quản lý thành viên");
@@ -265,11 +227,9 @@ public class HopDongUI {
             if (row < 0)
                 return;
             int modelRow = table.convertRowIndexToModel(row);
-            String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
-            String maPhong = String.valueOf(model.getValueAt(modelRow, 1));
-            showMemberManagementDialog(maHopDong, maPhong);
+            showMemberManagementDialog(String.valueOf(model.getValueAt(modelRow, 0)),
+                    String.valueOf(model.getValueAt(modelRow, 1)));
         });
-
         miEdit.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row >= 0)
@@ -280,11 +240,9 @@ public class HopDongUI {
             if (row < 0)
                 return;
             int modelRow = table.convertRowIndexToModel(row);
-            String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
-            String maPhong = String.valueOf(model.getValueAt(modelRow, 1));
-            showThanhToanHopDongDialog(maHopDong, maPhong);
+            showThanhToanHopDongDialog(String.valueOf(model.getValueAt(modelRow, 0)),
+                    String.valueOf(model.getValueAt(modelRow, 1)));
         });
-
         miDelete.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row < 0)
@@ -293,46 +251,36 @@ public class HopDongUI {
             String maHopDong = String.valueOf(model.getValueAt(modelRow, 0));
             String tenKhachHang = String.valueOf(model.getValueAt(modelRow, 2));
             String maPhong = String.valueOf(model.getValueAt(modelRow, 1));
-            int luaChon = JOptionPane.showConfirmDialog(
-                    pnlRoot,
+            int luaChon = JOptionPane.showConfirmDialog(pnlRoot,
                     "Bạn có chắc chắn muốn xóa hợp đồng của khách hàng '" + tenKhachHang + "' (Phòng " + maPhong
                             + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
-                    "Xác nhận xóa hợp đồng",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
+                    "Xác nhận xóa hợp đồng", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (luaChon == JOptionPane.YES_OPTION) {
                 boolean ok = HopDongDao.xoaHopDongVaKhachHangLienQuan(maHopDong);
-                if (ok) {
+                showToast(ok ? "Đã xóa hợp đồng thành công" : "Xóa hợp đồng thất bại");
+                if (ok)
                     loadDataToTable();
-                    showToast("Đã xóa hợp đồng thành công");
-                } else {
-                    showToast("Xóa hợp đồng thất bại");
-                }
             }
         });
 
         table.setComponentPopupMenu(contextMenu);
-
         table.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseMoved(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
-                if (row > -1) {
+                if (row > -1)
                     table.setRowSelectionInterval(row, row);
-                }
             }
         });
         table.addMouseListener(new MouseAdapter() {
             public void mouseExited(MouseEvent e) {
-                if (!contextMenu.isVisible()) {
+                if (!contextMenu.isVisible())
                     table.clearSelection();
-                }
             }
 
             public void mousePressed(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
-                if (row >= 0) {
+                if (row >= 0)
                     table.setRowSelectionInterval(row, row);
-                }
             }
         });
 
@@ -377,14 +325,12 @@ public class HopDongUI {
                 l.setForeground(MAU_TEXT);
                 l.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
                 l.setOpaque(true);
-
-                if (c == 0) {
+                if (c == 0)
                     l.setFont(new Font("Inter", Font.BOLD, 13));
-                } else if (c == 1) {
+                else if (c == 1) {
                     l.setForeground(new Color(37, 99, 235));
                     l.setFont(new Font("Inter", Font.BOLD, 13));
                 }
-
                 l.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
                         new EmptyBorder(0, 16, 0, 8)));
@@ -399,12 +345,10 @@ public class HopDongUI {
                 JPanel pnl = new JPanel(new GridBagLayout());
                 pnl.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
                 pnl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
-
                 String status = v != null ? v.toString() : "";
-                boolean active = status.equals("Đang hiệu lực");
-                Color bg = active ? new Color(34, 88, 195) : new Color(226, 232, 240);
-                Color fg = active ? Color.WHITE : new Color(71, 85, 105);
-
+                boolean active = status.equals("Đang Hiệu Lực");
+                Color bg = active ? new Color(22, 163, 74) : new Color(220, 38, 38);
+                Color fg = Color.WHITE;
                 JLabel lbl = new JLabel(status) {
                     @Override
                     protected void paintComponent(Graphics g) {
@@ -419,7 +363,6 @@ public class HopDongUI {
                 lbl.setForeground(fg);
                 lbl.setFont(new Font("Inter", Font.BOLD, 11));
                 lbl.setBorder(new EmptyBorder(4, 10, 4, 10));
-
                 GridBagConstraints gbc = new GridBagConstraints();
                 gbc.anchor = GridBagConstraints.WEST;
                 gbc.weightx = 1.0;
@@ -439,92 +382,44 @@ public class HopDongUI {
         table.getColumnModel().getColumn(5).setPreferredWidth(100);
         table.getColumnModel().getColumn(6).setPreferredWidth(110);
         table.getColumnModel().getColumn(7).setPreferredWidth(125);
-
         table.getColumnModel().getColumn(2).setCellRenderer(boldPaddedRenderer());
+
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(MAU_CARD);
-
         cardMargin.add(scrollPane, BorderLayout.CENTER);
         card.add(cardMargin, BorderLayout.CENTER);
-
         pnlMainContent.add(card, BorderLayout.CENTER);
         pnlRoot.add(pnlMainContent, BorderLayout.CENTER);
-
         return pnlRoot;
     }
 
     private void applyContractFilter() {
         String text = txtSearch.getText().trim();
         String hanFilter = (String) cboFilterHanHopDong.getSelectedItem();
-
         java.util.List<RowFilter<Object, Object>> filters = new java.util.ArrayList<>();
-
-        if (!text.isEmpty()) {
+        if (!text.isEmpty())
             filters.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(text)));
-        }
-
-        if ("Sắp hết hạn".equals(hanFilter)) {
-            filters.add(new RowFilter<Object, Object>() {
-                @Override
-                public boolean include(Entry<? extends Object, ? extends Object> entry) {
-                    Object dateVal = entry.getValue(4); // Ngày kết thúc
-                    if (dateVal == null)
-                        return false;
-                    try {
-                        java.time.LocalDate ngayKetThuc = parseTableDate(dateVal);
-                        if (ngayKetThuc == null)
-                            return false;
-                        java.time.LocalDate today = java.time.LocalDate.now();
-                        long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(today, ngayKetThuc);
-                        return daysLeft >= 0 && daysLeft <= 15;
-                    } catch (Exception e) {
-                        return false;
-                    }
-                }
-            });
+        if ("Đang hiệu lực".equals(hanFilter)) {
+            filters.add(RowFilter.regexFilter("(?i)Đang Hiệu Lực", 7));
         } else if ("Đã hết hạn".equals(hanFilter)) {
-            filters.add(new RowFilter<Object, Object>() {
-                @Override
-                public boolean include(Entry<? extends Object, ? extends Object> entry) {
-                    Object dateVal = entry.getValue(4); // Ngày kết thúc
-                    if (dateVal == null)
-                        return false;
-                    try {
-                        java.time.LocalDate ngayKetThuc = parseTableDate(dateVal);
-                        if (ngayKetThuc == null)
-                            return false;
-                        return ngayKetThuc.isBefore(java.time.LocalDate.now());
-                    } catch (Exception e) {
-                        return false;
-                    }
-                }
-            });
+            filters.add(RowFilter.regexFilter("(?i)Đã Kết Thúc", 7));
         }
-
-        if (filters.isEmpty()) {
-            sorter.setRowFilter(null);
-        } else {
-            sorter.setRowFilter(RowFilter.andFilter(filters));
-        }
+        sorter.setRowFilter(filters.isEmpty() ? null : RowFilter.andFilter(filters));
     }
 
     private java.time.LocalDate parseTableDate(Object dateVal) {
-        if (dateVal instanceof java.time.LocalDate) {
+        if (dateVal instanceof java.time.LocalDate)
             return (java.time.LocalDate) dateVal;
-        }
         String dateStr = dateVal.toString().trim();
         if (dateStr.isEmpty())
             return null;
-        // Try yyyy-MM-dd
         try {
             if (dateStr.length() > 10)
                 dateStr = dateStr.substring(0, 10);
             return java.time.LocalDate.parse(dateStr);
         } catch (Exception e) {
-            // ignore
         }
-        // Try dd/MM/yyyy
         try {
             return java.time.LocalDate.parse(dateStr, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         } catch (Exception e) {
@@ -548,8 +443,7 @@ public class HopDongUI {
                 setFont(FONT_BOLD);
                 setForeground(AppColors.SLATE_900);
                 setBorder(BorderFactory.createCompoundBorder(
-                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
-                        new EmptyBorder(0, 16, 0, 8)));
+                        new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200), new EmptyBorder(0, 16, 0, 8)));
                 return this;
             }
         };
@@ -561,7 +455,6 @@ public class HopDongUI {
 
     private void showContractForm(boolean isEdit, int row, String preselectedMaPhong) {
         Window parent = SwingUtilities.getWindowAncestor(pnlRoot);
-
         JDialog overlay = new JDialog(parent);
         overlay.setUndecorated(true);
         try {
@@ -577,7 +470,6 @@ public class HopDongUI {
         dialog.setBackground(new Color(0, 0, 0, 0));
         dialog.setSize(620, 560);
         dialog.setLocationRelativeTo(pnlRoot);
-
         dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
                 .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "ESC");
         dialog.getRootPane().getActionMap().put("ESC", new AbstractAction() {
@@ -596,7 +488,6 @@ public class HopDongUI {
         JLabel lblTitle = new JLabel(isEdit ? "Sửa hợp đồng" : "Tạo hợp đồng mới");
         lblTitle.setFont(new Font("Inter", Font.BOLD, 18));
         lblTitle.setForeground(MAU_TEXT);
-
         JButton btnClose = new JButton("X") {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -614,7 +505,6 @@ public class HopDongUI {
         btnClose.setContentAreaFilled(false);
         btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnClose.addActionListener(e -> dialog.dispose());
-
         pnlHead.add(lblTitle, BorderLayout.WEST);
         pnlHead.add(btnClose, BorderLayout.EAST);
         pnlHead.setBorder(new EmptyBorder(0, 0, 16, 0));
@@ -622,32 +512,25 @@ public class HopDongUI {
 
         JPanel pnlContent = new JPanel(new BorderLayout(0, 12));
         pnlContent.setOpaque(false);
-
         JPanel pnlGrid = new JPanel(new GridLayout(0, 2, 14, 12));
         pnlGrid.setOpaque(false);
 
         ArrayList<Phong> dsPhongTrong = PhongDAO.getAllPhongTrong();
         String[] roomOptions = new String[dsPhongTrong.size()];
         Map<String, Long> roomPriceByCode = new HashMap<>();
-
         for (int i = 0; i < dsPhongTrong.size(); i++) {
             Phong room = dsPhongTrong.get(i);
             GiaDetail gd = giaDetailDAO.getDonGiaByMa(room.getMaGiaDetail());
             double donGia = (gd != null) ? gd.getDonGia() : 0.0;
             long giaLamTron = Math.max(0L, Math.round(donGia));
-
             roomPriceByCode.put(room.getMaPhong(), giaLamTron);
-
             roomOptions[i] = room.getMaPhong() + " - " + formatCurrencyValue(giaLamTron) + " đ";
         }
-        JComboBox<String> cboPhong = FormFieldStyles.createRoomCombo(
-                roomOptions,
-                new Font("Inter", Font.PLAIN, 14),
-                MAU_TEXT,
-                BORDER_COLOR);
+        JComboBox<String> cboPhong = FormFieldStyles.createRoomCombo(roomOptions, new Font("Inter", Font.PLAIN, 14),
+                MAU_TEXT, BORDER_COLOR);
 
         RoundedTextField txtPhongEdit = createFocusableField();
-        txtPhongEdit.setEditable(false); // Không cho phép sửa mã phòng khi đang edit hợp đồng
+        txtPhongEdit.setEditable(false);
         txtPhongEdit.setBackground(new Color(241, 245, 249));
 
         RoundedTextField txtKhach = createFocusableField();
@@ -662,7 +545,6 @@ public class HopDongUI {
 
         txtSoDienThoai.setToolTipText("Ví dụ: 0901234567");
         txtCccd.setToolTipText("Ví dụ: 079123456789");
-
         applyNumberFilter(txtSoDienThoai);
         applyNumberFilter(txtCccd);
 
@@ -676,7 +558,6 @@ public class HopDongUI {
         addDateValidationOnFocusLost(txtNgaySinh, "Ngày sinh");
         addDateValidationOnFocusLost(txtBatDau, "Ngày bắt đầu");
         addDateValidationOnFocusLost(txtKetThuc, "Ngày kết thúc");
-
         txtThue.setEditable(false);
         txtCoc.setEditable(false);
 
@@ -684,14 +565,11 @@ public class HopDongUI {
             String selected = (String) cboPhong.getSelectedItem();
             String roomCode = extractRoomCode(selected);
             long selectedPrice = roomPriceByCode.getOrDefault(roomCode, 0L);
-            String rawPrice = String.valueOf(selectedPrice);
-            txtThue.setText(formatCurrency(rawPrice));
-            txtCoc.setText(formatCurrency(rawPrice));
-
+            txtThue.setText(formatCurrency(String.valueOf(selectedPrice)));
+            txtCoc.setText(formatCurrency(String.valueOf(selectedPrice)));
         };
         cboPhong.addActionListener(roomListener);
 
-        // Pre-select room if opened from dashboard
         if (!isEdit && preselectedMaPhong != null && !preselectedMaPhong.isEmpty()) {
             for (int i = 0; i < cboPhong.getItemCount(); i++) {
                 String item = cboPhong.getItemAt(i);
@@ -701,7 +579,6 @@ public class HopDongUI {
                 }
             }
         }
-
         roomListener.actionPerformed(null);
 
         if (isEdit && row != -1) {
@@ -713,26 +590,19 @@ public class HopDongUI {
                 txtSoDienThoai.setText(kh.getSoDienThoai());
                 txtCccd.setText(kh.getSoCCCD());
                 txtDiaChi.setText(kh.getDiaChi());
-                // Lấy và format ngày sinh (Giả sử hàm getNgaySinh() trả về String, Date hoặc
-                // LocalDate)
-                if (kh.getNgaySinh() != null) {
+                if (kh.getNgaySinh() != null)
                     txtNgaySinh.setText(formatToDDMMYYYY(kh.getNgaySinh()));
-                }
             }
-            // Lấy và format ngày bắt đầu, ngày kết thúc từ Table Model
-            Object objBatDau = model.getValueAt(row, 3);
-            Object objKetThuc = model.getValueAt(row, 4);
-
-            txtBatDau.setText(formatToDDMMYYYY(objBatDau));
-            txtKetThuc.setText(formatToDDMMYYYY(objKetThuc));
+            txtBatDau.setText(formatToDDMMYYYY(model.getValueAt(row, 3)));
+            txtKetThuc.setText(formatToDDMMYYYY(model.getValueAt(row, 4)));
             txtCoc.setText(formatCurrency(model.getValueAt(row, 5).toString()));
             txtThue.setText(formatCurrency(model.getValueAt(row, 6).toString()));
         }
 
         Font labelFont = new Font("Inter", Font.PLAIN, 13);
         if (isEdit) {
-            JPanel pnlPhong = FormFieldStyles.createLabeledField("Phòng", txtPhongEdit, MAU_TEXT, labelFont, 52);
-            pnlContent.add(pnlPhong, BorderLayout.NORTH);
+            pnlContent.add(FormFieldStyles.createLabeledField("Phòng", txtPhongEdit, MAU_TEXT, labelFont, 52),
+                    BorderLayout.NORTH);
             pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê *", txtKhach, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Số điện thoại *", txtSoDienThoai, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("CCCD/CMND *", txtCccd, MAU_TEXT, labelFont, 52));
@@ -741,9 +611,7 @@ public class HopDongUI {
             pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc *", txtKetThuc, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
-
             pnlContent.add(pnlGrid, BorderLayout.CENTER);
-
         } else {
             pnlGrid.add(FormFieldStyles.createLabeledField("Phòng *", cboPhong, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Họ tên khách thuê *", txtKhach, MAU_TEXT, labelFont, 52));
@@ -755,45 +623,22 @@ public class HopDongUI {
             pnlGrid.add(FormFieldStyles.createLabeledField("Ngày kết thúc *", txtKetThuc, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Tiền thuê/tháng", txtThue, MAU_TEXT, labelFont, 52));
             pnlGrid.add(FormFieldStyles.createLabeledField("Tiền cọc", txtCoc, MAU_TEXT, labelFont, 52));
-
             pnlContent.add(pnlGrid, BorderLayout.CENTER);
         }
-
         pnlBg.add(pnlContent, BorderLayout.CENTER);
 
         JPanel pnlFooter = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 16));
         pnlFooter.setOpaque(false);
-
-        RoundedButton btnCancel = ButtonStyles.createSecondary(
-                "Hủy",
-                new Font("Inter", Font.BOLD, 13),
-                MAU_TEXT,
-                Color.WHITE,
-                new Color(226, 232, 240),
-                8,
-                new EmptyBorder(10, 22, 10, 22));
+        RoundedButton btnCancel = ButtonStyles.createSecondary("Hủy", new Font("Inter", Font.BOLD, 13),
+                MAU_TEXT, Color.WHITE, new Color(226, 232, 240), 8, new EmptyBorder(10, 22, 10, 22));
         btnCancel.addActionListener(e -> dialog.dispose());
-
         JButton btnSave = primaryButton.makePrimaryButton(isEdit ? "Cập Nhật" : "Tạo");
-
         btnSave.addActionListener(e -> {
-            String ngaySinhRaw = "";
-            if (!isEdit) {
-                ngaySinhRaw = txtNgaySinh.getText().replace("_", "").trim();
-            }
             String bDau = txtBatDau.getText().replace("_", "").trim();
             String kThuc = txtKetThuc.getText().replace("_", "").trim();
-            String phongCode;
-            if (isEdit) {
-                phongCode = txtPhongEdit.getText().trim();
-            } else {
-                String phongDisplay = (String) cboPhong.getSelectedItem();
-                phongCode = extractRoomCode(phongDisplay);
-            }
+            String phongCode = isEdit ? txtPhongEdit.getText().trim()
+                    : extractRoomCode((String) cboPhong.getSelectedItem());
 
-            // ---------------------------
-
-            // --- Validate all fields ---
             if (txtKhach.getText().trim().isEmpty()) {
                 ui.util.ValidationPopup.show(txtKhach, "Họ tên không được để trống");
                 txtKhach.requestFocus();
@@ -804,7 +649,6 @@ public class HopDongUI {
                 txtKhach.requestFocus();
                 return;
             }
-
             String sdtVal = txtSoDienThoai.getText().trim();
             if (sdtVal.isEmpty()) {
                 ui.util.ValidationPopup.show(txtSoDienThoai, "Số điện thoại không được để trống");
@@ -816,7 +660,6 @@ public class HopDongUI {
                 txtSoDienThoai.requestFocus();
                 return;
             }
-
             String cccdValue = txtCccd.getText().trim();
             if (cccdValue.isEmpty()) {
                 ui.util.ValidationPopup.show(txtCccd, "CCCD/CMND không được để trống");
@@ -828,7 +671,6 @@ public class HopDongUI {
                 txtCccd.requestFocus();
                 return;
             }
-
             if (txtDiaChi.getText().trim().isEmpty()) {
                 ui.util.ValidationPopup.show(txtDiaChi, "Địa chỉ không được để trống");
                 txtDiaChi.requestFocus();
@@ -837,7 +679,6 @@ public class HopDongUI {
 
             java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")
                     .withResolverStyle(java.time.format.ResolverStyle.STRICT);
-
             if (!isEdit) {
                 String ngaySinhCheck = txtNgaySinh.getText().replace("_", "").replace("/", "").trim();
                 if (ngaySinhCheck.isEmpty()) {
@@ -853,7 +694,6 @@ public class HopDongUI {
                     return;
                 }
             }
-
             if (bDau.length() < 10 || bDau.replace("/", "").trim().isEmpty()) {
                 ui.util.ValidationPopup.show(txtBatDau, "Ngày bắt đầu không được để trống");
                 txtBatDau.requestFocus();
@@ -864,7 +704,6 @@ public class HopDongUI {
                 txtKetThuc.requestFocus();
                 return;
             }
-
             try {
                 java.time.LocalDate start = java.time.LocalDate.parse(txtBatDau.getText().trim(), fmt);
                 java.time.LocalDate end = java.time.LocalDate.parse(txtKetThuc.getText().trim(), fmt);
@@ -879,16 +718,13 @@ public class HopDongUI {
                 return;
             }
 
-            String cCoc = formatCurrency(txtCoc.getText());
-            String cThue = formatCurrency(txtThue.getText());
-
             if (isEdit) {
                 model.setValueAt(phongCode, row, 1);
                 model.setValueAt(txtKhach.getText(), row, 2);
                 model.setValueAt(txtBatDau.getText(), row, 3);
                 model.setValueAt(txtKetThuc.getText(), row, 4);
-                model.setValueAt(cCoc, row, 5);
-                model.setValueAt(cThue, row, 6);
+                model.setValueAt(formatCurrency(txtCoc.getText()), row, 5);
+                model.setValueAt(formatCurrency(txtThue.getText()), row, 6);
                 showToast("Cập nhật hợp đồng thành công");
                 dialog.dispose();
             } else {
@@ -909,7 +745,6 @@ public class HopDongUI {
                     draft.tienCocRaw = sanitizeMoneyRaw(txtCoc.getText().trim());
                     draft.giaThueRaw = sanitizeMoneyRaw(txtThue.getText().trim());
                 }
-
                 if (draft.tienCocRaw.isEmpty() || draft.giaThueRaw.isEmpty()) {
                     showToast("Tiền cọc / tiền thuê không hợp lệ");
                     return;
@@ -919,22 +754,17 @@ public class HopDongUI {
                 boolean accepted = showContractPreviewDialog(draft);
                 if (accepted) {
                     HopDongDAO dao = new HopDongDAO();
-                    boolean success = dao.luuHopDongMoi(draft); // Gọi hàm lưu vào DB
-
+                    boolean success = dao.luuHopDongMoi(draft);
                     if (success) {
                         loadDataToTable();
-                        if (onContractCreated != null) {
+                        if (onContractCreated != null)
                             onContractCreated.run();
-                        }
                         showToast("Lưu vào cơ sở dữ liệu thành công!");
                         dialog.dispose();
                     } else {
                         String err = dao.getLastError();
-                        if (err == null || err.trim().isEmpty()) {
-                            showToast("Lỗi: Không thể lưu vào cơ sở dữ liệu!");
-                        } else {
-                            showToast("Lỗi lưu hợp đồng: " + err);
-                        }
+                        showToast((err == null || err.trim().isEmpty()) ? "Lỗi: Không thể lưu vào cơ sở dữ liệu!"
+                                : "Lỗi lưu hợp đồng: " + err);
                     }
                 } else {
                     dialog.setVisible(true);
@@ -945,9 +775,7 @@ public class HopDongUI {
         pnlFooter.add(btnCancel);
         pnlFooter.add(btnSave);
         pnlBg.add(pnlFooter, BorderLayout.SOUTH);
-
         dialog.add(pnlBg);
-
         if (parent != null)
             overlay.setVisible(true);
         dialog.setVisible(true);
@@ -996,7 +824,6 @@ public class HopDongUI {
             mask.setPlaceholderCharacter('_');
         } catch (Exception e) {
         }
-
         JFormattedTextField txt = new JFormattedTextField(mask) {
             boolean focused = false;
             {
@@ -1036,10 +863,8 @@ public class HopDongUI {
                     g2.setStroke(new BasicStroke(1f));
                 }
                 g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 6, 6);
-
                 g2.setColor(new Color(15, 23, 42));
-                int cx = getWidth() - 20;
-                int cy = getHeight() / 2;
+                int cx = getWidth() - 20, cy = getHeight() / 2;
                 g2.drawRect(cx - 5, cy - 4, 10, 8);
                 g2.drawLine(cx - 3, cy - 6, cx - 3, cy - 4);
                 g2.drawLine(cx + 3, cy - 6, cx + 3, cy - 4);
@@ -1052,7 +877,6 @@ public class HopDongUI {
         txt.setCursor(new Cursor(Cursor.TEXT_CURSOR));
         txt.setFont(new Font("Inter", Font.PLAIN, 15));
         txt.setForeground(MAU_TEXT);
-
         txt.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseMoved(MouseEvent e) {
                 txt.setCursor(e.getX() > txt.getWidth() - 36 ? new Cursor(Cursor.HAND_CURSOR)
@@ -1064,14 +888,10 @@ public class HopDongUI {
                 if (e.getX() > txt.getWidth() - 36) {
                     new DatePickerPopup(txt).show(txt, 0, txt.getHeight());
                     txt.requestFocus();
-                } else {
-                    if (txt.getText().equals("__/__/____")) {
-                        txt.setCaretPosition(0);
-                    }
-                }
+                } else if (txt.getText().equals("__/__/____"))
+                    txt.setCaretPosition(0);
             }
         });
-
         txt.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
                 check();
@@ -1116,9 +936,8 @@ public class HopDongUI {
                                 if (!yyyy.contains("_")) {
                                     int y = Integer.parseInt(yyyy);
                                     max = (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)) ? 29 : 28;
-                                } else {
+                                } else
                                     max = 29;
-                                }
                             }
                             if (d < 1 || d > max) {
                                 ui.util.ValidationPopup.show(txt,
@@ -1131,7 +950,6 @@ public class HopDongUI {
                 });
             }
         });
-
         return txt;
     }
 
@@ -1159,8 +977,7 @@ public class HopDongUI {
                         java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
                                 .ofPattern("dd/MM/yyyy");
                         java.time.LocalDate start = java.time.LocalDate.parse(t, fmt);
-                        java.time.LocalDate end = start.plusYears(1);
-                        txtEndDate.setText(end.format(fmt));
+                        txtEndDate.setText(start.plusYears(1).format(fmt));
                     } catch (Exception ignored) {
                     }
                 });
@@ -1193,11 +1010,10 @@ public class HopDongUI {
                     return;
                 SwingUtilities.invokeLater(() -> {
                     String val = field.getText().trim();
-                    if (val.isEmpty()) {
+                    if (val.isEmpty())
                         ui.util.ValidationPopup.show(field, emptyMessage);
-                    } else if (!val.matches(regex)) {
+                    else if (!val.matches(regex))
                         ui.util.ValidationPopup.show(field, errorMessage);
-                    }
                 });
             }
         });
@@ -1222,10 +1038,8 @@ public class HopDongUI {
                         return;
                     }
                     try {
-                        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
-                                .ofPattern("dd/MM/uuuu")
-                                .withResolverStyle(java.time.format.ResolverStyle.STRICT);
-                        java.time.LocalDate.parse(val, fmt);
+                        java.time.LocalDate.parse(val, java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")
+                                .withResolverStyle(java.time.format.ResolverStyle.STRICT));
                     } catch (Exception ex) {
                         ui.util.ValidationPopup.show(field, label + " không hợp lệ (dd/MM/yyyy)");
                     }
@@ -1235,20 +1049,15 @@ public class HopDongUI {
     }
 
     private String extractRoomCode(String roomDisplay) {
-        if (roomDisplay == null || roomDisplay.trim().isEmpty()) {
+        if (roomDisplay == null || roomDisplay.trim().isEmpty())
             return "";
-        }
         int idx = roomDisplay.indexOf('-');
-        if (idx <= 0) {
-            return roomDisplay.trim();
-        }
-        return roomDisplay.substring(0, idx).trim();
+        return idx <= 0 ? roomDisplay.trim() : roomDisplay.substring(0, idx).trim();
     }
 
     private String extractRoomPriceRaw(String roomDisplay) {
-        if (roomDisplay == null) {
+        if (roomDisplay == null)
             return "0";
-        }
         int idx = roomDisplay.indexOf('-');
         String pricePart = idx >= 0 ? roomDisplay.substring(idx + 1) : roomDisplay;
         String digits = pricePart.replaceAll("[^0-9]", "");
@@ -1258,16 +1067,11 @@ public class HopDongUI {
     private void selectRoomByCode(JComboBox<String> combo, String roomCode) {
         if (roomCode == null)
             return;
-
         for (int i = 0; i < combo.getItemCount(); i++) {
             Object itemObj = combo.getItemAt(i);
-            if (itemObj != null) {
-                String item = itemObj.toString();
-                // Kiểm tra xem item có bắt đầu bằng mã phòng không
-                if (item.startsWith(roomCode)) {
-                    combo.setSelectedIndex(i);
-                    return; // Tìm thấy thì thoát vòng lặp ngay
-                }
+            if (itemObj != null && itemObj.toString().startsWith(roomCode)) {
+                combo.setSelectedIndex(i);
+                return;
             }
         }
     }
@@ -1278,7 +1082,6 @@ public class HopDongUI {
         dialog.setUndecorated(true);
         dialog.setBackground(new Color(0, 0, 0, 0));
 
-        // Responsive sizing: fit within screen bounds
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(
                 GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration());
@@ -1294,7 +1097,6 @@ public class HopDongUI {
         rootPanel.setLayout(new BorderLayout());
         rootPanel.setBorder(new EmptyBorder(14, 14, 14, 14));
 
-        // --- Header ---
         JPanel head = new JPanel(new BorderLayout());
         head.setOpaque(false);
         JLabel titleLbl = new JLabel("Xem trước hợp đồng", SwingConstants.CENTER);
@@ -1322,15 +1124,12 @@ public class HopDongUI {
         head.setBorder(new EmptyBorder(0, 0, 10, 0));
         rootPanel.add(head, BorderLayout.NORTH);
 
-        // --- Load service data ---
         DichVuDAO dvAllDAO = new DichVuDAO();
         java.util.List<DichVu> allDV = dvAllDAO.layTatCa();
         PhongDichVuDAO phongDvDAO = new PhongDichVuDAO();
         java.util.List<DichVu> roomDV = phongDvDAO.layDichVuCuaPhong(draft.phong);
 
-        String giaDien = "Theo quy định", giaNuoc = "Theo quy định";
-        String phiGiuXe = "Miễn phí", phiGiuXeDapDien = "Miễn phí", phiDichVu = "Theo quy định";
-
+        String giaDien = "Theo quy định", giaNuoc = "Theo quy định", phiDichVu = "Theo quy định";
         for (DichVu dv : allDV) {
             String ten = dv.getTenDichVu().toLowerCase();
             if (dv.getDonGia() == null || dv.getDonGia() <= 0)
@@ -1348,21 +1147,17 @@ public class HopDongUI {
                 continue;
             String giaStr = formatCurrency(String.valueOf(Math.round(dv.getDonGia()))) + "đ/"
                     + (dv.getDonVi() != null ? dv.getDonVi().toLowerCase() : "");
-            if (ten.contains("xe") || ten.contains("giữ") || ten.contains("gửi"))
-                phiGiuXe = giaStr;
-            else if (ten.contains("wifi") || ten.contains("dịch vụ") || ten.contains("rác") || ten.contains("vệ sinh")
+            if (ten.contains("wifi") || ten.contains("dịch vụ") || ten.contains("rác") || ten.contains("vệ sinh")
                     || ten.contains("phí"))
                 phiDichVu = giaStr;
         }
 
-        // --- Calculate contract duration ---
         String soThangThue = "";
         try {
             java.time.format.DateTimeFormatter fmtDate = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
             java.time.LocalDate start = java.time.LocalDate.parse(draft.ngayBatDau, fmtDate);
             java.time.LocalDate end = java.time.LocalDate.parse(draft.ngayKetThuc, fmtDate);
-            long months = java.time.temporal.ChronoUnit.MONTHS.between(start, end);
-            soThangThue = months + " tháng";
+            soThangThue = java.time.temporal.ChronoUnit.MONTHS.between(start, end) + " tháng";
         } catch (Exception ex) {
             soThangThue = "N/A";
         }
@@ -1374,21 +1169,16 @@ public class HopDongUI {
 
         // ==================== PAGE 1 ====================
         JPanel page1 = createDocPage();
-
         addDocCenter(page1, "Cộng Hòa Xã Hội Chủ Nghĩa Việt Nam", new Font("Be Vietnam Pro", Font.BOLD, 14));
         addDocCenter(page1, "Độc Lập \u2013 Tự Do \u2013 Hạnh Phúc", docFont);
         addDocCenter(page1, "\u2500oOo\u2500", new Font("Be Vietnam Pro", Font.PLAIN, 12));
         page1.add(Box.createVerticalStrut(14));
-
         addDocCenter(page1, "HỢP ĐỒNG ĐẶT CỌC", new Font("Be Vietnam Pro", Font.BOLD, 20));
         page1.add(Box.createVerticalStrut(10));
-
         addDocLine(page1, "- Căn cứ vào khả năng và nhu cầu của hai bên;", docFont, 0);
         addDocHtml(page1, "- Hôm nay, Ngày <b>" + today.getDayOfMonth() + "</b> Tháng <b>" + today.getMonthValue()
                 + "</b> Năm <b>" + today.getYear() + "</b> chúng tôi gồm:", docFont, 0);
         page1.add(Box.createVerticalStrut(8));
-
-        // --- I. BÊN A ---
         addDocLine(page1, "I. ĐẠI DIỆN BÊN A (Bên nhận cọc)", docBold, 0);
         addDocFill(page1, "Ông/Bà", "Tống Nguyễn Nhật Tiến", docFont);
         addDocHtml(page1,
@@ -1396,27 +1186,19 @@ public class HopDongUI {
                 docFont, 0);
         addDocFill(page1, "Điện thoại", "0357.988.614", docFont);
         page1.add(Box.createVerticalStrut(8));
-
-        // --- II. BÊN B ---
         addDocLine(page1, "II. ĐẠI DIỆN BÊN B (Bên đặt cọc)", docBold, 0);
         addDocFill(page1, "Ông/Bà", draft.hoTen, docFont);
-        if (draft.ngaySinh != null && !draft.ngaySinh.trim().isEmpty()) {
+        if (draft.ngaySinh != null && !draft.ngaySinh.trim().isEmpty())
             addDocFill(page1, "Ngày sinh", draft.ngaySinh, docFont);
-        }
         addDocFill(page1, "Số CMND/Hộ chiếu", draft.cccd, docFont);
         addDocFill(page1, "Địa chỉ thường trú", draft.diaChi, docFont);
         addDocFill(page1, "Điện Thoại", draft.soDienThoai, docFont);
         page1.add(Box.createVerticalStrut(8));
-
-        // --- Điều 1 ---
         addDocLine(page1, "Điều 1 \u2013 Nội dung thỏa thuận", docBold, 0);
         addDocHtml(page1,
-                "<b>1.1.</b>&nbsp;&nbsp;Bằng thỏa thuận này, Bên B đồng ý đặt cọc cho bên A và bên A đồng ý nhận cọc "
-                        + "của bên B nhằm mục đích đảm bảo việc giao kết thỏa thuận đặt cọc giữa bên B "
-                        + "\nvà chủ đầu tư để thuê sản phẩm với thông tin như sau:",
+                "<b>1.1.</b>&nbsp;&nbsp;Bằng thỏa thuận này, Bên B đồng ý đặt cọc cho bên A và bên A đồng ý nhận cọc của bên B nhằm mục đích đảm bảo việc giao kết thỏa thuận đặt cọc giữa bên B \nvà chủ đầu tư để thuê sản phẩm với thông tin như sau:",
                 docFont, 0);
         page1.add(Box.createVerticalStrut(4));
-
         addDocLine(page1, "a. Thông tin phòng:", docBold, 16);
         addDocHtml(page1, "Mã phòng: <b>" + draft.phong + "</b>", docFont, 28);
         addDocHtml(page1, "Giá phòng: <b>" + formatCurrency(draft.giaThueRaw) + " đ</b>", docFont, 28);
@@ -1424,7 +1206,6 @@ public class HopDongUI {
         addDocHtml(page1, "Ngày dự kiến dọn vào: <b>" + draft.ngayBatDau + "</b>", docFont, 28);
         addDocHtml(page1, "Tại địa chỉ: <b>36 Thích Bửu Đăng, P.1, Q. Gò Vấp, TP.HCM</b>", docFont, 28);
         page1.add(Box.createVerticalStrut(4));
-
         addDocLine(page1, "b. Thông tin phí dịch vụ của tòa nhà:", docBold, 16);
         addDocHtml(page1, "Đơn giá điện: <b>" + giaDien + "</b>", docFont, 28);
         addDocHtml(page1, "Giá nước: <b>" + giaNuoc + "</b>", docFont, 28);
@@ -1434,8 +1215,6 @@ public class HopDongUI {
 
         // ==================== PAGE 2 ====================
         JPanel page2 = createDocPage();
-
-        // --- 1.2 ---
         addDocHtml(page2, "<b>1.2.</b>&nbsp;&nbsp;Bên A nhận số tiền đặt cọc giữ phòng là: <b>"
                 + formatCurrency(draft.tienCocRaw) + " đ</b>", docFont, 0);
         addDocLine(page2, "Hình thức nhận cọc bằng chuyển khoản với thông tin cụ thể như sau:", docItalic, 16);
@@ -1443,41 +1222,39 @@ public class HopDongUI {
         addDocFillIndent(page2, "Số tài khoản", "0357988614", docFont, 16);
         addDocFillIndent(page2, "Tên tài khoản", "Tống Nguyễn Nhật Tiến", docFont, 16);
         page2.add(Box.createVerticalStrut(8));
-
-        // --- 1.3 ---
         addDocHtml(page2, "<b>1.3.</b>&nbsp;&nbsp;Hai bên cùng thỏa thuận và cam kết rằng:", docFont, 0);
         addDocHtml(page2,
                 "<b>a.</b> Bên B cam kết đến kí hợp đồng thuê nhà và dọn vào ở không quá 2 ngày so với ngày dọn vào dự kiến;",
                 docFont, 16);
-        addDocHtml(page2, "<b>b.</b> Bên B cam kết đến kí hợp đồng theo thời gian đã nêu tại điều khoản 1.3.a, "
-                + "đóng đủ tiền nhà và các phí dịch vụ của tòa nhà tháng đầu tiên;", docFont, 16);
-        addDocHtml(page2, "<b>c.</b> Nếu quá thời hạn nêu trên mà bên B vẫn không Ký hợp đồng theo như "
-                + "điều 1.3.a nêu trên thì bên B sẽ mất toàn bộ số tiền đặt cọc;", docFont, 16);
-        addDocHtml(page2, "<b>d.</b> Trong trường hợp tòa nhà có quy định khách hàng được sang nhượng hợp đồng "
-                + "thuê thì bên B có thể tự sang nhượng hoặc nhờ bên A tìm khách \nsang nhượng "
-                + "trên tinh thần tự nguyện. Bên A không có trách nhiệm bắt buộc sang nhượng cho bên B;", docFont, 16);
+        addDocHtml(page2,
+                "<b>b.</b> Bên B cam kết đến kí hợp đồng theo thời gian đã nêu tại điều khoản 1.3.a, đóng đủ tiền nhà và các phí dịch vụ của tòa nhà tháng đầu tiên;",
+                docFont, 16);
+        addDocHtml(page2,
+                "<b>c.</b> Nếu quá thời hạn nêu trên mà bên B vẫn không Ký hợp đồng theo như điều 1.3.a nêu trên thì bên B sẽ mất toàn bộ số tiền đặt cọc;",
+                docFont, 16);
+        addDocHtml(page2,
+                "<b>d.</b> Trong trường hợp tòa nhà có quy định khách hàng được sang nhượng hợp đồng thuê thì bên B có thể tự sang nhượng hoặc nhờ bên A tìm khách \nsang nhượng trên tinh thần tự nguyện. Bên A không có trách nhiệm bắt buộc sang nhượng cho bên B;",
+                docFont, 16);
         page2.add(Box.createVerticalStrut(10));
-
-        // --- Điều 2 ---
         addDocLine(page2, "Điều 2 \u2013 Điều khoản chung:", docBold, 0);
-        addDocHtml(page2, "<b>2.1.</b> Thỏa thuận này có hiệu lực từ thời điểm hai bên ký kết. "
-                + "Trường hợp khách hàng đặt cọc bằng hình thức chuyển khoản, hợp đồng này có hiệu lực khi "
-                + "Bên B đã đồng ý \nđặt cọc cho bên A (có xác thực bằng tin nhắn hoặc ghi âm) "
-                + "và đã chuyển khoản tiền cọc cho bên A mà không cần phải có chữ ký của Bên B;", docFont, 0);
-        addDocHtml(page2, "<b>2.2.</b> Thỏa thuận này sẽ chấm dứt hiệu lực trong các trường hợp sau: "
-                + "Bên B không ký hợp đồng và dọn vào ở theo quy định tại điều 1.3.b;", docFont, 0);
-        addDocHtml(page2, "<b>2.3.</b> Bên A không cho bất kì một bên nào khác bên B đặt cọc hoặc thuê phòng "
-                + "là đối tượng được quy định trên hợp đồng này trong thời hạn thỏa thuận;", docFont, 0);
-        addDocHtml(page2, "<b>2.4.</b> Ngay khi bên B ký hợp đồng thuê với chủ đầu tư, toàn bộ số tiền cọc sẽ "
-                + "được chuyển thành tiền ký quỹ trong hợp đồng thuê của Bên B;", docFont, 0);
+        addDocHtml(page2,
+                "<b>2.1.</b> Thỏa thuận này có hiệu lực từ thời điểm hai bên ký kết. Trường hợp khách hàng đặt cọc bằng hình thức chuyển khoản, hợp đồng này có hiệu lực khi Bên B đã đồng ý \nđặt cọc cho bên A (có xác thực bằng tin nhắn hoặc ghi âm) và đã chuyển khoản tiền cọc cho bên A mà không cần phải có chữ ký của Bên B;",
+                docFont, 0);
+        addDocHtml(page2,
+                "<b>2.2.</b> Thỏa thuận này sẽ chấm dứt hiệu lực trong các trường hợp sau: Bên B không ký hợp đồng và dọn vào ở theo quy định tại điều 1.3.b;",
+                docFont, 0);
+        addDocHtml(page2,
+                "<b>2.3.</b> Bên A không cho bất kì một bên nào khác bên B đặt cọc hoặc thuê phòng là đối tượng được quy định trên hợp đồng này trong thời hạn thỏa thuận;",
+                docFont, 0);
+        addDocHtml(page2,
+                "<b>2.4.</b> Ngay khi bên B ký hợp đồng thuê với chủ đầu tư, toàn bộ số tiền cọc sẽ được chuyển thành tiền ký quỹ trong hợp đồng thuê của Bên B;",
+                docFont, 0);
         page2.add(Box.createVerticalStrut(36));
 
-        // --- Ký tên ---
         JPanel signPanel = new JPanel(new GridLayout(1, 2, 40, 0));
         signPanel.setOpaque(false);
         signPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         signPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
-
         JPanel signA = new JPanel();
         signA.setOpaque(false);
         signA.setLayout(new BoxLayout(signA, BoxLayout.Y_AXIS));
@@ -1486,13 +1263,11 @@ public class HopDongUI {
         lblBenA.setAlignmentX(Component.CENTER_ALIGNMENT);
         signA.add(lblBenA);
         signA.add(Box.createVerticalStrut(6));
-        // --- Ảnh chữ ký Bên A ---
         try {
             java.awt.image.BufferedImage sigOrig = javax.imageio.ImageIO
                     .read(new java.io.File("img/signature/chuky.jpg"));
             int sigW = 120, sigH = (int) ((double) sigOrig.getHeight() / sigOrig.getWidth() * sigW);
-            Image sigScaled = sigOrig.getScaledInstance(sigW, sigH, Image.SCALE_SMOOTH);
-            JLabel lblSig = new JLabel(new ImageIcon(sigScaled));
+            JLabel lblSig = new JLabel(new ImageIcon(sigOrig.getScaledInstance(sigW, sigH, Image.SCALE_SMOOTH)));
             lblSig.setAlignmentX(Component.CENTER_ALIGNMENT);
             signA.add(lblSig);
         } catch (Exception ex) {
@@ -1503,7 +1278,6 @@ public class HopDongUI {
         lblNameA.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
         lblNameA.setAlignmentX(Component.CENTER_ALIGNMENT);
         signA.add(lblNameA);
-
         JPanel signB = new JPanel();
         signB.setOpaque(false);
         signB.setLayout(new BoxLayout(signB, BoxLayout.Y_AXIS));
@@ -1517,28 +1291,23 @@ public class HopDongUI {
         lblSignHint.setForeground(MAU_SUBTEXT);
         lblSignHint.setAlignmentX(Component.CENTER_ALIGNMENT);
         signB.add(lblSignHint);
-
         signPanel.add(signA);
         signPanel.add(signB);
         page2.add(signPanel);
 
-        // ==================== CARD LAYOUT ====================
         CardLayout cardLayout = new CardLayout();
         JPanel cardPanel = new JPanel(cardLayout);
         cardPanel.setOpaque(false);
-
         JScrollPane scroll1 = new JScrollPane(page1);
         scroll1.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         scroll1.getVerticalScrollBar().setUnitIncrement(16);
         scroll1.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll1.getViewport().setBackground(new Color(245, 245, 245));
-
         JScrollPane scroll2 = new JScrollPane(page2);
         scroll2.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         scroll2.getVerticalScrollBar().setUnitIncrement(16);
         scroll2.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll2.getViewport().setBackground(new Color(245, 245, 245));
-
         cardPanel.add(scroll1, "1");
         cardPanel.add(scroll2, "2");
         rootPanel.add(cardPanel, BorderLayout.CENTER);
@@ -1557,11 +1326,9 @@ public class HopDongUI {
         footerBtns.setOpaque(false);
 
         RoundedButton btnBack = ButtonStyles.createSecondary(
-                "\u2190  Quay lại sửa",
-                new Font("Inter", Font.BOLD, 13),
+                "\u2190  Quay lại sửa", new Font("Inter", Font.BOLD, 13),
                 MAU_TEXT, Color.WHITE, new Color(241, 245, 249), 8,
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(BORDER_COLOR),
+                BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER_COLOR),
                         new EmptyBorder(10, 12, 10, 12)));
 
         JButton btnNext = primaryButton.makePrimaryButton("Xem tiếp  \u2192");
@@ -1570,6 +1337,31 @@ public class HopDongUI {
         JButton btnConfirm = primaryButton.makePrimaryButton("Xác nhận hợp đồng");
         btnConfirm.setBorder(new EmptyBorder(10, 12, 10, 12));
         btnConfirm.setVisible(false);
+
+        // ── Nút in hợp đồng ──
+        JButton btnPrint = new JButton("🖨 In hợp đồng");
+        btnPrint.setFont(new Font("Inter", Font.BOLD, 13));
+        btnPrint.setFocusPainted(false);
+        btnPrint.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnPrint.setOpaque(true);
+        btnPrint.setBackground(Color.WHITE);
+        btnPrint.setForeground(new Color(37, 99, 235));
+        btnPrint.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(37, 99, 235), 1, true),
+                new EmptyBorder(10, 14, 10, 14)));
+        btnPrint.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btnPrint.setBackground(new Color(239, 246, 255));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btnPrint.setBackground(Color.WHITE);
+            }
+        });
+        btnPrint.addActionListener(e -> inHopDong(page1, page2, dialog));
+        // ── Hết phần nút in ──
 
         final int[] currentPage = { 1 };
 
@@ -1586,7 +1378,6 @@ public class HopDongUI {
                 dialog.dispose();
             }
         });
-
         btnNext.addActionListener(e -> {
             cardLayout.show(cardPanel, "2");
             currentPage[0] = 2;
@@ -1595,7 +1386,6 @@ public class HopDongUI {
             btnConfirm.setVisible(true);
             btnBack.setText("\u2190  Trang trước");
         });
-
         btnConfirm.addActionListener(e -> {
             accepted[0] = true;
             dialog.dispose();
@@ -1607,6 +1397,7 @@ public class HopDongUI {
         rightBtns.add(btnConfirm);
 
         footerBtns.add(btnBack, BorderLayout.WEST);
+        footerBtns.add(btnPrint, BorderLayout.CENTER);
         footerBtns.add(rightBtns, BorderLayout.EAST);
 
         footer.add(lblPageNum, BorderLayout.NORTH);
@@ -1618,25 +1409,102 @@ public class HopDongUI {
         return accepted[0];
     }
 
-    // ============ Contract document helper methods ============
+    // ── Phần in hợp đồng ──────────────────────────────────────────────────────
+
+    /**
+     * In cả 2 trang hợp đồng. OS print dialog cho phép chọn máy in hoặc Save as
+     * PDF.
+     */
+    private void inHopDong(JPanel page1, JPanel page2, JDialog parentDialog) {
+        java.util.List<JPanel> pages = java.util.Arrays.asList(page1, page2);
+
+        Printable printable = (graphics, pageFormat, pageIndex) -> {
+            if (pageIndex >= pages.size())
+                return Printable.NO_SUCH_PAGE;
+            JPanel page = pages.get(pageIndex);
+            page.setSize(new Dimension(794, 1123));
+            forceLayout(page);
+
+            double pageW = pageFormat.getImageableWidth();
+            double pageH = pageFormat.getImageableHeight();
+            double panelW = Math.max(page.getWidth(), 794);
+            double panelH = Math.max(page.getHeight(), 1);
+            double scale = Math.min(pageW / panelW, pageH / panelH);
+
+            Graphics2D g2 = (Graphics2D) graphics;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+            g2.scale(scale, scale);
+
+            boolean wasBuffered = disableDoubleBuffering(page);
+            page.print(g2);
+            restoreDoubleBuffering(page, wasBuffered);
+            return Printable.PAGE_EXISTS;
+        };
+
+        PrinterJob job = PrinterJob.getPrinterJob();
+        PageFormat pf = job.defaultPage();
+        Paper paper = new Paper();
+        double a4W = 595.0, a4H = 842.0, margin = 36.0;
+        paper.setSize(a4W, a4H);
+        paper.setImageableArea(margin, margin, a4W - 2 * margin, a4H - 2 * margin);
+        pf.setPaper(paper);
+        pf.setOrientation(PageFormat.PORTRAIT);
+
+        Book book = new Book();
+        book.append(printable, pf);
+        book.append(printable, pf);
+        job.setPageable(book);
+        job.setJobName("HopDong_" + java.time.LocalDate.now());
+
+        if (job.printDialog()) {
+            try {
+                job.print();
+                showToast("In hợp đồng thành công!");
+            } catch (PrinterException ex) {
+                ex.printStackTrace();
+                showToast("Lỗi khi in: " + ex.getMessage());
+            }
+        }
+    }
+
+    private void forceLayout(java.awt.Container container) {
+        container.validate();
+        for (java.awt.Component c : container.getComponents()) {
+            if (c instanceof java.awt.Container)
+                forceLayout((java.awt.Container) c);
+        }
+    }
+
+    private boolean disableDoubleBuffering(java.awt.Component c) {
+        javax.swing.RepaintManager mgr = javax.swing.RepaintManager.currentManager(c);
+        boolean was = mgr.isDoubleBufferingEnabled();
+        mgr.setDoubleBufferingEnabled(false);
+        return was;
+    }
+
+    private void restoreDoubleBuffering(java.awt.Component c, boolean was) {
+        javax.swing.RepaintManager.currentManager(c).setDoubleBufferingEnabled(was);
+    }
+
+    // ── Hết phần in hợp đồng ──────────────────────────────────────────────────
 
     private JPanel createDocPage() {
         JPanel page = new JPanel() {
             @Override
             public Dimension getPreferredSize() {
-                // Let width be determined by parent, height by content
                 Dimension d = super.getPreferredSize();
-                if (getParent() != null) {
+                if (getParent() != null)
                     d.width = getParent().getWidth();
-                }
                 return d;
             }
         };
         page.setBackground(Color.WHITE);
         page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
         page.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createCompoundBorder(
-                        new EmptyBorder(8, 8, 8, 8),
+                BorderFactory.createCompoundBorder(new EmptyBorder(8, 8, 8, 8),
                         BorderFactory.createLineBorder(new Color(210, 215, 220))),
                 new EmptyBorder(28, 36, 28, 36)));
         return page;
@@ -1678,13 +1546,11 @@ public class HopDongUI {
 
     private void addDocFillIndent(JPanel doc, String label, String value, Font font, int indent) {
         String safeVal = value != null ? value : "";
-        // Build dotted line that stretches to fill
         String dots = " ................................................................................";
         int maxDots = Math.max(5, 50 - label.length() - safeVal.length());
         String filling = dots.substring(0, Math.min(maxDots, dots.length()));
-        JLabel lbl = new JLabel(
-                "<html>" + label + " :" + filling + "<b>" + safeVal + "</b>"
-                        + filling.substring(0, Math.min(8, filling.length())) + "</html>");
+        JLabel lbl = new JLabel("<html>" + label + " :" + filling + "<b>" + safeVal + "</b>"
+                + filling.substring(0, Math.min(8, filling.length())) + "</html>");
         lbl.setFont(font);
         lbl.setForeground(MAU_TEXT);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -1698,8 +1564,7 @@ public class HopDongUI {
         if (digits.isEmpty())
             return "0";
         try {
-            long v = Long.parseLong(digits);
-            return VN_MONEY.format(v);
+            return VN_MONEY.format(Long.parseLong(digits));
         } catch (NumberFormatException e) {
             return "0";
         }
@@ -1709,9 +1574,7 @@ public class HopDongUI {
         if (moneyObj == null || moneyObj.toString().isEmpty())
             return "0 đ";
         try {
-            double amount = Double.parseDouble(moneyObj.toString());
-            long value = Math.round(amount);
-            return VN_MONEY.format(value) + " đ";
+            return VN_MONEY.format(Math.round(Double.parseDouble(moneyObj.toString()))) + " đ";
         } catch (Exception e) {
             return "0 đ";
         }
@@ -1748,16 +1611,14 @@ public class HopDongUI {
         java.time.LocalDate ngayBDHieuQua = ngayBD.isAfter(ngayDauThang) ? ngayBD : ngayDauThang;
         long soNgay = java.time.temporal.ChronoUnit.DAYS.between(ngayBDHieuQua, today) + 1;
         long soNgayTrongThang = today.lengthOfMonth();
-
         double tienThueThang = hd.getTienThueThang();
         double tienPhongProRated = Math.round(tienThueThang * soNgay / (double) soNgayTrongThang);
 
         entity.DichVu dvDien = dvDAO2.getDichVuByTen("Điện");
         entity.DichVu dvNuoc = dvDAO2.getDichVuByTen("Nước");
-        final double donGiaDien;
-        final double donGiaNuoc;
         String maDichVuDien = dvDien != null ? dvDien.getMaDichVu() : null;
         String maDichVuNuoc = dvNuoc != null ? dvNuoc.getMaDichVu() : null;
+        final double donGiaDien, donGiaNuoc;
         {
             double tmp = 0;
             if (dvDien != null && dvDien.getMaGiaDetail() != null) {
@@ -1777,9 +1638,6 @@ public class HopDongUI {
 
         int[] chiSoCu = chiSoDAO.layChiSoThangTruoc(maPhong, today.getMonthValue(), today.getYear());
         int[] chiSoMoi = chiSoDAO.layChiSoTheoThang(maPhong, today.getMonthValue(), today.getYear());
-        // Giá trị gợi ý điền sẵn cho chỉ số cuối: ưu tiên chỉ số tháng hiện tại (nếu
-        // có),
-        // ngược lại dùng chỉ số tháng trước.
         int prefillDien = chiSoMoi != null ? chiSoMoi[0] : chiSoCu[0];
         int prefillNuoc = chiSoMoi != null ? chiSoMoi[1] : chiSoCu[1];
 
@@ -1794,9 +1652,7 @@ public class HopDongUI {
             si.maDichVu = dv.getMaDichVu();
             si.tenKhoan = dv.getTenDichVu();
             si.soLuong = 1;
-            si.donGia = dv.getDonGia() != null
-                    ? Math.round(dv.getDonGia() * soNgay / (double) soNgayTrongThang)
-                    : 0;
+            si.donGia = dv.getDonGia() != null ? Math.round(dv.getDonGia() * soNgay / (double) soNgayTrongThang) : 0;
             dichVuKhac.add(si);
         }
         for (entity.PhuongTien pt : ptDAO.getAllPhuongTien()) {
@@ -1810,12 +1666,9 @@ public class HopDongUI {
             dichVuKhac.add(si);
         }
 
-        final int[] tieuThuD = { 0 };
-        final int[] tieuThuN = { 0 };
-        final double[] tienDien = { 0 };
-        final double[] tienNuoc = { 0 };
+        final int[] tieuThuD = { 0 }, tieuThuN = { 0 };
+        final double[] tienDien = { 0 }, tienNuoc = { 0 };
 
-        // ===== DIALOG =====
         Window parent2 = SwingUtilities.getWindowAncestor(pnlRoot);
         JDialog dialog = new JDialog(parent2, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
@@ -1874,8 +1727,7 @@ public class HopDongUI {
 
         addRow.accept("Kỳ tính:", String.format("%d/%d – %d/%d/%d  (%d/%d ngày)",
                 ngayBDHieuQua.getDayOfMonth(), ngayBDHieuQua.getMonthValue(),
-                today.getDayOfMonth(), today.getMonthValue(), today.getYear(),
-                soNgay, soNgayTrongThang));
+                today.getDayOfMonth(), today.getMonthValue(), today.getYear(), soNgay, soNgayTrongThang));
 
         JLabel lblSec1 = new JLabel("Tiền phòng & Dịch vụ (theo ngày)");
         lblSec1.setFont(new Font("Inter", Font.BOLD, 12));
@@ -1891,12 +1743,12 @@ public class HopDongUI {
         lblSec2.setForeground(new Color(37, 99, 235));
         lblSec2.setBorder(new EmptyBorder(6, 0, 2, 0));
         pnlBody.add(lblSec2);
-
         JLabel lblNote = new JLabel("Nhập chỉ số điện/nước tại thời điểm thanh lý:");
         lblNote.setFont(new Font("Inter", Font.ITALIC, 12));
         lblNote.setForeground(new Color(37, 99, 235));
         pnlBody.add(lblNote);
         pnlBody.add(Box.createVerticalStrut(4));
+
         JPanel grid = new JPanel(new java.awt.GridLayout(2, 2, 8, 6));
         grid.setOpaque(false);
         grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
@@ -1921,8 +1773,8 @@ public class HopDongUI {
         pnlBody.add(sep2);
         pnlBody.add(Box.createVerticalStrut(6));
 
-        double tongTamTinh = tienPhongProRated + dichVuKhac.stream().mapToDouble(s -> s.donGia).sum()
-                + tienDien[0] + tienNuoc[0];
+        double tongTamTinh = tienPhongProRated + dichVuKhac.stream().mapToDouble(s -> s.donGia).sum() + tienDien[0]
+                + tienNuoc[0];
         JPanel rowTong = new JPanel(new BorderLayout());
         rowTong.setOpaque(false);
         rowTong.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
@@ -1936,7 +1788,6 @@ public class HopDongUI {
         rowTong.add(lTV, BorderLayout.EAST);
         pnlBody.add(rowTong);
 
-        // Footer
         JPanel pnlFoot = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlFoot.setOpaque(false);
         JButton btnHuy = new JButton("Hủy");
@@ -1959,9 +1810,8 @@ public class HopDongUI {
                 tieuThuN[0] = nm - chiSoCu[1];
                 tienDien[0] = tieuThuD[0] * donGiaDien;
                 tienNuoc[0] = tieuThuN[0] * donGiaNuoc;
-                // Lưu chỉ số với ngày = ngày thanh lý hợp đồng
-                entity.ChiSoDienNuoc cs = new entity.ChiSoDienNuoc(
-                        maPhong, today.getMonthValue(), today.getYear(), today.getDayOfMonth(), dm, nm);
+                entity.ChiSoDienNuoc cs = new entity.ChiSoDienNuoc(maPhong, today.getMonthValue(), today.getYear(),
+                        today.getDayOfMonth(), dm, nm);
                 chiSoDAO.luuHoacCapNhat(cs);
             } catch (NumberFormatException ex) {
                 showToast("Chỉ số điện/nước phải là số nguyên.");
@@ -2012,7 +1862,6 @@ public class HopDongUI {
 
     private void showMemberManagementDialog(String maHopDong, String maPhong) {
         Window parent = SwingUtilities.getWindowAncestor(pnlRoot);
-
         JDialog overlay = new JDialog(parent);
         overlay.setUndecorated(true);
         try {
@@ -2028,7 +1877,6 @@ public class HopDongUI {
         dialog.setBackground(new Color(0, 0, 0, 0));
         dialog.setSize(680, 520);
         dialog.setLocationRelativeTo(pnlRoot);
-
         dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
                 .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "ESC");
         dialog.getRootPane().getActionMap().put("ESC", new AbstractAction() {
@@ -2042,13 +1890,11 @@ public class HopDongUI {
         pnlBg.setLayout(new BorderLayout());
         pnlBg.setBorder(new EmptyBorder(16, 20, 20, 20));
 
-        // Header
         JPanel pnlHead = new JPanel(new BorderLayout());
         pnlHead.setOpaque(false);
         JLabel lblTitle = new JLabel("Quản lý thành viên - Phòng " + maPhong);
         lblTitle.setFont(new Font("Inter", Font.BOLD, 18));
         lblTitle.setForeground(MAU_TEXT);
-
         JButton btnClose = new JButton("X") {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -2066,13 +1912,11 @@ public class HopDongUI {
         btnClose.setContentAreaFilled(false);
         btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnClose.addActionListener(e -> dialog.dispose());
-
         pnlHead.add(lblTitle, BorderLayout.WEST);
         pnlHead.add(btnClose, BorderLayout.EAST);
         pnlHead.setBorder(new EmptyBorder(0, 0, 16, 0));
         pnlBg.add(pnlHead, BorderLayout.NORTH);
 
-        // Content - Member Table
         String[] cols = { "", "Họ tên", "SĐT", "CCCD", "Vai trò" };
         DefaultTableModel memberModel = new DefaultTableModel(cols, 0) {
             public boolean isCellEditable(int r, int c) {
@@ -2086,8 +1930,6 @@ public class HopDongUI {
         memberTable.setFocusable(false);
         memberTable.setSelectionBackground(new Color(241, 245, 249));
         memberTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-
-        // Hide maHDKT column
         memberTable.getColumnModel().getColumn(0).setMinWidth(0);
         memberTable.getColumnModel().getColumn(0).setMaxWidth(0);
         memberTable.getColumnModel().getColumn(0).setPreferredWidth(0);
@@ -2096,8 +1938,7 @@ public class HopDongUI {
         memberTable.getColumnModel().getColumn(3).setPreferredWidth(130);
         memberTable.getColumnModel().getColumn(4).setPreferredWidth(120);
 
-        JTableHeader mHeader = memberTable.getTableHeader();
-        mHeader.setDefaultRenderer(new DefaultTableCellRenderer() {
+        memberTable.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
                     int c) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
@@ -2105,20 +1946,17 @@ public class HopDongUI {
                 l.setForeground(MAU_SUBTEXT);
                 l.setBackground(MAU_CARD);
                 l.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
-                        new EmptyBorder(12, 12, 12, 8)));
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR), new EmptyBorder(12, 12, 12, 8)));
                 return l;
             }
         });
 
-        // Role column renderer with badge
         memberTable.getColumnModel().getColumn(4).setCellRenderer(new TableCellRenderer() {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
                     int c) {
                 JPanel pnl = new JPanel(new GridBagLayout());
                 pnl.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
                 pnl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
-
                 String role = v != null ? v.toString() : "";
                 Color bg, fg;
                 if (role.contains("Đại Diện")) {
@@ -2131,7 +1969,6 @@ public class HopDongUI {
                     bg = new Color(226, 232, 240);
                     fg = new Color(71, 85, 105);
                 }
-
                 JLabel lbl = new JLabel(role) {
                     protected void paintComponent(Graphics g) {
                         Graphics2D g2 = (Graphics2D) g.create();
@@ -2145,7 +1982,6 @@ public class HopDongUI {
                 lbl.setForeground(fg);
                 lbl.setFont(new Font("Inter", Font.BOLD, 11));
                 lbl.setBorder(new EmptyBorder(4, 10, 4, 10));
-
                 GridBagConstraints gbc = new GridBagConstraints();
                 gbc.anchor = GridBagConstraints.WEST;
                 gbc.weightx = 1.0;
@@ -2155,7 +1991,6 @@ public class HopDongUI {
             }
         });
 
-        // Default renderer for other columns
         memberTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
                     int c) {
@@ -2163,14 +1998,9 @@ public class HopDongUI {
                 l.setFont(new Font("Inter", Font.PLAIN, 13));
                 l.setForeground(MAU_TEXT);
                 l.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
-
-                // Kiểm tra nếu người đã rời đi thì hiện chữ xám + gạch ngang
                 int modelRow = t.convertRowIndexToModel(r);
-                String vaiTro = String.valueOf(memberModel.getValueAt(modelRow, 4));
-                if (vaiTro.contains("rời")) {
+                if (String.valueOf(memberModel.getValueAt(modelRow, 4)).contains("rời"))
                     l.setForeground(new Color(148, 163, 184));
-                }
-
                 l.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
                         new EmptyBorder(0, 12, 0, 8)));
@@ -2178,19 +2008,14 @@ public class HopDongUI {
             }
         });
 
-        // Load data
         Runnable loadMembers = () -> {
             memberModel.setRowCount(0);
             ArrayList<entity.HopDongKhachThue> dsTV = HDKHdao.getAllThanhVienByMaHopDong(maHopDong);
             for (entity.HopDongKhachThue hdkt : dsTV) {
                 entity.KhachHang kh = hdkt.getKhachHang();
-                memberModel.addRow(new Object[] {
-                        hdkt.getMaHDKT(),
-                        kh.getHoTen(),
+                memberModel.addRow(new Object[] { hdkt.getMaHDKT(), kh.getHoTen(),
                         kh.getSoDienThoai() != null ? kh.getSoDienThoai() : "",
-                        kh.getSoCCCD() != null ? kh.getSoCCCD() : "",
-                        hdkt.getVaiTro().getTen()
-                });
+                        kh.getSoCCCD() != null ? kh.getSoCCCD() : "", hdkt.getVaiTro().getTen() });
             }
         };
         loadMembers.run();
@@ -2198,16 +2023,13 @@ public class HopDongUI {
         JScrollPane scrollMembers = new JScrollPane(memberTable);
         scrollMembers.setBorder(BorderFactory.createEmptyBorder());
         scrollMembers.getViewport().setBackground(MAU_CARD);
-
         RoundedPanel cardMembers = new RoundedPanel(12);
         cardMembers.setBackground(MAU_CARD);
         cardMembers.setLayout(new BorderLayout());
         cardMembers.setBorder(new EmptyBorder(4, 0, 4, 0));
         cardMembers.add(scrollMembers, BorderLayout.CENTER);
-
         pnlBg.add(cardMembers, BorderLayout.CENTER);
 
-        // Footer buttons
         JPanel pnlFooter = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
         pnlFooter.setOpaque(false);
 
@@ -2224,15 +2046,11 @@ public class HopDongUI {
             String maHDKT = String.valueOf(memberModel.getValueAt(mRow, 0));
             String tenKH = String.valueOf(memberModel.getValueAt(mRow, 1));
             String vaiTro = String.valueOf(memberModel.getValueAt(mRow, 4));
-
             if (vaiTro.contains("rời")) {
                 showToast("Thành viên này đã rời đi rồi");
                 return;
             }
-
             boolean laDaiDien = vaiTro.contains("Đại Diện");
-
-            // Đếm số thành viên còn hoạt động (không phải đã rời đi)
             int soConLai = 0;
             ArrayList<String[]> danhSachConLai = new ArrayList<>();
             for (int i = 0; i < memberModel.getRowCount(); i++) {
@@ -2244,143 +2062,91 @@ public class HopDongUI {
                     danhSachConLai.add(new String[] { hdkt, ten });
                 }
             }
-
             if (laDaiDien && soConLai == 0) {
-                int confirm = JOptionPane.showConfirmDialog(dialog,
-                        "'" + tenKH + "' là người đại diện duy nhất.\n" +
-                                "Đánh dấu rời đi sẽ khiến hợp đồng không còn người đại diện.\n\n" +
-                                "Bạn có chắc chắn muốn tiếp tục?",
+                int confirm = JOptionPane.showConfirmDialog(dialog, "'" + tenKH
+                        + "' là người đại diện duy nhất.\nĐánh dấu rời đi sẽ khiến hợp đồng không còn người đại diện.\n\nBạn có chắc chắn muốn tiếp tục?",
                         "Cảnh báo", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
                 if (confirm != JOptionPane.YES_OPTION)
                     return;
-
                 boolean ok = HDKHdao.thanhVienRoiDi(maHDKT, maPhong);
                 if (ok) {
                     loadMembers.run();
                     loadDataToTable();
                     showToast("Đã đánh dấu '" + tenKH + "' rời đi");
-                } else {
+                } else
                     showToast("Thao tác thất bại");
-                }
                 return;
             }
-
             if (laDaiDien) {
-                // Phải chọn người đại diện mới trước
-                String[] options = new String[danhSachConLai.size()];
-                for (int i = 0; i < danhSachConLai.size(); i++) {
-                    options[i] = danhSachConLai.get(i)[1];
-                }
-
+                String[] options = danhSachConLai.stream().map(a -> a[1]).toArray(String[]::new);
                 String chosen = (String) JOptionPane.showInputDialog(dialog,
                         "'" + tenKH + "' là người đại diện.\nVui lòng chọn người đại diện mới:",
-                        "Chọn người đại diện mới",
-                        JOptionPane.QUESTION_MESSAGE, null, options,
+                        "Chọn người đại diện mới", JOptionPane.QUESTION_MESSAGE, null, options,
                         options.length > 0 ? options[0] : null);
-
                 if (chosen == null)
                     return;
-
-                // Tìm maHDKT của người được chọn
-                String maHDKT_Moi = null;
-                for (String[] item : danhSachConLai) {
-                    if (item[1].equals(chosen)) {
-                        maHDKT_Moi = item[0];
-                        break;
-                    }
-                }
-
+                String maHDKT_Moi = danhSachConLai.stream().filter(a -> a[1].equals(chosen)).map(a -> a[0]).findFirst()
+                        .orElse(null);
                 boolean ok = HDKHdao.roiDiVaDoiDaiDien(maHDKT, maHopDong, maHDKT_Moi, maPhong);
                 if (ok) {
                     loadMembers.run();
                     loadDataToTable();
                     showToast("Đã đánh dấu '" + tenKH + "' rời đi và '" + chosen + "' là người đại diện mới");
-                } else {
+                } else
                     showToast("Thao tác thất bại");
-                }
             } else {
-                // Thành viên thường rời đi
                 int confirm = JOptionPane.showConfirmDialog(dialog,
-                        "Bạn có chắc chắn muốn đánh dấu '" + tenKH + "' đã rời đi?",
-                        "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                        "Bạn có chắc chắn muốn đánh dấu '" + tenKH + "' đã rời đi?", "Xác nhận",
+                        JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
                 if (confirm != JOptionPane.YES_OPTION)
                     return;
-
                 boolean ok = HDKHdao.thanhVienRoiDi(maHDKT, maPhong);
                 if (ok) {
                     loadMembers.run();
                     loadDataToTable();
                     showToast("Đã đánh dấu '" + tenKH + "' rời đi");
-                } else {
+                } else
                     showToast("Thao tác thất bại");
-                }
             }
         });
 
         JButton btnDoiDaiDien = primaryButton.makePrimaryButton("Đổi người đại diện");
         btnDoiDaiDien.setBorder(new EmptyBorder(10, 18, 10, 18));
         btnDoiDaiDien.addActionListener(e -> {
-            // Tìm danh sách thành viên còn hoạt động (không phải đại diện, không phải đã
-            // rời)
             ArrayList<String[]> danhSachTV = new ArrayList<>();
             for (int i = 0; i < memberModel.getRowCount(); i++) {
                 String vt = String.valueOf(memberModel.getValueAt(i, 4));
-                if (!vt.contains("Đại Diện") && !vt.contains("rời")) {
-                    danhSachTV.add(new String[] {
-                            String.valueOf(memberModel.getValueAt(i, 0)),
-                            String.valueOf(memberModel.getValueAt(i, 1))
-                    });
-                }
+                if (!vt.contains("Đại Diện") && !vt.contains("rời"))
+                    danhSachTV.add(new String[] { String.valueOf(memberModel.getValueAt(i, 0)),
+                            String.valueOf(memberModel.getValueAt(i, 1)) });
             }
-
             if (danhSachTV.isEmpty()) {
                 showToast("Không có thành viên nào khả dụng để đổi");
                 return;
             }
-
-            String[] options = new String[danhSachTV.size()];
-            for (int i = 0; i < danhSachTV.size(); i++) {
-                options[i] = danhSachTV.get(i)[1];
-            }
-
-            String chosen = (String) JOptionPane.showInputDialog(dialog,
-                    "Chọn người đại diện mới:",
-                    "Đổi người đại diện",
-                    JOptionPane.QUESTION_MESSAGE, null, options,
-                    options[0]);
-
+            String[] options = danhSachTV.stream().map(a -> a[1]).toArray(String[]::new);
+            String chosen = (String) JOptionPane.showInputDialog(dialog, "Chọn người đại diện mới:",
+                    "Đổi người đại diện", JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
             if (chosen == null)
                 return;
-
-            String maHDKT_Moi = null;
-            for (String[] item : danhSachTV) {
-                if (item[1].equals(chosen)) {
-                    maHDKT_Moi = item[0];
-                    break;
-                }
-            }
-
+            String maHDKT_Moi = danhSachTV.stream().filter(a -> a[1].equals(chosen)).map(a -> a[0]).findFirst()
+                    .orElse(null);
             boolean ok = HDKHdao.doiNguoiDaiDien(maHopDong, maHDKT_Moi);
             if (ok) {
                 loadMembers.run();
                 loadDataToTable();
                 showToast("Đã đổi người đại diện thành '" + chosen + "'");
-            } else {
+            } else
                 showToast("Thao tác thất bại");
-            }
         });
 
-        RoundedButton btnDong = ButtonStyles.createSecondary(
-                "Đóng", new Font("Inter", Font.BOLD, 13),
-                MAU_TEXT, Color.WHITE, new Color(226, 232, 240), 8,
-                new EmptyBorder(10, 22, 10, 22));
+        RoundedButton btnDong = ButtonStyles.createSecondary("Đóng", new Font("Inter", Font.BOLD, 13),
+                MAU_TEXT, Color.WHITE, new Color(226, 232, 240), 8, new EmptyBorder(10, 22, 10, 22));
         btnDong.addActionListener(e -> dialog.dispose());
-
         pnlFooter.add(btnDoiDaiDien);
         pnlFooter.add(btnRoiDi);
         pnlFooter.add(btnDong);
         pnlBg.add(pnlFooter, BorderLayout.SOUTH);
-
         dialog.add(pnlBg);
         if (parent != null)
             overlay.setVisible(true);
@@ -2400,12 +2166,10 @@ public class HopDongUI {
         }
         toast.setFocusableWindowState(false);
         toast.setAlwaysOnTop(true);
-
         RoundedPanel pnl = new RoundedPanel(8);
         pnl.setBackground(Color.WHITE);
         pnl.setBorder(new EmptyBorder(10, 16, 10, 16));
         pnl.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0));
-
         JLabel lblIcon = new JLabel() {
             @Override
             public void paint(Graphics g) {
@@ -2422,20 +2186,16 @@ public class HopDongUI {
             }
         };
         lblIcon.setPreferredSize(new Dimension(16, 20));
-
         JLabel lblMsg = new JLabel(message);
         lblMsg.setFont(new Font("Inter", Font.BOLD, 13));
         lblMsg.setForeground(MAU_TEXT);
-
         pnl.add(lblIcon);
         pnl.add(lblMsg);
         toast.add(pnl);
         toast.pack();
-
         toast.setLocation(parent.getX() + parent.getWidth() - toast.getWidth() - 32,
                 parent.getY() + parent.getHeight() - toast.getHeight() - 32);
         toast.setVisible(true);
-
         Timer t = new Timer(2500, e -> toast.dispose());
         t.setRepeats(false);
         t.start();
@@ -2451,15 +2211,12 @@ public class HopDongUI {
             this.targetField = targetField;
             setLayout(new BorderLayout());
             setBackground(Color.WHITE);
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(BORDER_COLOR),
+            setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER_COLOR),
                     new EmptyBorder(12, 16, 12, 16)));
-
             JPanel pnlHead = new JPanel(new BorderLayout());
             pnlHead.setOpaque(false);
             lblMonthYear = new JLabel("", SwingConstants.LEFT);
             lblMonthYear.setFont(new Font("Inter", Font.BOLD, 14));
-
             JPanel pnlArrows = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
             pnlArrows.setOpaque(false);
             JButton btnPrev = createArrBtn("←");
@@ -2474,32 +2231,25 @@ public class HopDongUI {
             });
             pnlArrows.add(btnPrev);
             pnlArrows.add(btnNext);
-
             pnlHead.add(lblMonthYear, BorderLayout.CENTER);
             pnlHead.add(pnlArrows, BorderLayout.EAST);
             add(pnlHead, BorderLayout.NORTH);
-
             JPanel pnlGrid = new JPanel(new BorderLayout(0, 8));
             pnlGrid.setOpaque(false);
             pnlGrid.setBorder(new EmptyBorder(12, 0, 12, 0));
-
             JPanel pnlDOW = new JPanel(new GridLayout(1, 7, 4, 4));
             pnlDOW.setOpaque(false);
-            String[] dows = { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" };
-            for (String d : dows) {
+            for (String d : new String[] { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" }) {
                 JLabel l = new JLabel(d, SwingConstants.CENTER);
                 l.setFont(new Font("Inter", Font.PLAIN, 12));
                 l.setForeground(MAU_SUBTEXT);
                 pnlDOW.add(l);
             }
             pnlGrid.add(pnlDOW, BorderLayout.NORTH);
-
             daysPanel = new JPanel(new GridLayout(6, 7, 4, 4));
             daysPanel.setOpaque(false);
             pnlGrid.add(daysPanel, BorderLayout.CENTER);
-
             add(pnlGrid, BorderLayout.CENTER);
-
             JPanel pnlFooter = new JPanel(new BorderLayout());
             pnlFooter.setOpaque(false);
             JButton btnClear = createTxtBtn("Clear");
@@ -2515,20 +2265,16 @@ public class HopDongUI {
             pnlFooter.add(btnClear, BorderLayout.WEST);
             pnlFooter.add(btnToday, BorderLayout.EAST);
             add(pnlFooter, BorderLayout.SOUTH);
-
             updateCal();
         }
 
         private void updateCal() {
             daysPanel.removeAll();
             Calendar cal = (Calendar) calTracker.clone();
-            String m = cal.getDisplayName(Calendar.MONTH, Calendar.LONG, java.util.Locale.US);
-            lblMonthYear.setText(m + " " + cal.get(Calendar.YEAR));
-
+            lblMonthYear.setText(cal.getDisplayName(Calendar.MONTH, Calendar.LONG, java.util.Locale.US) + " "
+                    + cal.get(Calendar.YEAR));
             cal.set(Calendar.DAY_OF_MONTH, 1);
-            int sd = cal.get(Calendar.DAY_OF_WEEK);
-            cal.add(Calendar.DAY_OF_MONTH, -(sd - 1));
-
+            cal.add(Calendar.DAY_OF_MONTH, -(cal.get(Calendar.DAY_OF_WEEK) - 1));
             for (int i = 0; i < 42; i++) {
                 int d = cal.get(Calendar.DAY_OF_MONTH);
                 boolean cM = cal.get(Calendar.MONTH) == calTracker.get(Calendar.MONTH);
@@ -2540,7 +2286,6 @@ public class HopDongUI {
                 b.setContentAreaFilled(false);
                 b.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 b.setMargin(new Insets(2, 2, 2, 2));
-
                 b.addMouseListener(new MouseAdapter() {
                     public void mouseEntered(MouseEvent e) {
                         b.setContentAreaFilled(true);
@@ -2551,7 +2296,6 @@ public class HopDongUI {
                         b.setContentAreaFilled(false);
                     }
                 });
-
                 Calendar cap = (Calendar) cal.clone();
                 b.addActionListener(e -> {
                     targetField.setText(fmtStr(cap));
@@ -2589,5 +2333,4 @@ public class HopDongUI {
             return b;
         }
     }
-
 }
