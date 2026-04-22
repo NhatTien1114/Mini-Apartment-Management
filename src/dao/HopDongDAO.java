@@ -331,6 +331,31 @@ public class HopDongDAO {
         return null;
     }
 
+    public HopDong getHopDongByMaHopDong(String maHopDong) {
+        String sql = "SELECT maHopDong, maPhong, ngayBatDau, ngayKetThuc, tienCoc, tienThueThang, trangThai FROM HopDong WHERE maHopDong = ?";
+        try {
+            Connection con = connectDB.getConnection();
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, maHopDong);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next())
+                        return null;
+                    String maPhong = rs.getString("maPhong");
+                    LocalDate ngayBatDau = rs.getObject("ngayBatDau", LocalDate.class);
+                    LocalDate ngayKetThuc = rs.getObject("ngayKetThuc", LocalDate.class);
+                    Double tienCoc = rs.getDouble("tienCoc");
+                    Double tienThang = rs.getDouble("tienThueThang");
+                    int tt = rs.getInt("trangThai");
+                    return new HopDong(maHopDong, new Phong(maPhong), ngayBatDau, ngayKetThuc, tienCoc, tienThang,
+                            HopDong.TrangThai.fromInt(tt));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("getHopDongByMaHopDong lỗi: " + e.getMessage());
+        }
+        return null;
+    }
+
     // Hàm phụ chuyển định dạng ngày
     private String convertToSqlDate(String dateStr) {
         if (dateStr == null) {
@@ -375,11 +400,19 @@ public class HopDongDAO {
             con.commit();
             return true;
         } catch (SQLException e) {
-            if (con != null) try { con.rollback(); } catch (SQLException ignored) {}
+            if (con != null)
+                try {
+                    con.rollback();
+                } catch (SQLException ignored) {
+                }
             lastError = e.getMessage();
             return false;
         } finally {
-            if (con != null) try { con.setAutoCommit(true); } catch (SQLException ignored) {}
+            if (con != null)
+                try {
+                    con.setAutoCommit(true);
+                } catch (SQLException ignored) {
+                }
         }
     }
 }

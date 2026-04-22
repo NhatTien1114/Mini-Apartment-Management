@@ -57,6 +57,13 @@ public class KhachHangService {
 		return khachHangDAO.layMaPhongHienTaiTheoKhach(maKhachHang.trim());
 	}
 
+	public String layMaPhongCuoiCungTheoKhach(String maKhachHang) {
+		if (maKhachHang == null || maKhachHang.trim().isEmpty()) {
+			return "";
+		}
+		return khachHangDAO.layMaPhongCuoiCungTheoKhach(maKhachHang.trim());
+	}
+
 	public boolean kiemTraDaRoiDi(String maKhachHang) {
 		if (maKhachHang == null || maKhachHang.trim().isEmpty()) {
 			return false;

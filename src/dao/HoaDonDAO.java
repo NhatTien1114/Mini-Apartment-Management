@@ -2,7 +2,6 @@ package dao;
 
 import database.connectDB;
 import entity.Phong;
-
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -274,10 +273,10 @@ public class HoaDonDAO {
     public ArrayList<HoaDonUI.MonthDetailRow> getChiTietHoaDonTheoThang(int month, int year) {
         ArrayList<HoaDonUI.MonthDetailRow> rows = new ArrayList<>();
         String sql = "SELECT hd.maPhong, "
-                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienPhong, "
                 + "SUM(CASE WHEN ct.tenKhoan = N'Tiền điện' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienDien, "
                 + "SUM(CASE WHEN ct.tenKhoan = N'Tiền nước' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienNuoc, "
-                + "SUM(CASE WHEN ct.tenKhoan NOT IN (N'Tiền thuê phòng', N'Tiền điện', N'Tiền nước') THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienDichVu, "
+                + "SUM(CASE WHEN ct.tenKhoan NOT LIKE N'Tiền thuê phòng%' AND ct.tenKhoan NOT IN (N'Tiền điện', N'Tiền nước') THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienDichVu, "
                 + "SUM(ISNULL(ct.thanhTien,0)) AS tongTien "
                 + "FROM HoaDon hd "
                 + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
@@ -308,23 +307,23 @@ public class HoaDonDAO {
     }
 
     public List<HoaDonUI.RoomMonthSummary> getRoomSummariesTheoThang(int month, int year) {
-        Map<String, HoaDonUI.RoomMonthSummary> byRoom = new LinkedHashMap<>();
+        Map<String, HoaDonUI.RoomMonthSummary> byHoaDon = new LinkedHashMap<>();
 
-        String sqlMain = "SELECT hd.maPhong, hd.trangThaiThanhToan, "
-                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienPhong, "
+        String sqlMain = "SELECT hd.maHoaDon, hd.maPhong, hd.trangThaiThanhToan, "
+                + "SUM(CASE WHEN ct.tenKhoan LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienPhong, "
                 + "SUM(CASE WHEN ct.tenKhoan = N'Tiền điện' THEN ct.soLuong ELSE 0 END) AS tieuThuDien, "
                 + "MAX(CASE WHEN ct.tenKhoan = N'Tiền điện' THEN ct.donGia ELSE 0 END) AS donGiaDien, "
                 + "SUM(CASE WHEN ct.tenKhoan = N'Tiền nước' THEN ct.soLuong ELSE 0 END) AS tieuThuNuoc, "
                 + "MAX(CASE WHEN ct.tenKhoan = N'Tiền nước' THEN ct.donGia ELSE 0 END) AS donGiaNuoc "
                 + "FROM HoaDon hd LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
                 + "WHERE MONTH(hd.tuNgay) = ? AND YEAR(hd.tuNgay) = ? "
-                + "GROUP BY hd.maPhong, hd.maHoaDon, hd.trangThaiThanhToan "
+                + "GROUP BY hd.maHoaDon, hd.maPhong, hd.trangThaiThanhToan "
                 + "ORDER BY hd.maPhong";
 
-        String sqlServices = "SELECT hd.maPhong, ct.maDichVu, ct.tenKhoan, ct.soLuong, ct.donGia "
+        String sqlServices = "SELECT hd.maHoaDon, ct.maDichVu, ct.tenKhoan, ct.soLuong, ct.donGia "
                 + "FROM HoaDon hd JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
                 + "WHERE MONTH(hd.tuNgay) = ? AND YEAR(hd.tuNgay) = ? "
-                + "AND ct.tenKhoan NOT IN (N'Tiền thuê phòng', N'Tiền điện', N'Tiền nước') "
+                + "AND ct.tenKhoan NOT LIKE N'Tiền thuê phòng%' AND ct.tenKhoan NOT IN (N'Tiền điện', N'Tiền nước') "
                 + "ORDER BY hd.maPhong";
 
         try (Connection con = connectDB.getConnection();
@@ -334,6 +333,7 @@ public class HoaDonDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     HoaDonUI.RoomMonthSummary s = new HoaDonUI.RoomMonthSummary();
+                    s.maHoaDon = rs.getString("maHoaDon");
                     s.maPhong = rs.getString("maPhong");
                     s.tienPhong = rs.getDouble("tienPhong");
                     s.tieuThuDien = rs.getInt("tieuThuDien");
@@ -341,7 +341,7 @@ public class HoaDonDAO {
                     s.tieuThuNuoc = rs.getInt("tieuThuNuoc");
                     s.donGiaNuoc = rs.getDouble("donGiaNuoc");
                     s.daThanhToan = rs.getInt("trangThaiThanhToan") == 1;
-                    byRoom.put(s.maPhong, s);
+                    byHoaDon.put(s.maHoaDon, s);
                 }
             }
         } catch (SQLException e) {
@@ -354,8 +354,8 @@ public class HoaDonDAO {
             ps.setInt(2, year);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    String maPhong = rs.getString("maPhong");
-                    HoaDonUI.RoomMonthSummary s = byRoom.get(maPhong);
+                    String maHoaDon = rs.getString("maHoaDon");
+                    HoaDonUI.RoomMonthSummary s = byHoaDon.get(maHoaDon);
                     if (s != null) {
                         HoaDonUI.BillServiceItem si = new HoaDonUI.BillServiceItem();
                         si.maDichVu = rs.getString("maDichVu");
@@ -370,11 +370,15 @@ public class HoaDonDAO {
             System.err.println("Lỗi load dịch vụ hóa đơn tháng: " + e.getMessage());
         }
 
-        return new ArrayList<>(byRoom.values());
+        return new ArrayList<>(byHoaDon.values());
     }
 
     public boolean daCoHoaDonThang(int month, int year) {
-        String sql = "SELECT COUNT(*) FROM HoaDon WHERE MONTH(tuNgay) = ? AND YEAR(tuNgay) = ?";
+        // Chỉ đếm hóa đơn tháng thường (denNgay = ngày cuối tháng),
+        // bỏ qua hóa đơn thanh lý hợp đồng giữa tháng.
+        String sql = "SELECT COUNT(DISTINCT maPhong) FROM HoaDon "
+                + "WHERE MONTH(tuNgay) = ? AND YEAR(tuNgay) = ? "
+                + "AND DAY(denNgay) = DAY(EOMONTH(denNgay))";
         ArrayList<Phong> dsPhong = phongDAO.getAllPhongDaThue();
         try (Connection con = connectDB.getConnection();
                 PreparedStatement ps = con.prepareStatement(sql)) {
@@ -468,8 +472,8 @@ public class HoaDonDAO {
         int soHoaDon = 0;
 
         String sql = "SELECT "
-                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
-                + "SUM(CASE WHEN ct.tenKhoan <> N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu, "
+                + "SUM(CASE WHEN ct.tenKhoan LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan NOT LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu, "
                 + "COUNT(DISTINCT hd.maHoaDon) AS soHD "
                 + "FROM HoaDon hd "
                 + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
@@ -501,8 +505,8 @@ public class HoaDonDAO {
     public List<Object[]> getDoanhThuTheoThangTrongKhoang(LocalDate from, LocalDate to) {
         List<Object[]> result = new ArrayList<>();
         String sql = "SELECT MONTH(hd.tuNgay) AS thang, YEAR(hd.tuNgay) AS nam, "
-                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
-                + "SUM(CASE WHEN ct.tenKhoan <> N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
+                + "SUM(CASE WHEN ct.tenKhoan LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan NOT LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
                 + "FROM HoaDon hd "
                 + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
                 + "WHERE hd.tuNgay >= ? AND hd.tuNgay <= ? "
@@ -535,8 +539,8 @@ public class HoaDonDAO {
     public List<Object[]> getDoanhThuTheoQuyTrongKhoang(LocalDate from, LocalDate to) {
         List<Object[]> result = new ArrayList<>();
         String sql = "SELECT DATEPART(QUARTER, hd.tuNgay) AS quy, YEAR(hd.tuNgay) AS nam, "
-                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
-                + "SUM(CASE WHEN ct.tenKhoan <> N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
+                + "SUM(CASE WHEN ct.tenKhoan LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan NOT LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
                 + "FROM HoaDon hd "
                 + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
                 + "WHERE hd.tuNgay >= ? AND hd.tuNgay <= ? "
@@ -569,8 +573,8 @@ public class HoaDonDAO {
     public List<Object[]> getDoanhThuTheoNamTrongKhoang(LocalDate from, LocalDate to) {
         List<Object[]> result = new ArrayList<>();
         String sql = "SELECT YEAR(hd.tuNgay) AS nam, "
-                + "SUM(CASE WHEN ct.tenKhoan = N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
-                + "SUM(CASE WHEN ct.tenKhoan <> N'Tiền thuê phòng' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
+                + "SUM(CASE WHEN ct.tenKhoan LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtPhong, "
+                + "SUM(CASE WHEN ct.tenKhoan NOT LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS dtDichVu "
                 + "FROM HoaDon hd "
                 + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
                 + "WHERE hd.tuNgay >= ? AND hd.tuNgay <= ? "
@@ -622,30 +626,42 @@ public class HoaDonDAO {
             String sqlDetail = "INSERT INTO HoaDonDetail (maChiTiet, maHoaDon, maDichVu, soLuong, tenKhoan, donGia) "
                     + "VALUES (?,?,?,?,?,?)";
             try (PreparedStatement ps = con.prepareStatement(sqlDetail)) {
-                ps.setString(1, taoMaTheoThoiGian("CT")); ps.setString(2, maHoaDon);
-                ps.setString(3, "DV00"); ps.setInt(4, 1);
-                ps.setString(5, "Tiền thuê phòng (theo ngày)"); ps.setDouble(6, bill.tienPhong);
+                ps.setString(1, taoMaTheoThoiGian("CT"));
+                ps.setString(2, maHoaDon);
+                ps.setString(3, "DV00");
+                ps.setInt(4, 1);
+                ps.setString(5, "Tiền thuê phòng (theo ngày)");
+                ps.setDouble(6, bill.tienPhong);
                 ps.addBatch();
 
                 if (bill.tongTieuThuD > 0) {
-                    ps.setString(1, taoMaTheoThoiGian("CT")); ps.setString(2, maHoaDon);
-                    ps.setString(3, bill.maDichVuDien); ps.setInt(4, bill.tongTieuThuD);
-                    ps.setString(5, "Tiền điện"); ps.setDouble(6, bill.donGiaDien);
+                    ps.setString(1, taoMaTheoThoiGian("CT"));
+                    ps.setString(2, maHoaDon);
+                    ps.setString(3, bill.maDichVuDien);
+                    ps.setInt(4, bill.tongTieuThuD);
+                    ps.setString(5, "Tiền điện");
+                    ps.setDouble(6, bill.donGiaDien);
                     ps.addBatch();
                 }
 
                 if (bill.tongTieuThuN > 0) {
-                    ps.setString(1, taoMaTheoThoiGian("CT")); ps.setString(2, maHoaDon);
-                    ps.setString(3, bill.maDichVuNuoc); ps.setInt(4, bill.tongTieuThuN);
-                    ps.setString(5, "Tiền nước"); ps.setDouble(6, bill.donGiaNuoc);
+                    ps.setString(1, taoMaTheoThoiGian("CT"));
+                    ps.setString(2, maHoaDon);
+                    ps.setString(3, bill.maDichVuNuoc);
+                    ps.setInt(4, bill.tongTieuThuN);
+                    ps.setString(5, "Tiền nước");
+                    ps.setDouble(6, bill.donGiaNuoc);
                     ps.addBatch();
                 }
 
                 if (bill.dichVuKhac != null) {
                     for (HoaDonUI.BillServiceItem item : bill.dichVuKhac) {
-                        if (item == null || item.maDichVu == null || item.maDichVu.isEmpty()) continue;
-                        ps.setString(1, taoMaTheoThoiGian("CT")); ps.setString(2, maHoaDon);
-                        ps.setString(3, item.maDichVu); ps.setInt(4, Math.max(1, item.soLuong));
+                        if (item == null || item.maDichVu == null || item.maDichVu.isEmpty())
+                            continue;
+                        ps.setString(1, taoMaTheoThoiGian("CT"));
+                        ps.setString(2, maHoaDon);
+                        ps.setString(3, item.maDichVu);
+                        ps.setInt(4, Math.max(1, item.soLuong));
                         ps.setString(5, item.tenKhoan == null ? "Dịch vụ" : item.tenKhoan);
                         ps.setDouble(6, item.donGia);
                         ps.addBatch();
@@ -658,11 +674,19 @@ public class HoaDonDAO {
             con.commit();
             return true;
         } catch (SQLException e) {
-            if (con != null) try { con.rollback(); } catch (SQLException ignored) {}
+            if (con != null)
+                try {
+                    con.rollback();
+                } catch (SQLException ignored) {
+                }
             System.err.println("Lỗi lưu hóa đơn kết thúc hợp đồng: " + e.getMessage());
             return false;
         } finally {
-            if (con != null) try { con.setAutoCommit(true); } catch (SQLException ignored) {}
+            if (con != null)
+                try {
+                    con.setAutoCommit(true);
+                } catch (SQLException ignored) {
+                }
         }
     }
 }

@@ -478,8 +478,10 @@ public class KhachHangUI {
         try {
             List<KhachHang> danhSach = khachHangService.layDanhSachKhachHang();
             for (KhachHang kh : danhSach) {
-                String maPhong = khachHangService.layMaPhongHienTaiTheoKhach(kh.getMaKhachHang());
                 boolean daRoiDi = khachHangService.kiemTraDaRoiDi(kh.getMaKhachHang());
+                String maPhong = daRoiDi
+                        ? khachHangService.layMaPhongCuoiCungTheoKhach(kh.getMaKhachHang())
+                        : khachHangService.layMaPhongHienTaiTheoKhach(kh.getMaKhachHang());
                 tableModel.addRow(new Object[] {
                         kh.getMaKhachHang(),
                         kh.getHoTen(),

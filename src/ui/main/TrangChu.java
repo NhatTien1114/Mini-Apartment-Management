@@ -837,10 +837,10 @@ public class TrangChu extends JFrame {
 
         JMenuItem menuItemContract = new JMenuItem("Tạo hợp đồng");
         menuItemContract.addActionListener(e -> {
-            // Switch to contract page and show add contract form
+            // Switch to contract page and show add contract form with pre-selected room
             selectMenuTab(1); // Switch to contract page (panel "1")
             if (hopDongUI != null) {
-                hopDongUI.showAddContractForm();
+                hopDongUI.showAddContractForm(phong.getMaPhong());
             }
         });
 
@@ -927,7 +927,6 @@ public class TrangChu extends JFrame {
         }
         return dem;
     }
-    
 
     // ================= MAIN =================
     public static void main(String[] args) {

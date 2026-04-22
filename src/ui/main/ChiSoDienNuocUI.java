@@ -46,15 +46,18 @@ public class ChiSoDienNuocUI {
     private static class RoomMeterRow {
         String maPhong;
         String tenKhach;
+        int ngay;
         int dienCu;
         int dienMoi;
         int nuocCu;
         int nuocMoi;
         boolean saved;
 
-        RoomMeterRow(String maPhong, String tenKhach, int dienCu, int dienMoi, int nuocCu, int nuocMoi, boolean saved) {
+        RoomMeterRow(String maPhong, String tenKhach, int ngay,
+                int dienCu, int dienMoi, int nuocCu, int nuocMoi, boolean saved) {
             this.maPhong = maPhong;
             this.tenKhach = tenKhach;
+            this.ngay = ngay;
             this.dienCu = dienCu;
             this.dienMoi = dienMoi;
             this.nuocCu = nuocCu;
@@ -161,12 +164,15 @@ public class ChiSoDienNuocUI {
         card.add(toolbar, BorderLayout.NORTH);
 
         // ── Table ──
-        String[] cols = { "Phòng", "Khách thuê", "Số điện cũ", "Số điện mới", "Tiêu thụ (kWh)",
-                "Số nước cũ", "Số nước mới", "Tiêu thụ (m³)", "Trạng thái" };
+        // Columns: 0=Phòng 1=Khách thuê 2=Ngày 3=Số điện cũ 4=Số điện mới
+        // 5=Tiêu thụ(kWh) 6=Số nước cũ 7=Số nước mới 8=Tiêu thụ(m³) 9=Trạng thái
+        String[] cols = { "Phòng", "Khách thuê", "Ngày", "Số điện cũ", "Số điện mới",
+                "Tiêu thụ (kWh)", "Số nước cũ", "Số nước mới", "Tiêu thụ (m³)", "Trạng thái" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                if (column != 3 && column != 6)
+                // Chỉ cho sửa cột Ngày (2), Số điện mới (4), Số nước mới (7) khi chưa lưu
+                if (column != 2 && column != 4 && column != 7)
                     return false;
                 if (row >= 0 && row < currentRows.size() && currentRows.get(row).saved)
                     return false;
@@ -193,6 +199,31 @@ public class ChiSoDienNuocUI {
                     public void mouseExited(MouseEvent e) {
                         hoverRow = -1;
                         repaint();
+                    }
+
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        if (e.isPopupTrigger())
+                            showTableContextMenu(e);
+                    }
+
+                    @Override
+                    public void mouseReleased(MouseEvent e) {
+                        if (e.isPopupTrigger())
+                            showTableContextMenu(e);
+                    }
+
+                    private void showTableContextMenu(MouseEvent e) {
+                        int row = rowAtPoint(e.getPoint());
+                        if (row >= 0) {
+                            setRowSelectionInterval(row, row);
+                        }
+                        JPopupMenu menu = new JPopupMenu();
+                        JMenuItem itemAdd = new JMenuItem("Thêm chỉ số mới cho phòng này");
+                        itemAdd.setFont(FONT_PLAIN);
+                        itemAdd.addActionListener(ev -> addNewReadingForSelectedRoom());
+                        menu.add(itemAdd);
+                        menu.show(e.getComponent(), e.getX(), e.getY());
                     }
                 });
             }
@@ -293,8 +324,9 @@ public class ChiSoDienNuocUI {
                 return this;
             }
         };
-        table.getColumnModel().getColumn(3).setCellRenderer(editableCellRenderer);
-        table.getColumnModel().getColumn(6).setCellRenderer(editableCellRenderer);
+        table.getColumnModel().getColumn(2).setCellRenderer(editableCellRenderer);
+        table.getColumnModel().getColumn(4).setCellRenderer(editableCellRenderer);
+        table.getColumnModel().getColumn(7).setCellRenderer(editableCellRenderer);
 
         // Renderer cho cột tiêu thụ — hiển thị màu theo mức
         DefaultTableCellRenderer consumptionRenderer = new DefaultTableCellRenderer() {
@@ -317,8 +349,8 @@ public class ChiSoDienNuocUI {
                 return this;
             }
         };
-        table.getColumnModel().getColumn(4).setCellRenderer(consumptionRenderer);
-        table.getColumnModel().getColumn(7).setCellRenderer(consumptionRenderer);
+        table.getColumnModel().getColumn(5).setCellRenderer(consumptionRenderer);
+        table.getColumnModel().getColumn(8).setCellRenderer(consumptionRenderer);
 
         // Renderer cho cột trạng thái — badge style
         DefaultTableCellRenderer statusRenderer = new DefaultTableCellRenderer() {
@@ -340,22 +372,24 @@ public class ChiSoDienNuocUI {
                 return this;
             }
         };
-        table.getColumnModel().getColumn(8).setCellRenderer(statusRenderer);
+        table.getColumnModel().getColumn(9).setCellRenderer(statusRenderer);
 
         // Column widths
-        int[] widths = { 80, 180, 100, 110, 110, 100, 110, 110, 100 };
+        int[] widths = { 80, 160, 60, 100, 110, 110, 100, 110, 110, 100 };
         for (int i = 0; i < widths.length; i++) {
             table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         }
 
-        // Update tiêu thụ khi chỉnh sửa
+        // Update tiêu thụ khi chỉnh sửa; cập nhật chỉ số cũ khi thay đổi ngày
         tableModel.addTableModelListener(e -> {
             int row = e.getFirstRow();
             int col = e.getColumn();
             if (row < 0 || row >= currentRows.size())
                 return;
-            if (col == 3 || col == 6) {
+            if (col == 4 || col == 7) {
                 SwingUtilities.invokeLater(() -> updateConsumption(row));
+            } else if (col == 2) {
+                SwingUtilities.invokeLater(() -> updateOldReading(row));
             }
         });
 
@@ -406,21 +440,55 @@ public class ChiSoDienNuocUI {
             return;
         RoomMeterRow data = currentRows.get(row);
         try {
-            Object valDien = tableModel.getValueAt(row, 3);
+            Object valDien = tableModel.getValueAt(row, 4);
             int dienMoi = valDien != null ? Integer.parseInt(valDien.toString().trim()) : data.dienCu;
             data.dienMoi = dienMoi;
             int tieuThuDien = Math.max(0, dienMoi - data.dienCu);
-            tableModel.setValueAt(String.valueOf(tieuThuDien), row, 4);
+            tableModel.setValueAt(String.valueOf(tieuThuDien), row, 5);
         } catch (NumberFormatException ignored) {
         }
         try {
-            Object valNuoc = tableModel.getValueAt(row, 6);
+            Object valNuoc = tableModel.getValueAt(row, 7);
             int nuocMoi = valNuoc != null ? Integer.parseInt(valNuoc.toString().trim()) : data.nuocCu;
             data.nuocMoi = nuocMoi;
             int tieuThuNuoc = Math.max(0, nuocMoi - data.nuocCu);
-            tableModel.setValueAt(String.valueOf(tieuThuNuoc), row, 7);
+            tableModel.setValueAt(String.valueOf(tieuThuNuoc), row, 8);
         } catch (NumberFormatException ignored) {
         }
+    }
+
+    /**
+     * Khi admin thay đổi cột "Ngày" → tự động tính lại chỉ số cũ (dựa trên
+     * bản ghi gần nhất trước ngày đó trong cùng tháng hoặc tháng trước).
+     */
+    private void updateOldReading(int row) {
+        if (row < 0 || row >= currentRows.size())
+            return;
+        RoomMeterRow data = currentRows.get(row);
+        if (data.saved)
+            return;
+
+        Object valNgay = tableModel.getValueAt(row, 2);
+        int ngay;
+        try {
+            ngay = Integer.parseInt(valNgay.toString().trim());
+            if (ngay < 1 || ngay > 31)
+                return;
+        } catch (NumberFormatException e) {
+            return;
+        }
+
+        int thang = Integer.parseInt((String) cboMonth.getSelectedItem());
+        int nam = Integer.parseInt((String) cboYear.getSelectedItem());
+
+        data.ngay = ngay;
+        int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(data.maPhong, thang, nam, ngay);
+        data.dienCu = chiSoCu[0];
+        data.nuocCu = chiSoCu[1];
+
+        tableModel.setValueAt(String.valueOf(data.dienCu), row, 3);
+        tableModel.setValueAt(String.valueOf(data.nuocCu), row, 6);
+        updateConsumption(row);
     }
 
     private void loadData() {
@@ -433,6 +501,13 @@ public class ChiSoDienNuocUI {
         currentRows.clear();
         tableModel.setRowCount(0);
 
+        // Lấy tất cả chỉ số đã lưu của tháng này, gom theo phòng
+        ArrayList<ChiSoDienNuoc> savedList = chiSoDAO.getAllChiSoThang(String.valueOf(thang), String.valueOf(nam));
+        java.util.Map<String, java.util.List<ChiSoDienNuoc>> savedByRoom = new java.util.LinkedHashMap<>();
+        for (ChiSoDienNuoc cs : savedList) {
+            savedByRoom.computeIfAbsent(cs.getMaPhong(), k -> new java.util.ArrayList<>()).add(cs);
+        }
+
         ArrayList<Phong> dsPhong = phongDAO.getAllPhongDaThue();
         if (dsPhong == null)
             dsPhong = new ArrayList<>();
@@ -440,50 +515,74 @@ public class ChiSoDienNuocUI {
         int daNhap = 0;
         int chuaNhap = 0;
 
+        // Ngày mặc định cho dòng chưa nhập
+        Calendar cal = Calendar.getInstance();
+        int todayDay = (thang == cal.get(Calendar.MONTH) + 1 && nam == cal.get(Calendar.YEAR))
+                ? cal.get(Calendar.DAY_OF_MONTH)
+                : 1;
+
         for (Phong phong : dsPhong) {
             String maPhong = phong.getMaPhong();
+            // Tên khách hiện tại (dùng cho dòng chưa nhập)
+            String tenKhachHienTai = "";
+            KhachHang khHT = hopDongKhachHangDAO.getNguoiDaiDienByMaPhong(maPhong);
+            if (khHT != null)
+                tenKhachHienTai = khHT.getHoTen();
 
-            // Lấy tên khách đại diện
-            String tenKhach = "";
-            KhachHang kh = hopDongKhachHangDAO.getNguoiDaiDienByMaPhong(maPhong);
-            if (kh != null) {
-                tenKhach = kh.getHoTen();
-            }
+            java.util.List<ChiSoDienNuoc> savedForRoom = savedByRoom.getOrDefault(maPhong,
+                    java.util.Collections.emptyList());
 
-            // Chỉ số cũ (tháng trước)
-            int[] chiSoCu = chiSoDAO.layChiSoThangTruoc(maPhong, thang, nam);
+            if (!savedForRoom.isEmpty()) {
+                // Hiển thị từng bản ghi đã lưu — dùng tên khách tại ngày ghi chỉ số
+                for (ChiSoDienNuoc cs : savedForRoom) {
+                    int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(maPhong, thang, nam, cs.getNgay());
+                    int dienCu = chiSoCu[0];
+                    int nuocCu = chiSoCu[1];
+                    int dienMoi = cs.getSoDien();
+                    int nuocMoi = cs.getSoNuoc();
+                    int tieuThuDien = Math.max(0, dienMoi - dienCu);
+                    int tieuThuNuoc = Math.max(0, nuocMoi - nuocCu);
 
-            // Chỉ số hiện tại (tháng đang chọn)
-            int[] chiSoHienTai = chiSoDAO.layChiSoTheoThang(maPhong, thang, nam);
+                    java.time.LocalDate ngayGhi = java.time.LocalDate.of(nam, thang, cs.getNgay());
+                    KhachHang khTaiNgay = hopDongKhachHangDAO.getNguoiDaiDienByMaPhongTaiNgay(maPhong, ngayGhi);
+                    String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachHienTai;
 
-            int dienCu = chiSoCu[0];
-            int nuocCu = chiSoCu[1];
-            int dienMoi = chiSoHienTai != null ? chiSoHienTai[0] : dienCu;
-            int nuocMoi = chiSoHienTai != null ? chiSoHienTai[1] : nuocCu;
-            boolean saved = chiSoHienTai != null;
+                    currentRows.add(new RoomMeterRow(maPhong, tenKhach, cs.getNgay(),
+                            dienCu, dienMoi, nuocCu, nuocMoi, true));
+                    tableModel.addRow(new Object[] {
+                            maPhong, tenKhach,
+                            String.valueOf(cs.getNgay()),
+                            String.valueOf(dienCu),
+                            String.valueOf(dienMoi),
+                            String.valueOf(tieuThuDien),
+                            String.valueOf(nuocCu),
+                            String.valueOf(nuocMoi),
+                            String.valueOf(tieuThuNuoc),
+                            "Đã nhập"
+                    });
+                    daNhap++;
+                }
+            } else {
+                // Chưa có chỉ số tháng này — hiển thị 1 dòng chưa nhập với tên người hiện tại
+                int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(maPhong, thang, nam, todayDay);
+                int dienCu = chiSoCu[0];
+                int nuocCu = chiSoCu[1];
 
-            if (saved)
-                daNhap++;
-            else
+                currentRows.add(new RoomMeterRow(maPhong, tenKhachHienTai, todayDay,
+                        dienCu, dienCu, nuocCu, nuocCu, false));
+                tableModel.addRow(new Object[] {
+                        maPhong, tenKhachHienTai,
+                        String.valueOf(todayDay),
+                        String.valueOf(dienCu),
+                        String.valueOf(dienCu),
+                        "0",
+                        String.valueOf(nuocCu),
+                        String.valueOf(nuocCu),
+                        "0",
+                        "Chưa nhập"
+                });
                 chuaNhap++;
-
-            RoomMeterRow rowData = new RoomMeterRow(maPhong, tenKhach, dienCu, dienMoi, nuocCu, nuocMoi, saved);
-            currentRows.add(rowData);
-
-            int tieuThuDien = Math.max(0, dienMoi - dienCu);
-            int tieuThuNuoc = Math.max(0, nuocMoi - nuocCu);
-
-            tableModel.addRow(new Object[] {
-                    maPhong,
-                    tenKhach,
-                    String.valueOf(dienCu),
-                    String.valueOf(dienMoi),
-                    String.valueOf(tieuThuDien),
-                    String.valueOf(nuocCu),
-                    String.valueOf(nuocMoi),
-                    String.valueOf(tieuThuNuoc),
-                    saved ? "Đã nhập" : "Chưa nhập"
-            });
+            }
         }
 
         // Update summary
@@ -492,6 +591,69 @@ public class ChiSoDienNuocUI {
         lblEnteredCount.setText("Đã nhập: " + daNhap);
         lblPendingCount.setText("Chưa nhập: " + chuaNhap);
         lblStatus.setText("");
+    }
+
+    /**
+     * Thêm dòng chỉ số mới cho phòng đang được chọn (dùng khi người mới vào giữa
+     * tháng).
+     */
+    private void addNewReadingForSelectedRoom() {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow < 0 || selectedRow >= currentRows.size()) {
+            JOptionPane.showMessageDialog(root,
+                    "Vui lòng chọn một dòng của phòng cần thêm chỉ số.",
+                    "Chưa chọn phòng", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        RoomMeterRow selected = currentRows.get(selectedRow);
+        String maPhong = selected.maPhong;
+        // Luôn dùng tên người hiện đang thuê phòng này (không phải tên trong bản ghi
+        // cũ)
+        KhachHang khHienTai = hopDongKhachHangDAO.getNguoiDaiDienByMaPhong(maPhong);
+        String tenKhach = (khHienTai != null) ? khHienTai.getHoTen() : selected.tenKhach;
+
+        int thang = Integer.parseInt((String) cboMonth.getSelectedItem());
+        int nam = Integer.parseInt((String) cboYear.getSelectedItem());
+
+        Calendar cal = Calendar.getInstance();
+        int defaultNgay = (thang == cal.get(Calendar.MONTH) + 1 && nam == cal.get(Calendar.YEAR))
+                ? cal.get(Calendar.DAY_OF_MONTH)
+                : 1;
+
+        // Chỉ số cũ = bản ghi gần nhất trước defaultNgay (tính cả cùng tháng)
+        int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(maPhong, thang, nam, defaultNgay);
+        int dienCu = chiSoCu[0];
+        int nuocCu = chiSoCu[1];
+
+        RoomMeterRow newRow = new RoomMeterRow(maPhong, tenKhach, defaultNgay,
+                dienCu, dienCu, nuocCu, nuocCu, false);
+        currentRows.add(newRow);
+
+        tableModel.addRow(new Object[] {
+                maPhong, tenKhach,
+                String.valueOf(defaultNgay),
+                String.valueOf(dienCu),
+                String.valueOf(dienCu),
+                "0",
+                String.valueOf(nuocCu),
+                String.valueOf(nuocCu),
+                "0",
+                "Chưa nhập"
+        });
+
+        // Cập nhật summary
+        int pending = (int) currentRows.stream().filter(r -> !r.saved).count();
+        int entered = (int) currentRows.stream().filter(r -> r.saved).count();
+        lblPendingCount.setText("Chưa nhập: " + pending);
+        lblEnteredCount.setText("Đã nhập: " + entered);
+
+        // Scroll đến dòng mới
+        int newRowIdx = currentRows.size() - 1;
+        table.scrollRectToVisible(table.getCellRect(newRowIdx, 0, true));
+        table.changeSelection(newRowIdx, 2, false, false);
+        lblStatus.setText("Đã thêm dòng mới cho phòng " + maPhong + " — nhập ngày và chỉ số mới.");
+        lblStatus.setForeground(AppColors.PRIMARY);
     }
 
     private void saveAll() {
@@ -512,29 +674,49 @@ public class ChiSoDienNuocUI {
             if (data.saved)
                 continue;
 
-            // Đọc giá trị mới nhất từ table
-            int dienMoi, nuocMoi;
+            // Đọc Ngày
+            int ngay;
             try {
-                Object valDien = tableModel.getValueAt(i, 3);
+                Object valNgay = tableModel.getValueAt(i, 2);
+                ngay = Integer.parseInt(valNgay.toString().trim());
+                if (ngay < 1 || ngay > 31)
+                    throw new NumberFormatException();
+            } catch (NumberFormatException e) {
+                table.scrollRectToVisible(table.getCellRect(i, 2, true));
+                table.changeSelection(i, 2, false, false);
+                table.editCellAt(i, 2);
+                JOptionPane.showMessageDialog(root,
+                        "Phòng " + data.maPhong + ": Ngày không hợp lệ (1–31).",
+                        "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Đọc Số điện mới
+            int dienMoi;
+            try {
+                Object valDien = tableModel.getValueAt(i, 4);
                 dienMoi = Integer.parseInt(valDien.toString().trim());
             } catch (NumberFormatException e) {
                 errors.add(data.maPhong + ": Số điện mới không hợp lệ");
-                table.scrollRectToVisible(table.getCellRect(i, 3, true));
-                table.changeSelection(i, 3, false, false);
-                table.editCellAt(i, 3);
+                table.scrollRectToVisible(table.getCellRect(i, 4, true));
+                table.changeSelection(i, 4, false, false);
+                table.editCellAt(i, 4);
                 JOptionPane.showMessageDialog(root,
                         "Phòng " + data.maPhong + ": Số điện mới không hợp lệ, vui lòng nhập số nguyên.",
                         "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
                 return;
             }
+
+            // Đọc Số nước mới
+            int nuocMoi;
             try {
-                Object valNuoc = tableModel.getValueAt(i, 6);
+                Object valNuoc = tableModel.getValueAt(i, 7);
                 nuocMoi = Integer.parseInt(valNuoc.toString().trim());
             } catch (NumberFormatException e) {
                 errors.add(data.maPhong + ": Số nước mới không hợp lệ");
-                table.scrollRectToVisible(table.getCellRect(i, 6, true));
-                table.changeSelection(i, 6, false, false);
-                table.editCellAt(i, 6);
+                table.scrollRectToVisible(table.getCellRect(i, 7, true));
+                table.changeSelection(i, 7, false, false);
+                table.editCellAt(i, 7);
                 JOptionPane.showMessageDialog(root,
                         "Phòng " + data.maPhong + ": Số nước mới không hợp lệ, vui lòng nhập số nguyên.",
                         "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
@@ -542,9 +724,9 @@ public class ChiSoDienNuocUI {
             }
 
             if (dienMoi < data.dienCu) {
-                table.scrollRectToVisible(table.getCellRect(i, 3, true));
-                table.changeSelection(i, 3, false, false);
-                table.editCellAt(i, 3);
+                table.scrollRectToVisible(table.getCellRect(i, 4, true));
+                table.changeSelection(i, 4, false, false);
+                table.editCellAt(i, 4);
                 JOptionPane.showMessageDialog(root,
                         "Phòng " + data.maPhong + ": Số điện mới (" + dienMoi + ") không được nhỏ hơn số cũ ("
                                 + data.dienCu + ").",
@@ -552,9 +734,9 @@ public class ChiSoDienNuocUI {
                 return;
             }
             if (nuocMoi < data.nuocCu) {
-                table.scrollRectToVisible(table.getCellRect(i, 6, true));
-                table.changeSelection(i, 6, false, false);
-                table.editCellAt(i, 6);
+                table.scrollRectToVisible(table.getCellRect(i, 7, true));
+                table.changeSelection(i, 7, false, false);
+                table.editCellAt(i, 7);
                 JOptionPane.showMessageDialog(root,
                         "Phòng " + data.maPhong + ": Số nước mới (" + nuocMoi + ") không được nhỏ hơn số cũ ("
                                 + data.nuocCu + ").",
@@ -562,23 +744,20 @@ public class ChiSoDienNuocUI {
                 return;
             }
 
-            int tieuThuDien = dienMoi - data.dienCu;
-            int tieuThuNuoc = nuocMoi - data.nuocCu;
-
-            if (tieuThuDien <= 0) {
-                table.scrollRectToVisible(table.getCellRect(i, 3, true));
-                table.changeSelection(i, 3, false, false);
-                table.editCellAt(i, 3);
+            if (dienMoi <= data.dienCu) {
+                table.scrollRectToVisible(table.getCellRect(i, 4, true));
+                table.changeSelection(i, 4, false, false);
+                table.editCellAt(i, 4);
                 JOptionPane.showMessageDialog(root,
                         "Phòng " + data.maPhong + ": Tiêu thụ điện phải lớn hơn 0.\nSố điện cũ: " + data.dienCu
                                 + " → Vui lòng nhập số điện mới lớn hơn " + data.dienCu + ".",
                         "Lỗi nhập liệu", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            if (tieuThuNuoc <= 0) {
-                table.scrollRectToVisible(table.getCellRect(i, 6, true));
-                table.changeSelection(i, 6, false, false);
-                table.editCellAt(i, 6);
+            if (nuocMoi <= data.nuocCu) {
+                table.scrollRectToVisible(table.getCellRect(i, 7, true));
+                table.changeSelection(i, 7, false, false);
+                table.editCellAt(i, 7);
                 JOptionPane.showMessageDialog(root,
                         "Phòng " + data.maPhong + ": Tiêu thụ nước phải lớn hơn 0.\nSố nước cũ: " + data.nuocCu
                                 + " → Vui lòng nhập số nước mới lớn hơn " + data.nuocCu + ".",
@@ -586,7 +765,7 @@ public class ChiSoDienNuocUI {
                 return;
             }
 
-            ChiSoDienNuoc cs = new ChiSoDienNuoc(data.maPhong, thang, nam, dienMoi, nuocMoi);
+            ChiSoDienNuoc cs = new ChiSoDienNuoc(data.maPhong, thang, nam, ngay, dienMoi, nuocMoi);
             String err = chiSoDAO.luuHoacCapNhat(cs);
             if (err != null) {
                 errors.add(data.maPhong + ": " + err);

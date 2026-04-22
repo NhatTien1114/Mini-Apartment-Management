@@ -9,6 +9,28 @@ import java.util.ArrayList;
 
 public class HopDongKhachHangDAO {
 
+    public KhachHang getNguoiDaiDienByMaHopDong(String maHopDong) {
+        if (maHopDong == null || maHopDong.trim().isEmpty()) {
+            return null;
+        }
+        String sql = "SELECT k.* FROM KhachHang k " +
+                "JOIN HopDongKhachHang hdkh ON k.maKhachHang = hdkh.maKhachHang " +
+                "WHERE hdkh.maHopDong = ? AND hdkh.vaiTro = 0";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maHopDong);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapKhachHang(rs);
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public KhachHang getNguoiDaiDienByMaPhong(String maPhong) {
         if (maPhong == null || maPhong.trim().isEmpty()) {
             return null;
@@ -24,6 +46,39 @@ public class HopDongKhachHangDAO {
 
             ps.setString(1, maPhong);
 
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapKhachHang(rs);
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Trả về người đại diện hợp đồng của phòng tại một ngày cụ thể.
+     * Dùng để hiển thị đúng tên khách trong chỉ số điện nước theo ngày ghi.
+     */
+    public KhachHang getNguoiDaiDienByMaPhongTaiNgay(String maPhong, LocalDate ngay) {
+        if (maPhong == null || maPhong.trim().isEmpty() || ngay == null) {
+            return null;
+        }
+
+        String sql = "SELECT TOP 1 k.* FROM KhachHang k " +
+                "JOIN HopDongKhachHang hdkh ON k.maKhachHang = hdkh.maKhachHang " +
+                "JOIN HopDong hd ON hdkh.maHopDong = hd.maHopDong " +
+                "WHERE hd.maPhong = ? AND hdkh.vaiTro = 0 " +
+                "AND hd.ngayBatDau <= ? AND (hd.ngayKetThuc >= ? OR hd.trangThai = 1) " +
+                "ORDER BY hd.ngayBatDau DESC";
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            ps.setObject(2, ngay);
+            ps.setObject(3, ngay);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return mapKhachHang(rs);

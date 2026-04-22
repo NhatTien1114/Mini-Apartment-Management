@@ -915,8 +915,8 @@ public class QuanLyPhongUI {
                             "Lỗi", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-                ChiSoDienNuoc cs = new ChiSoDienNuoc(phong.getMaPhong(), now.getMonthValue(), now.getYear(), dienMoi,
-                        nuocMoi);
+                ChiSoDienNuoc cs = new ChiSoDienNuoc(phong.getMaPhong(), now.getMonthValue(), now.getYear(),
+                        now.getDayOfMonth(), dienMoi, nuocMoi);
                 String errCs = chiSoDAO.luuHoacCapNhat(cs);
                 if (errCs != null) {
                     JOptionPane.showMessageDialog(dlg, errCs, "Lỗi", JOptionPane.ERROR_MESSAGE);
