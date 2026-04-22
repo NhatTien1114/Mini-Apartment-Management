@@ -57,6 +57,16 @@ public class PhuongTienUI {
         root.add(createTableCard(), BorderLayout.CENTER);
 
         loadData();
+        root.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent e) {
+                if (txtTimKiem != null)
+                    txtTimKiem.setText("");
+                if (cboFilterType != null)
+                    cboFilterType.setSelectedIndex(0);
+                loadData();
+            }
+        });
         return root;
     }
 

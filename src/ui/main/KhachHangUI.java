@@ -107,6 +107,10 @@ public class KhachHangUI {
     }
 
     public void refresh() {
+        if (txtTimKiem != null)
+            txtTimKiem.setText("");
+        if (cboFilterPhong != null)
+            cboFilterPhong.setSelectedIndex(0);
         loadKhachHangData();
     }
 

@@ -76,13 +76,21 @@ public class HopDongUI {
     }
 
     public void loadDataToTable() {
+        if (table != null && table.isEditing()) {
+            table.getCellEditor().cancelCellEditing();
+        }
+        // Reset bộ lọc về mặc định
+        if (txtSearch != null)
+            txtSearch.setText("");
+        if (cboFilterHanHopDong != null)
+            cboFilterHanHopDong.setSelectedIndex(0);
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         model.setRowCount(0);
         ArrayList<HopDong> listHD = HopDongDao.getAllHopDong();
         for (HopDong row : listHD) {
             String tenNguoiDaiDien = "";
             entity.KhachHang nguoiDaiDien = HDKHdao
-                    .getNguoiDaiDienByMaPhong(String.valueOf(row.getPhong().getMaPhong()));
+                    .getNguoiDaiDienByMaHopDong(row.getMaHopDong());
             if (nguoiDaiDien != null)
                 tenNguoiDaiDien = nguoiDaiDien.getHoTen();
             model.addRow(new Object[] {
@@ -110,11 +118,25 @@ public class HopDongUI {
         }
     }
 
+    private boolean isContractEnded(int modelRow) {
+        if (modelRow < 0 || modelRow >= model.getRowCount())
+            return false;
+        Object statusValue = model.getValueAt(modelRow, 7);
+        return statusValue != null && "Đã Kết Thúc".equalsIgnoreCase(statusValue.toString().trim());
+    }
+
     public JPanel getPanel() {
         pnlRoot = new JPanel(new BorderLayout(0, 24));
         pnlRoot.setBorder(new EmptyBorder(32, 32, 32, 32));
         pnlRoot.setBackground(MAU_NEN);
         table = new JTable();
+
+        pnlRoot.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent e) {
+                loadDataToTable();
+            }
+        });
 
         JPanel pnlHeader = new JPanel(new BorderLayout());
         pnlHeader.setOpaque(false);
@@ -221,6 +243,22 @@ public class HopDongUI {
         contextMenu.add(miMembers);
         contextMenu.add(miThanhToan);
         contextMenu.add(miDelete);
+        contextMenu.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) {
+                int selectedRow = table.getSelectedRow();
+                int modelRow = selectedRow >= 0 ? table.convertRowIndexToModel(selectedRow) : -1;
+                miThanhToan.setVisible(!isContractEnded(modelRow));
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) {
+            }
+
+            @Override
+            public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) {
+            }
+        });
 
         miMembers.addActionListener(e -> {
             int row = table.getSelectedRow();
@@ -240,6 +278,8 @@ public class HopDongUI {
             if (row < 0)
                 return;
             int modelRow = table.convertRowIndexToModel(row);
+            if (isContractEnded(modelRow))
+                return;
             showThanhToanHopDongDialog(String.valueOf(model.getValueAt(modelRow, 0)),
                     String.valueOf(model.getValueAt(modelRow, 1)));
         });
@@ -583,9 +623,10 @@ public class HopDongUI {
 
         if (isEdit && row != -1) {
             String roomCode = model.getValueAt(row, 1).toString();
+            String maHopDong = model.getValueAt(row, 0).toString();
             txtPhongEdit.setText(roomCode);
             txtKhach.setText(model.getValueAt(row, 2).toString());
-            KhachHang kh = HDKHdao.getNguoiDaiDienByMaPhong(roomCode);
+            KhachHang kh = HDKHdao.getNguoiDaiDienByMaHopDong(maHopDong);
             if (kh != null) {
                 txtSoDienThoai.setText(kh.getSoDienThoai());
                 txtCccd.setText(kh.getSoCCCD());

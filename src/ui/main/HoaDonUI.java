@@ -243,6 +243,10 @@ public class HoaDonUI {
     private CardLayout mainCardLayout;
 
     public void refresh() {
+        // Quay lại view danh sách hóa đơn nếu đang ở màn tính
+        if (mainCardLayout != null && pnlRoot != null && pnlRoot.getComponentCount() > 0) {
+            mainCardLayout.show((java.awt.Container) pnlRoot.getComponent(0), "history");
+        }
         loadHistory();
         rebuildSummaryModel();
     }
