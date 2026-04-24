@@ -171,12 +171,7 @@ public class KhachHangUI {
         btnTimKiem.setPreferredSize(new Dimension(110, 36));
         btnTimKiem.addActionListener(e -> applyFilter());
 
-        List<String> dsPhong = new ArrayList<>();
-        dsPhong.add("Tất cả phòng");
-        for (Phong phong : phongDAO.getAllPhongDaThue()) {
-            dsPhong.add(phong.getMaPhong());
-        }
-        cboFilterPhong = new JComboBox<>(dsPhong.toArray(new String[0]));
+        cboFilterPhong = new JComboBox<>(new String[] { "Tất cả phòng" });
         cboFilterPhong.setPreferredSize(new Dimension(150, 36));
         cboFilterPhong.setFont(FONT_PLAIN);
         cboFilterPhong.setBackground(AppColors.WHITE);
@@ -500,6 +495,41 @@ public class KhachHangUI {
         } catch (RuntimeException ex) {
             showError("Không tải được danh sách khách hàng: " + ex.getMessage());
         }
+        rebuildPhongFilterCombo();
+    }
+
+    private void rebuildPhongFilterCombo() {
+        if (cboFilterPhong == null)
+            return;
+        String currentSelection = (String) cboFilterPhong.getSelectedItem();
+        java.util.LinkedHashSet<String> phongSet = new java.util.LinkedHashSet<>();
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            Object val = tableModel.getValueAt(i, 6);
+            if (val != null && !val.toString().trim().isEmpty()) {
+                phongSet.add(val.toString().trim());
+            }
+        }
+        java.util.List<String> items = new java.util.ArrayList<>();
+        items.add("Tất cả phòng");
+        items.addAll(phongSet);
+        // Temporarily disable listener to avoid spurious filter triggers
+        java.awt.event.ItemListener[] listeners = cboFilterPhong.getItemListeners();
+        for (java.awt.event.ItemListener il : listeners)
+            cboFilterPhong.removeItemListener(il);
+        cboFilterPhong.removeAllItems();
+        for (String item : items)
+            cboFilterPhong.addItem(item);
+        // Restore selection if still present
+        if (currentSelection != null) {
+            for (int i = 0; i < cboFilterPhong.getItemCount(); i++) {
+                if (currentSelection.equals(cboFilterPhong.getItemAt(i))) {
+                    cboFilterPhong.setSelectedItem(currentSelection);
+                    break;
+                }
+            }
+        }
+        for (java.awt.event.ItemListener il : listeners)
+            cboFilterPhong.addItemListener(il);
     }
 
     private void showKhachHangDialog(KhachHang editKhachHang) {

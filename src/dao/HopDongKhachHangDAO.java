@@ -13,9 +13,13 @@ public class HopDongKhachHangDAO {
         if (maHopDong == null || maHopDong.trim().isEmpty()) {
             return null;
         }
-        String sql = "SELECT k.* FROM KhachHang k " +
+        // Ưu tiên vaiTro = 0 (Đại Diện còn hiệu lực).
+        // Nếu hợp đồng hết hạn (tất cả đã là vaiTro = 2), lấy người được thêm đầu tiên
+        // (maHDKT nhỏ nhất) – đó là người đại diện cũ.
+        String sql = "SELECT TOP 1 k.* FROM KhachHang k " +
                 "JOIN HopDongKhachHang hdkh ON k.maKhachHang = hdkh.maKhachHang " +
-                "WHERE hdkh.maHopDong = ? AND hdkh.vaiTro = 0";
+                "WHERE hdkh.maHopDong = ? " +
+                "ORDER BY CASE WHEN hdkh.vaiTro = 0 THEN 0 ELSE 1 END ASC, hdkh.maHDKT ASC";
         try (Connection con = connectDB.getConnection();
                 PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, maHopDong);

@@ -168,12 +168,15 @@ public class HopDongDAO {
             con.setAutoCommit(false);
 
             // 1) Thành viên thuộc hợp đồng hết hạn -> rời đi (vaiTro = 2)
+            // Bao phủ cả: hợp đồng đang active nhưng đã quá ngày KT
+            // VÀ hợp đồng đã được đánh trangThai=0 từ trước nhưng thành viên chưa cập nhật
             String sqlRoiDi = "UPDATE hdkh SET hdkh.vaiTro = 2 "
                     + "FROM HopDongKhachHang hdkh "
                     + "JOIN HopDong hd ON hd.maHopDong = hdkh.maHopDong "
-                    + "WHERE hd.trangThai = 1 "
-                    + "AND hd.ngayKetThuc <= CAST(GETDATE() AS DATE) "
-                    + "AND hdkh.vaiTro <> 2";
+                    + "WHERE ("
+                    + "  (hd.trangThai = 1 AND hd.ngayKetThuc <= CAST(GETDATE() AS DATE))"
+                    + "  OR hd.trangThai = 0"
+                    + ") AND hdkh.vaiTro <> 2";
             try (PreparedStatement ps = con.prepareStatement(sqlRoiDi)) {
                 ps.executeUpdate();
             }
@@ -475,6 +478,13 @@ public class HopDongDAO {
         try {
             con = connectDB.getConnection();
             con.setAutoCommit(false);
+
+            // 1) Thành viên thuộc hợp đồng -> rời đi (vaiTro = 2)
+            String sqlRoiDi = "UPDATE HopDongKhachHang SET vaiTro = 2 WHERE maHopDong = ? AND vaiTro <> 2";
+            try (PreparedStatement ps = con.prepareStatement(sqlRoiDi)) {
+                ps.setString(1, maHopDong);
+                ps.executeUpdate();
+            }
 
             String sqlHD = "UPDATE HopDong SET trangThai = 0 WHERE maHopDong = ?";
             try (PreparedStatement ps = con.prepareStatement(sqlHD)) {

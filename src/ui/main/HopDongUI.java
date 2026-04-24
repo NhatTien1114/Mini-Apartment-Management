@@ -199,7 +199,7 @@ public class HopDongUI {
         cboFilterHanHopDong.setFont(new Font("Inter", Font.PLAIN, 14));
         cboFilterHanHopDong.setBackground(Color.WHITE);
         cboFilterHanHopDong.addItemListener(e -> {
-            if (e.getStateChange() == ItemEvent.ITEM_STATE_CHANGED)
+            if (e.getStateChange() == ItemEvent.SELECTED)
                 applyContractFilter();
         });
 
@@ -361,14 +361,18 @@ public class HopDongUI {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
                     int c) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                int modelRow = t.convertRowIndexToModel(r);
+                Object statusObj = model.getValueAt(modelRow, 7);
+                boolean expired = statusObj != null && statusObj.toString().contains("Kết Thúc");
+                Color rowBg = expired ? new Color(248, 248, 250) : MAU_CARD;
                 l.setFont(new Font("Inter", Font.PLAIN, 13));
-                l.setForeground(MAU_TEXT);
-                l.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
+                l.setForeground(expired ? new Color(180, 180, 190) : MAU_TEXT);
+                l.setBackground(isSel ? t.getSelectionBackground() : rowBg);
                 l.setOpaque(true);
                 if (c == 0)
                     l.setFont(new Font("Inter", Font.BOLD, 13));
                 else if (c == 1) {
-                    l.setForeground(new Color(37, 99, 235));
+                    l.setForeground(expired ? new Color(180, 180, 190) : new Color(37, 99, 235));
                     l.setFont(new Font("Inter", Font.BOLD, 13));
                 }
                 l.setBorder(BorderFactory.createCompoundBorder(
@@ -382,8 +386,12 @@ public class HopDongUI {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
                     int c) {
+                int modelRow = t.convertRowIndexToModel(r);
+                Object statusObj = model.getValueAt(modelRow, 7);
+                boolean expired = statusObj != null && statusObj.toString().contains("Kết Thúc");
+                Color rowBg = expired ? new Color(248, 248, 250) : MAU_CARD;
                 JPanel pnl = new JPanel(new GridBagLayout());
-                pnl.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
+                pnl.setBackground(isSel ? t.getSelectionBackground() : rowBg);
                 pnl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
                 String status = v != null ? v.toString() : "";
                 boolean active = status.equals("Đang Hiệu Lực");
@@ -422,7 +430,24 @@ public class HopDongUI {
         table.getColumnModel().getColumn(5).setPreferredWidth(100);
         table.getColumnModel().getColumn(6).setPreferredWidth(110);
         table.getColumnModel().getColumn(7).setPreferredWidth(125);
-        table.getColumnModel().getColumn(2).setCellRenderer(boldPaddedRenderer());
+        table.getColumnModel().getColumn(2).setCellRenderer(new TableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
+                    int c) {
+                int modelRow = t.convertRowIndexToModel(r);
+                Object statusObj = model.getValueAt(modelRow, 7);
+                boolean expired = statusObj != null && statusObj.toString().contains("Kết Thúc");
+                JLabel l = new JLabel(v != null ? v.toString() : "");
+                l.setFont(FONT_BOLD);
+                l.setForeground(expired ? new Color(180, 180, 190) : AppColors.SLATE_900);
+                l.setBackground(isSel ? t.getSelectionBackground() : (expired ? new Color(248, 248, 250) : MAU_CARD));
+                l.setOpaque(true);
+                l.setBorder(BorderFactory.createCompoundBorder(
+                        new javax.swing.border.MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 16, 0, 8)));
+                return l;
+            }
+        });
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
