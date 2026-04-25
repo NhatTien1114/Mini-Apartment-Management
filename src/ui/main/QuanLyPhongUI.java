@@ -602,6 +602,8 @@ public class QuanLyPhongUI {
         // Trạng thái: không có "Đã thuê" vì phải tạo qua hợp đồng
         JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đang sửa" });
 
+        
+
         form.add(wrapField("Tên phòng", txtMa));
         form.add(errMa);
         form.add(Box.createVerticalStrut(10));
@@ -612,6 +614,7 @@ public class QuanLyPhongUI {
         form.add(wrapField("Trạng thái", cTT));
 
         root.add(form, BorderLayout.CENTER);
+        txtGia.setEditable(false);
 
         JButton btnSave = primaryButtonHelper.makePrimaryButton("Thêm phòng");
         btnSave.addActionListener(e -> {
@@ -848,6 +851,8 @@ public class QuanLyPhongUI {
         form.add(wrapField("Giá thuê (VNĐ/tháng)", txtGia));
         form.add(Box.createVerticalStrut(10));
 
+        
+
         boolean isTrong = phong.getTrangThai() == Phong.TrangThai.TRONG;
         if (!isDaThue) {
             form.add(wrapField("Trạng thái", cTT));
@@ -878,7 +883,7 @@ public class QuanLyPhongUI {
         }
 
         root.add(form, BorderLayout.CENTER);
-
+        txtGia.setEditable(false);
         dlg.setSize(440, isDaThue ? 660 : (isTrong ? 380 : 560));
         dlg.setLocationRelativeTo(owner);
 

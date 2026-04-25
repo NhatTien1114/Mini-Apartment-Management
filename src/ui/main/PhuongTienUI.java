@@ -362,10 +362,9 @@ public class PhuongTienUI {
                         String val = txtBienSo.getText().trim();
                         if (val.isEmpty()) {
                             ValidationPopup.show(txtBienSo, "Biển số xe không được để trống");
-                        } else if (!val.matches("^\\d{2}[A-Z]\\d?-\\d{3}\\.\\d{2}$")
-                                && !val.matches("^\\d{2}[A-Z]\\d?-\\d{4}$")) {
+                        } else if (!val.matches("^\\d{2}[A-Z]\\d-\\d{5}$")) {
                             ValidationPopup.show(txtBienSo,
-                                    "Biển số không đúng định dạng (VD: 59A-123.45 hoặc 59A1-1234)");
+                                    "Biển số không đúng định dạng (VD: 59A1-12345)");
                         } else if (phuongTienDAO.kiemTraBienSoTonTai(val)) {
                             ValidationPopup.show(txtBienSo, "Biển số này đã tồn tại trong hệ thống");
                         }
@@ -476,8 +475,8 @@ public class PhuongTienUI {
                 return;
             }
             if (!isEdit) {
-                if (!bsx.matches("^\\d{2}[A-Z]\\d?-\\d{3}\\.\\d{2}$") && !bsx.matches("^\\d{2}[A-Z]\\d?-\\d{4}$")) {
-                    ValidationPopup.show(txtBienSo, "Biển số không đúng định dạng (VD: 59A-123.45 hoặc 59A1-1234)");
+                if (!bsx.matches("^\\d{2}[A-Z]\\d-\\d{5}$")) {
+                    ValidationPopup.show(txtBienSo, "Biển số không đúng định dạng (VD: 59A1-12345)");
                     txtBienSo.requestFocus();
                     return;
                 }
@@ -578,61 +577,13 @@ public class PhuongTienUI {
                 updating = true;
                 try {
                     String raw = fb.getDocument().getText(0, fb.getDocument().getLength());
-                    // Strip all formatting chars to get raw input
-                    String digits = raw.replace("-", "").replace(".", "");
+                    String stripped = raw.replace("-", "");
+                    if (stripped.length() > 9) stripped = stripped.substring(0, 9);
 
-                    // Build formatted string
                     StringBuilder formatted = new StringBuilder();
-                    int dashPos = -1;
-                    for (int i = 0; i < digits.length(); i++) {
-                        char c = digits.charAt(i);
-                        formatted.append(c);
-                        // After prefix part (2 digits + letter + optional digit), insert dash
-                        if (dashPos < 0 && formatted.length() >= 3) {
-                            // Check if we have the pattern: digit digit letter [digit]
-                            String prefix = formatted.toString();
-                            if (prefix.length() == 3 && Character.isLetter(prefix.charAt(2)) && i + 1 < digits.length()
-                                    && Character.isDigit(digits.charAt(i + 1))) {
-                                // Could be 59A- or 59A1-, peek next
-                                // If next is digit and the one after is also digit, it's 59A1-
-                                // Just continue, dash will be inserted when we have enough chars
-                            }
-                            if (prefix.length() == 3 && Character.isLetter(prefix.charAt(2))) {
-                                // Check if next char is a digit that's part of the prefix (like 59A1)
-                                if (i + 1 < digits.length() && Character.isDigit(digits.charAt(i + 1))) {
-                                    // Peek: could be 59A1-xxxx or 59A-xxx.xx
-                                    // We need to decide: if total remaining digits after letter = 5+, it's 59A1-
-                                    int remainingDigits = 0;
-                                    for (int j = i + 1; j < digits.length(); j++) {
-                                        if (Character.isDigit(digits.charAt(j)))
-                                            remainingDigits++;
-                                    }
-                                    if (remainingDigits >= 5) {
-                                        // 59A1-xxxx format, don't insert dash yet
-                                        continue;
-                                    }
-                                }
-                                formatted.append('-');
-                                dashPos = formatted.length();
-                            }
-                            if (prefix.length() == 4 && Character.isLetter(prefix.charAt(2))
-                                    && Character.isDigit(prefix.charAt(3)) && dashPos < 0) {
-                                formatted.append('-');
-                                dashPos = formatted.length();
-                            }
-                        }
-                    }
-
-                    // Auto-insert dot for 5-digit suffix: xxx.xx
-                    if (dashPos > 0) {
-                        int dashIdx = formatted.indexOf("-");
-                        if (dashIdx >= 0) {
-                            String suffix = formatted.substring(dashIdx + 1).replace(".", "");
-                            if (suffix.length() == 5) {
-                                formatted = new StringBuilder(formatted.substring(0, dashIdx + 1));
-                                formatted.append(suffix.substring(0, 3)).append('.').append(suffix.substring(3));
-                            }
-                        }
+                    for (int i = 0; i < stripped.length(); i++) {
+                        if (i == 4) formatted.append('-');
+                        formatted.append(stripped.charAt(i));
                     }
 
                     String result = formatted.toString();
