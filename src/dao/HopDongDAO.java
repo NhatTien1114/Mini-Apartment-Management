@@ -185,13 +185,9 @@ public class HopDongDAO {
                 }
             }
 
-            con.commit();
+            new DichVuDAO().ganDichVuTrongTransaction(con, draft.phong);
 
-            try {
-                new DichVuDAO().ganTatCaDichVuChoPhongNeuChuaCo(draft.phong);
-            } catch (RuntimeException ex) {
-                System.err.println("Canh bao gan dich vu mac dinh that bai: " + ex.getMessage());
-            }
+            con.commit();
 
             return true;
         } catch (SQLException | RuntimeException e) {
