@@ -409,7 +409,7 @@ public class QuanLyTaiKhoanUI {
             @Override
             public Component getTableCellRendererComponent(
                     JTable t, Object v, boolean sel, boolean focus, int r, int c) {
-                JPanel cell = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
+                JPanel cell = new JPanel(new GridBagLayout());
                 cell.setBackground(sel ? C_ROW_SEL : C_CARD);
                 cell.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
 
@@ -530,7 +530,7 @@ public class QuanLyTaiKhoanUI {
                 String vaiTro = model.getValueAt(mRow, 1).toString();
                 boolean isAdmin = adminEmail != null && adminEmail.equalsIgnoreCase(email);
 
-                miSua.setEnabled(!isAdmin);
+                miSua.setEnabled(true);
                 if (isAdmin) {
                     miDoiVaiTro.setEnabled(false);
                     miXoa.setEnabled(false);

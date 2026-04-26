@@ -39,8 +39,6 @@ public class DoanhThuUI {
     // ── Font ─────────────────────────────────────────────────────────────────
     private static final String FONT = "Be Vietnam Pro";
 
-    // ── Filter options ───────────────────────────────────────────────────────
-    private static final String[] FILTER_PERIOD = { "Tháng", "Quý", "Năm" };
     private static final String[] FILTER_TYPE = { "Tất cả", "Phòng", "Dịch vụ" };
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -64,7 +62,6 @@ public class DoanhThuUI {
     private BarChartPanel barChartPanel;
     private PieChartPanel pieChartPanel;
     private JTextField txtFromDate, txtToDate;
-    private JPanel pnlPeriodButtons;
     private JPanel pnlTypeButtons;
 
     public DoanhThuUI() {
@@ -159,17 +156,20 @@ public class DoanhThuUI {
     }
 
     // ── FILTER BAR ───────────────────────────────────────────────────────────
+    private static final String[] FILTER_PERIOD = { "Tháng", "Quý", "Năm" };
+    private JPanel pnlPeriodButtons;
+
     private JPanel buildFilterBar() {
         JPanel wrapper = createRoundedPanel();
         wrapper.setLayout(new BorderLayout(0, 12));
-        wrapper.setBorder(new EmptyBorder(16, 20, 16, 20));
-        wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
+        wrapper.setBorder(new EmptyBorder(14, 20, 14, 20));
+        wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
 
-        JPanel topRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        JPanel topRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         topRow.setOpaque(false);
 
         JLabel lblPeriod = new JLabel("Kỳ:");
-        lblPeriod.setFont(new Font(FONT, Font.BOLD, 12));
+        lblPeriod.setFont(new Font(FONT, Font.BOLD, 13));
         lblPeriod.setForeground(TEXT_SECONDARY);
         topRow.add(lblPeriod);
 
@@ -185,11 +185,10 @@ public class DoanhThuUI {
             pnlPeriodButtons.add(btn);
         }
         topRow.add(pnlPeriodButtons);
-
-        topRow.add(Box.createHorizontalStrut(20));
+        topRow.add(Box.createHorizontalStrut(16));
 
         JLabel lblType = new JLabel("Loại:");
-        lblType.setFont(new Font(FONT, Font.BOLD, 12));
+        lblType.setFont(new Font(FONT, Font.BOLD, 13));
         lblType.setForeground(TEXT_SECONDARY);
         topRow.add(lblType);
 
@@ -205,67 +204,155 @@ public class DoanhThuUI {
             pnlTypeButtons.add(btn);
         }
         topRow.add(pnlTypeButtons);
-
         wrapper.add(topRow, BorderLayout.NORTH);
 
-        JPanel bottomRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel bottomRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         bottomRow.setOpaque(false);
 
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
         JLabel lblFrom = new JLabel("Từ ngày:");
-        lblFrom.setFont(new Font(FONT, Font.PLAIN, 12));
+        lblFrom.setFont(new Font(FONT, Font.BOLD, 13));
         lblFrom.setForeground(TEXT_SECONDARY);
         bottomRow.add(lblFrom);
 
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        txtFromDate = new JTextField(dateFrom.format(dtf), 10);
-        txtFromDate.setFont(new Font(FONT, Font.PLAIN, 12));
-        txtFromDate.setPreferredSize(new Dimension(110, 30));
-        bottomRow.add(txtFromDate);
+        txtFromDate = new JTextField(dateFrom.format(dtf), 9);
+        txtFromDate.setFont(new Font(FONT, Font.PLAIN, 13));
+        bottomRow.add(buildDateFieldWithIcon(txtFromDate, true));
 
-        bottomRow.add(Box.createHorizontalStrut(8));
+        bottomRow.add(Box.createHorizontalStrut(12));
+
         JLabel lblTo = new JLabel("Đến ngày:");
-        lblTo.setFont(new Font(FONT, Font.PLAIN, 12));
+        lblTo.setFont(new Font(FONT, Font.BOLD, 13));
         lblTo.setForeground(TEXT_SECONDARY);
         bottomRow.add(lblTo);
 
-        txtToDate = new JTextField(dateTo.format(dtf), 10);
-        txtToDate.setFont(new Font(FONT, Font.PLAIN, 12));
-        txtToDate.setPreferredSize(new Dimension(110, 30));
-        bottomRow.add(txtToDate);
-
-        bottomRow.add(Box.createHorizontalStrut(8));
-
-        JButton btnApply = new JButton("Áp dụng");
-        btnApply.setFont(new Font(FONT, Font.BOLD, 12));
-        btnApply.setForeground(WHITE);
-        btnApply.setBackground(ACCENT);
-        btnApply.setBorderPainted(false);
-        btnApply.setFocusPainted(false);
-        btnApply.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnApply.setPreferredSize(new Dimension(90, 30));
-        btnApply.addActionListener(e -> applyDateFilter());
-        bottomRow.add(btnApply);
-
-        bottomRow.add(Box.createHorizontalStrut(14));
-        String[][] quickFilters = {
-                { "Tháng này", "month" }, { "Quý này", "quarter" }, { "Năm nay", "year" }
-        };
-        for (String[] qf : quickFilters) {
-            JButton btnQ = new JButton(qf[0]);
-            btnQ.setFont(new Font(FONT, Font.PLAIN, 11));
-            btnQ.setForeground(ACCENT);
-            btnQ.setBackground(ACCENT_LIGHT);
-            btnQ.setBorderPainted(false);
-            btnQ.setFocusPainted(false);
-            btnQ.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            btnQ.setMargin(new Insets(4, 12, 4, 12));
-            String type = qf[1];
-            btnQ.addActionListener(e -> applyQuickFilter(type));
-            bottomRow.add(btnQ);
-        }
+        txtToDate = new JTextField(dateTo.format(dtf), 9);
+        txtToDate.setFont(new Font(FONT, Font.PLAIN, 13));
+        bottomRow.add(buildDateFieldWithIcon(txtToDate, false));
 
         wrapper.add(bottomRow, BorderLayout.SOUTH);
         return wrapper;
+    }
+
+    private JPanel buildDateFieldWithIcon(JTextField txt, boolean isFrom) {
+        JPanel p = new JPanel(new BorderLayout(0, 0));
+        p.setBackground(WHITE);
+        p.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER, 1, true),
+                new EmptyBorder(2, 6, 2, 2)));
+        p.setPreferredSize(new Dimension(150, 34));
+        txt.setBorder(null);
+        txt.setBackground(WHITE);
+        p.add(txt, BorderLayout.CENTER);
+
+        JLabel calIcon = new JLabel("\uD83D\uDCC5");
+        calIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+        calIcon.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        calIcon.setBorder(new EmptyBorder(0, 4, 0, 6));
+        calIcon.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) { showDatePicker(calIcon, isFrom); }
+        });
+        p.add(calIcon, BorderLayout.EAST);
+        return p;
+    }
+
+    private void showDatePicker(JComponent anchor, boolean isFrom) {
+        JPopupMenu popup = new JPopupMenu();
+        popup.setLayout(new BorderLayout());
+        popup.setBorder(BorderFactory.createLineBorder(BORDER, 1));
+
+        LocalDate current = isFrom ? dateFrom : dateTo;
+        final LocalDate[] viewing = { current.withDayOfMonth(1) };
+
+        JPanel calPanel = new JPanel(new BorderLayout(0, 6));
+        calPanel.setBackground(WHITE);
+        calPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        JPanel nav = new JPanel(new BorderLayout());
+        nav.setOpaque(false);
+        JButton btnPrev = makeNavBtn("\u25C0");
+        JButton btnNext = makeNavBtn("\u25B6");
+        JLabel lblMonth = new JLabel("", SwingConstants.CENTER);
+        lblMonth.setFont(new Font(FONT, Font.BOLD, 13));
+        lblMonth.setForeground(TEXT_PRIMARY);
+        nav.add(btnPrev, BorderLayout.WEST);
+        nav.add(lblMonth, BorderLayout.CENTER);
+        nav.add(btnNext, BorderLayout.EAST);
+        calPanel.add(nav, BorderLayout.NORTH);
+
+        JPanel grid = new JPanel(new GridLayout(0, 7, 2, 2));
+        grid.setOpaque(false);
+
+        Runnable refreshCal = () -> {
+            grid.removeAll();
+            DateTimeFormatter mf = DateTimeFormatter.ofPattern("'Tháng' MM, yyyy");
+            lblMonth.setText(viewing[0].format(mf));
+
+            String[] dh = {"T2","T3","T4","T5","T6","T7","CN"};
+            for (String s : dh) {
+                JLabel lbl = new JLabel(s, SwingConstants.CENTER);
+                lbl.setFont(new Font(FONT, Font.BOLD, 10));
+                lbl.setForeground(TEXT_SECONDARY);
+                lbl.setPreferredSize(new Dimension(32, 20));
+                grid.add(lbl);
+            }
+
+            LocalDate first = viewing[0];
+            int dow = first.getDayOfWeek().getValue();
+            for (int i = 1; i < dow; i++) grid.add(new JLabel(""));
+
+            int len = first.lengthOfMonth();
+            for (int d = 1; d <= len; d++) {
+                LocalDate date = first.withDayOfMonth(d);
+                JButton db = new JButton(String.valueOf(d));
+                db.setFont(new Font(FONT, Font.PLAIN, 11));
+                db.setPreferredSize(new Dimension(32, 28));
+                db.setMargin(new Insets(0, 0, 0, 0));
+                db.setFocusPainted(false);
+                db.setBorderPainted(false);
+                db.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                boolean isSel = date.equals(current);
+                boolean isToday = date.equals(LocalDate.now());
+                if (isSel) { db.setBackground(ACCENT); db.setForeground(WHITE); }
+                else if (isToday) { db.setBackground(ACCENT_LIGHT); db.setForeground(ACCENT); }
+                else { db.setBackground(WHITE); db.setForeground(TEXT_PRIMARY); }
+                db.addActionListener(ev -> {
+                    DateTimeFormatter dtf2 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                    if (isFrom) { dateFrom = date; txtFromDate.setText(dateFrom.format(dtf2)); }
+                    else { dateTo = date; txtToDate.setText(dateTo.format(dtf2)); }
+                    if (dateFrom.isAfter(dateTo)) {
+                        LocalDate tmp = dateFrom; dateFrom = dateTo; dateTo = tmp;
+                        txtFromDate.setText(dateFrom.format(dtf2));
+                        txtToDate.setText(dateTo.format(dtf2));
+                    }
+                    popup.setVisible(false);
+                    refreshAll();
+                });
+                grid.add(db);
+            }
+            grid.revalidate(); grid.repaint();
+        };
+
+        btnPrev.addActionListener(ev -> { viewing[0] = viewing[0].minusMonths(1); refreshCal.run(); });
+        btnNext.addActionListener(ev -> { viewing[0] = viewing[0].plusMonths(1); refreshCal.run(); });
+        calPanel.add(grid, BorderLayout.CENTER);
+        refreshCal.run();
+        popup.add(calPanel);
+        popup.show(anchor, 0, anchor.getHeight());
+    }
+
+    private JButton makeNavBtn(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font(FONT, Font.BOLD, 12));
+        btn.setForeground(ACCENT);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setPreferredSize(new Dimension(36, 28));
+        return btn;
     }
 
     private JButton createFilterChip(String text, boolean active) {
@@ -297,46 +384,7 @@ public class DoanhThuUI {
         }
     }
 
-    private void applyDateFilter() {
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        try {
-            dateFrom = LocalDate.parse(txtFromDate.getText().trim(), dtf);
-            dateTo = LocalDate.parse(txtToDate.getText().trim(), dtf);
-            if (dateFrom.isAfter(dateTo)) {
-                LocalDate tmp = dateFrom;
-                dateFrom = dateTo;
-                dateTo = tmp;
-                txtFromDate.setText(dateFrom.format(dtf));
-                txtToDate.setText(dateTo.format(dtf));
-            }
-            refreshAll();
-        } catch (DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(null, "Định dạng ngày không hợp lệ (dd/MM/yyyy)");
-        }
-    }
 
-    private void applyQuickFilter(String type) {
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        LocalDate now = LocalDate.now();
-        switch (type) {
-            case "month":
-                dateFrom = now.withDayOfMonth(1);
-                dateTo = now.withDayOfMonth(now.lengthOfMonth());
-                break;
-            case "quarter":
-                int q = (now.getMonthValue() - 1) / 3;
-                dateFrom = LocalDate.of(now.getYear(), q * 3 + 1, 1);
-                dateTo = dateFrom.plusMonths(2).withDayOfMonth(dateFrom.plusMonths(2).lengthOfMonth());
-                break;
-            case "year":
-                dateFrom = LocalDate.of(now.getYear(), 1, 1);
-                dateTo = LocalDate.of(now.getYear(), 12, 31);
-                break;
-        }
-        txtFromDate.setText(dateFrom.format(dtf));
-        txtToDate.setText(dateTo.format(dtf));
-        refreshAll();
-    }
 
     // ── CARDS ────────────────────────────────────────────────────────────────
     private JPanel buildCards() {
