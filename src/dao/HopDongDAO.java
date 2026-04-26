@@ -379,15 +379,16 @@ public class HopDongDAO {
         return Double.parseDouble(digits);
     }
 
-    public boolean ketThucHopDong(String maHopDong, String maPhong) {
+    public boolean ketThucHopDong(String maHopDong, String maPhong, LocalDate ngayKetThuc) {
         Connection con = null;
         try {
             con = connectDB.getConnection();
             con.setAutoCommit(false);
 
-            String sqlHD = "UPDATE HopDong SET trangThai = 0 WHERE maHopDong = ?";
+            String sqlHD = "UPDATE HopDong SET trangThai = 0, ngayKetThuc = ? WHERE maHopDong = ?";
             try (PreparedStatement ps = con.prepareStatement(sqlHD)) {
-                ps.setString(1, maHopDong);
+                ps.setObject(1, ngayKetThuc);
+                ps.setString(2, maHopDong);
                 ps.executeUpdate();
             }
 

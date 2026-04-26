@@ -577,8 +577,9 @@ public class PhuongTienUI {
                 updating = true;
                 try {
                     String raw = fb.getDocument().getText(0, fb.getDocument().getLength());
-                    String stripped = raw.replace("-", "");
-                    if (stripped.length() > 9) stripped = stripped.substring(0, 9);
+                    String stripped = raw.replaceAll("[^A-Za-z0-9]", "");
+                    if (stripped.length() > 9)
+                        stripped = stripped.substring(0, 9);
 
                     StringBuilder formatted = new StringBuilder();
                     for (int i = 0; i < stripped.length(); i++) {
@@ -590,6 +591,7 @@ public class PhuongTienUI {
                     if (!result.equals(raw)) {
                         fb.remove(0, fb.getDocument().getLength());
                         fb.insertString(0, result, null);
+                        SwingUtilities.invokeLater(() -> field.setCaretPosition(field.getDocument().getLength()));
                     }
                 } finally {
                     updating = false;

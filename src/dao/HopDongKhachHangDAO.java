@@ -31,6 +31,21 @@ public class HopDongKhachHangDAO {
         }
     }
 
+    public String getMaHopDongHienTai(String maPhong) {
+        if (maPhong == null || maPhong.trim().isEmpty()) return null;
+        String sql = "SELECT maHopDong FROM HopDong WHERE maPhong = ? AND trangThai = 1";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("maHopDong");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public KhachHang getNguoiDaiDienByMaPhong(String maPhong) {
         if (maPhong == null || maPhong.trim().isEmpty()) {
             return null;

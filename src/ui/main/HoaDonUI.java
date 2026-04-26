@@ -119,9 +119,14 @@ public class HoaDonUI {
     private String currentYear = "";
 
     private Runnable onInvoiceSaved;
+    private Runnable onNavigateToChiSo;
 
     public void setOnInvoiceSaved(Runnable callback) {
         this.onInvoiceSaved = callback;
+    }
+
+    public void setOnNavigateToChiSo(Runnable callback) {
+        this.onNavigateToChiSo = callback;
     }
 
     public static class BillServiceItem {
@@ -158,6 +163,7 @@ public class HoaDonUI {
 
     private static class MonthlyRoomDraft {
         String maPhong;
+        String maHopDong = "";
         String tenKhach = "";
         int soDienCu;
         int soDienMoi;
@@ -505,6 +511,24 @@ public class HoaDonUI {
                         "Thông báo", JOptionPane.WARNING_MESSAGE);
                 return;
             }
+            // Kiểm tra chỉ số điện/nước
+            java.util.List<String> phongChuaNhap = new java.util.ArrayList<>();
+            for (Phong p : phongDAO.getAllPhongDaThue()) {
+                if (dienNuocDAO.layChiSoTheoThangVoiNgay(p.getMaPhong(), m, y) == null) {
+                    phongChuaNhap.add(p.getMaPhong());
+                }
+            }
+            if (!phongChuaNhap.isEmpty()) {
+                JOptionPane.showMessageDialog(dlg,
+                        "Các phòng sau chưa nhập chỉ số điện/nước tháng " + month + "/" + year + ":\n"
+                                + String.join(", ", phongChuaNhap)
+                                + "\nVui lòng nhập chỉ số trước khi tính hóa đơn.",
+                        "Chưa nhập chỉ số điện/nước", JOptionPane.WARNING_MESSAGE);
+                dlg.dispose();
+                if (onNavigateToChiSo != null)
+                    onNavigateToChiSo.run();
+                return;
+            }
             calculateDraft(month, year);
             dlg.dispose();
 
@@ -569,13 +593,16 @@ public class HoaDonUI {
             ed.daThanhToan = existS.daThanhToan;
             ed.isExisting = true;
             // Lấy chỉ số thực tế từ ChiSoDienNuoc
-            int[] curFull = dienNuocDAO.layChiSoTheoThangVoiNgay(existS.maPhong, m, y);
-            if (curFull != null) {
-                int[] old = dienNuocDAO.layChiSoTruocNgay(existS.maPhong, m, y, curFull[0]);
+            String maHopDongEx = hdkhDAO.getMaHopDongHienTai(existS.maPhong);
+            ed.maHopDong = maHopDongEx != null ? maHopDongEx : "";
+            ChiSoDienNuoc curFullEx = (maHopDongEx != null)
+                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongEx, m, y) : null;
+            if (curFullEx != null) {
+                int[] old = dienNuocDAO.layChiSoTruocNgay(maHopDongEx, curFullEx.getNgayGhi());
                 ed.soDienCu = old[0];
                 ed.soNuocCu = old[1];
-                ed.soDienMoi = curFull[1];
-                ed.soNuocMoi = curFull[2];
+                ed.soDienMoi = curFullEx.getSoDien();
+                ed.soNuocMoi = curFullEx.getSoNuoc();
             } else {
                 ed.soDienCu = 0;
                 ed.soDienMoi = existS.tieuThuDien;
@@ -612,15 +639,20 @@ public class HoaDonUI {
             KhachHang khNew = hdkhDAO.getNguoiDaiDienByMaPhong(room.getMaPhong());
             d.tenKhach = (khNew != null) ? khNew.getHoTen() : "";
 
-            int[] curFull = dienNuocDAO.layChiSoTheoThangVoiNgay(room.getMaPhong(), m, y);
+            String maHopDongNew = hdkhDAO.getMaHopDongHienTai(room.getMaPhong());
+            d.maHopDong = maHopDongNew != null ? maHopDongNew : "";
+            ChiSoDienNuoc curFull = (maHopDongNew != null)
+                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongNew, m, y) : null;
             d.hasChiSoMoi = curFull != null;
             int[] old = curFull != null
-                    ? dienNuocDAO.layChiSoTruocNgay(room.getMaPhong(), m, y, curFull[0])
-                    : dienNuocDAO.layChiSoThangTruoc(room.getMaPhong(), m, y);
+                    ? dienNuocDAO.layChiSoTruocNgay(maHopDongNew, curFull.getNgayGhi())
+                    : (maHopDongNew != null
+                            ? dienNuocDAO.layChiSoThangTruoc(maHopDongNew, m, y)
+                            : new int[]{0, 0});
             d.soDienCu = old[0];
             d.soNuocCu = old[1];
-            d.soDienMoi = curFull == null ? old[0] : curFull[1];
-            d.soNuocMoi = curFull == null ? old[1] : curFull[2];
+            d.soDienMoi = curFull == null ? old[0] : curFull.getSoDien();
+            d.soNuocMoi = curFull == null ? old[1] : curFull.getSoNuoc();
 
             if (room.getMaGiaDetail() != null) {
                 GiaDetail gdPhong = giaDetailDAO.getDonGiaByMa(room.getMaGiaDetail());
@@ -675,8 +707,8 @@ public class HoaDonUI {
             // Bỏ qua draft đã có trong DB hoặc đã có chỉ số trong tháng
             if (d.isExisting || d.hasChiSoMoi)
                 continue;
-            int ngayHD = java.time.LocalDate.of(nam, thang, 1).lengthOfMonth();
-            ChiSoDienNuoc chiSo = new ChiSoDienNuoc(d.maPhong, thang, nam, ngayHD, d.soDienMoi, d.soNuocMoi);
+            int ngayHD = LocalDate.of(nam, thang, 1).lengthOfMonth();
+            ChiSoDienNuoc chiSo = new ChiSoDienNuoc(d.maHopDong, LocalDate.of(nam, thang, ngayHD), d.soDienMoi, d.soNuocMoi);
             String err = dienNuocDAO.luuHoacCapNhat(chiSo);
             if (err != null) {
                 loiChiSo.add(d.maPhong + ": " + err);
@@ -780,7 +812,7 @@ public class HoaDonUI {
         // Right-click context menu
         JPopupMenu summaryMenu = new JPopupMenu();
         JMenuItem miXemHoaDon = new JMenuItem("Xem hóa đơn");
-        JMenuItem miCaiDat = new JMenuItem("Cài đặt");
+        JMenuItem miCaiDat = new JMenuItem("Chỉnh sửa");
         summaryMenu.add(miXemHoaDon);
         summaryMenu.add(miCaiDat);
 
@@ -879,13 +911,16 @@ public class HoaDonUI {
             d.tienPhong = s.tienPhong;
             d.daThanhToan = s.daThanhToan;
             // Lấy chỉ số thực tế từ ChiSoDienNuoc
-            int[] curFull = dienNuocDAO.layChiSoTheoThangVoiNgay(s.maPhong, m, y);
-            if (curFull != null) {
-                int[] old = dienNuocDAO.layChiSoTruocNgay(s.maPhong, m, y, curFull[0]);
+            String maHopDongDB = hdkhDAO.getMaHopDongHienTai(s.maPhong);
+            d.maHopDong = maHopDongDB != null ? maHopDongDB : "";
+            ChiSoDienNuoc curFullDB = (maHopDongDB != null)
+                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongDB, m, y) : null;
+            if (curFullDB != null) {
+                int[] old = dienNuocDAO.layChiSoTruocNgay(maHopDongDB, curFullDB.getNgayGhi());
                 d.soDienCu = old[0];
                 d.soNuocCu = old[1];
-                d.soDienMoi = curFull[1];
-                d.soNuocMoi = curFull[2];
+                d.soDienMoi = curFullDB.getSoDien();
+                d.soNuocMoi = curFullDB.getSoNuoc();
             } else {
                 d.soDienCu = 0;
                 d.soDienMoi = s.tieuThuDien;
@@ -1142,7 +1177,7 @@ public class HoaDonUI {
 
         // ── Tiền phòng ──
         JTextField txtTienPhong = makeField(NF.format((long) d.tienPhong));
-        txtTienPhong.setEditable(true);
+        txtTienPhong.setEditable(false);
         txtTienPhong.setMaximumSize(new Dimension(5, 38));
 
         // ── Điện ──
