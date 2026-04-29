@@ -496,8 +496,8 @@ public class PhuongTienUI {
                 return;
             }
             if (!isEdit) {
-                if (!isBienSoHopLe(bsx)) {
-                    ValidationPopup.show(txtBienSo, "Biển số không đúng định dạng (VD: 59Y3-628.59 hoặc 60B2-1234)");
+                if (!bsx.matches("^\\d{2}[A-Z]\\d-\\d{5}$")) {
+                    ValidationPopup.show(txtBienSo, "Biển số không đúng định dạng (VD: 59A1-12345)");
                     txtBienSo.requestFocus();
                     return;
                 }
@@ -598,14 +598,13 @@ public class PhuongTienUI {
                 updating = true;
                 try {
                     String raw = fb.getDocument().getText(0, fb.getDocument().getLength());
-                    String stripped = raw.replace("-", "");
+                    String stripped = raw.replaceAll("[^A-Za-z0-9]", "");
                     if (stripped.length() > 9)
                         stripped = stripped.substring(0, 9);
 
                     StringBuilder formatted = new StringBuilder();
                     for (int i = 0; i < stripped.length(); i++) {
-                        if (i == 4)
-                            formatted.append('-');
+                        if (i == 4) formatted.append('-');
                         formatted.append(stripped.charAt(i));
                     }
 
@@ -613,6 +612,7 @@ public class PhuongTienUI {
                     if (!result.equals(raw)) {
                         fb.remove(0, fb.getDocument().getLength());
                         fb.insertString(0, result, null);
+                        SwingUtilities.invokeLater(() -> field.setCaretPosition(field.getDocument().getLength()));
                     }
                 } finally {
                     updating = false;

@@ -620,6 +620,8 @@ public class QuanLyPhongUI {
         // Trạng thái: không có "Đã thuê" vì phải tạo qua hợp đồng
         JComboBox<String> cTT = makeCombo(new String[] { "Trống", "Đã cọc", "Đang sửa" });
 
+        
+
         form.add(wrapField("Tên phòng", txtMa));
         form.add(errMa);
         form.add(Box.createVerticalStrut(10));
@@ -630,6 +632,7 @@ public class QuanLyPhongUI {
         form.add(wrapField("Trạng thái", cTT));
 
         root.add(form, BorderLayout.CENTER);
+        txtGia.setEditable(false);
 
         txtGia.setEditable(false);
         JButton btnSave = primaryButtonHelper.makePrimaryButton("Thêm phòng");
@@ -774,8 +777,11 @@ public class QuanLyPhongUI {
 
         // ── Panel chỉ số điện/nước (chỉ hiện khi "Đã thuê") ──
         LocalDate now = LocalDate.now();
-        int[] chiSoCu = chiSoDAO.layChiSoGanNhat(phong.getMaPhong());
-        int[] chiSoThangNay = chiSoDAO.layChiSoTheoThang(phong.getMaPhong(), now.getMonthValue(), now.getYear());
+        String maHopDongPhong = hopDongKhachHangDAO.getMaHopDongHienTai(phong.getMaPhong());
+        int[] chiSoCu = maHopDongPhong != null
+                ? chiSoDAO.layChiSoGanNhat(maHopDongPhong) : new int[]{0, 0};
+        int[] chiSoThangNay = maHopDongPhong != null
+                ? chiSoDAO.layChiSoTheoThang(maHopDongPhong, now.getMonthValue(), now.getYear()) : null;
 
         JPanel pnlChiSo = new JPanel();
         pnlChiSo.setBackground(AppColors.WHITE);
@@ -852,6 +858,9 @@ public class QuanLyPhongUI {
         form.add(wrapField("Giá thuê (VNĐ/tháng)", txtGia));
         form.add(Box.createVerticalStrut(10));
 
+        
+
+        boolean isTrong = phong.getTrangThai() == Phong.TrangThai.TRONG;
         if (!isDaThue) {
             form.add(wrapField("Trạng thái", cTT));
         } else {
@@ -877,8 +886,8 @@ public class QuanLyPhongUI {
         }
 
         root.add(form, BorderLayout.CENTER);
-
-        dlg.setSize(440, isDaThue ? 660 : 380);
+        txtGia.setEditable(false);
+        dlg.setSize(440, isDaThue ? 660 : (isTrong ? 380 : 560));
         dlg.setLocationRelativeTo(owner);
 
         // ── Nút Lưu ──
@@ -914,8 +923,12 @@ public class QuanLyPhongUI {
                             "Lỗi", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-                ChiSoDienNuoc cs = new ChiSoDienNuoc(phong.getMaPhong(), now.getMonthValue(), now.getYear(),
-                        now.getDayOfMonth(), dienMoi, nuocMoi);
+                if (maHopDongPhong == null) {
+                    JOptionPane.showMessageDialog(dlg, "Không tìm thấy hợp đồng hiện tại của phòng!", "Lỗi",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                ChiSoDienNuoc cs = new ChiSoDienNuoc(maHopDongPhong, now, dienMoi, nuocMoi);
                 String errCs = chiSoDAO.luuHoacCapNhat(cs);
                 if (errCs != null) {
                     JOptionPane.showMessageDialog(dlg, errCs, "Lỗi", JOptionPane.ERROR_MESSAGE);
