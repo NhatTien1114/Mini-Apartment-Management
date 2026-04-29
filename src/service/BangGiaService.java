@@ -203,6 +203,18 @@ public class BangGiaService {
             }
 
             if (trangThai == 1) {
+                // Deactivate all previous active headers of same type
+                for (GiaHeader old : headerDAO.layTheoLoai(loai)) {
+                    if (!old.getMaGiaHeader().equals(maHeader) && old.getTrangThai() == 1) {
+                        old.setTrangThai(0);
+                        LocalDate endDate = ngayBatDau.minusDays(1);
+                        if (old.getNgayKetThuc() == null || old.getNgayKetThuc().isAfter(endDate)) {
+                            old.setNgayKetThuc(endDate);
+                        }
+                        old.setGhiChu(nguoiCapNhat);
+                        headerDAO.capNhat(old);
+                    }
+                }
                 if (!updateActiveKeys(con, loai, details)) {
                     con.rollback();
                     return "Không thể cập nhật giá trị kích hoạt cho Dịch vụ / Phòng";

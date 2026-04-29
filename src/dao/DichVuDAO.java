@@ -211,20 +211,22 @@ public class DichVuDAO {
     }
 
     public void ganTatCaDichVuChoPhongNeuChuaCo(String maPhong) {
+        try (Connection con = connectDB.getConnection()) {
+            ganDichVuTrongTransaction(con, maPhong);
+        } catch (SQLException e) {
+            System.err.println("Lỗi ganTatCaDichVuChoPhongNeuChuaCo: " + e.getMessage());
+        }
+    }
+
+    public void ganDichVuTrongTransaction(Connection con, String maPhong) throws SQLException {
+        ensurePhongDichVuTable(con);
         String sqlInsertMissing = "INSERT INTO PhongDichVu(maPhong, maDichVu) "
                 + "SELECT ?, maDichVu FROM DichVu WHERE maDichVu NOT IN ('DV00','DVXE') "
                 + "AND maDichVu NOT IN (SELECT maDichVu FROM PhongDichVu WHERE maPhong = ?)";
-
-        try (Connection con = connectDB.getConnection()) {
-            ensurePhongDichVuTable(con);
-
-            try (PreparedStatement psIns = con.prepareStatement(sqlInsertMissing)) {
-                psIns.setString(1, maPhong);
-                psIns.setString(2, maPhong);
-                psIns.executeUpdate();
-            }
-        } catch (SQLException e) {
-            System.err.println("Lỗi ganTatCaDichVuChoPhongNeuChuaCo: " + e.getMessage());
+        try (PreparedStatement psIns = con.prepareStatement(sqlInsertMissing)) {
+            psIns.setString(1, maPhong);
+            psIns.setString(2, maPhong);
+            psIns.executeUpdate();
         }
     }
 

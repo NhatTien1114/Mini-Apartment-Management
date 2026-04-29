@@ -150,6 +150,11 @@ public class TrangChu extends JFrame {
             allMenuItems.add(new MenuItem("Loại phòng", "img/icons/settings.png", 9));
         }
 
+        if ("admin@gmail.com".equalsIgnoreCase(taiKhoan.getEmail())) {
+            allMenuItems.add(MenuItem.sectionHeader("Quản trị"));
+            allMenuItems.add(new MenuItem("Tài khoản", "img/icons/user.png", 11));
+        }
+
         menuItems = allMenuItems;
 
         // Count clickable items for buttons array
@@ -260,6 +265,9 @@ public class TrangChu extends JFrame {
         if (panelIndex == 7) {
             hoaDonUI.refresh();
         }
+        if (panelIndex == 11 && quanLyTaiKhoanUI != null) {
+            quanLyTaiKhoanUI.refresh();
+        }
 
         cardLayout.show(pnlContent, String.valueOf(panelIndex));
     }
@@ -271,6 +279,7 @@ public class TrangChu extends JFrame {
     private DoanhThuUI doanhThuUI;
     private HoaDonUI hoaDonUI;
     private ChiSoDienNuocUI chiSoDienNuocUI;
+    private QuanLyTaiKhoanUI quanLyTaiKhoanUI;
 
     private JPanel createMainPanel() {
         JPanel pnlMain = new JPanel(new BorderLayout());
@@ -296,11 +305,20 @@ public class TrangChu extends JFrame {
         pnlContent.add(new DichVuUI().getPanel(), "6");
         hoaDonUI = new HoaDonUI();
         hoaDonUI.setOnInvoiceSaved(() -> refreshDoanhThuTab());
+        hoaDonUI.setOnNavigateToChiSo(() -> {
+            cardLayout.show(pnlContent, "10");
+            refreshChiSoDienNuocTab();
+        });
         pnlContent.add(hoaDonUI.getPanel(), "7");
         pnlContent.add(new BangGiaUI(taiKhoan).getPanel(), "8");
         pnlContent.add(new LoaiPhongUI().getPanel(), "9");
         chiSoDienNuocUI = new ChiSoDienNuocUI();
         pnlContent.add(chiSoDienNuocUI.getPanel(), "10");
+
+        if ("admin@gmail.com".equalsIgnoreCase(taiKhoan.getEmail())) {
+            quanLyTaiKhoanUI = new QuanLyTaiKhoanUI(taiKhoan.getEmail());
+            pnlContent.add(quanLyTaiKhoanUI.getPanel(), "11");
+        }
 
         if (hopDongUI != null) {
             hopDongUI.setOnContractCreated(() -> {

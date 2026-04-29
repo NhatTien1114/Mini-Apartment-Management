@@ -1,5 +1,7 @@
 package ui.main;
 
+import java.text.NumberFormat;
+
 import entity.Chu;
 import entity.DichVu;
 import entity.GiaDetail;
@@ -181,14 +183,26 @@ public class BangGiaUI {
         section.setBackground(AppColors.WHITE);
         section.setLayout(new BorderLayout());
 
-        JLabel lblTitle = new JLabel("  " + titleText);
-        lblTitle.setFont(FONT_BOLD);
+        // Section header with colored accent
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(new EmptyBorder(14, 14, 10, 14));
+
+        // Colored dot indicator
+        java.awt.Color dotColor = loai == 0 ? new java.awt.Color(59, 130, 246) : new java.awt.Color(16, 185, 129);
+        JLabel dot = new JLabel("\u25CF ");
+        dot.setFont(new java.awt.Font("Be Vietnam Pro", java.awt.Font.PLAIN, 16));
+        dot.setForeground(dotColor);
+        headerPanel.add(dot);
+
+        JLabel lblTitle = new JLabel(titleText);
+        lblTitle.setFont(new java.awt.Font("Be Vietnam Pro", java.awt.Font.BOLD, 15));
         lblTitle.setForeground(AppColors.SLATE_900);
-        lblTitle.setBorder(new EmptyBorder(12, 8, 8, 8));
-        section.add(lblTitle, BorderLayout.NORTH);
+        headerPanel.add(lblTitle);
+        section.add(headerPanel, BorderLayout.NORTH);
 
         DefaultTableModel model = new DefaultTableModel(
-                new String[] { "Mã bảng giá", "Người tạo", "Ngày bắt đầu", "Ngày kết thúc" }, 0) {
+                new String[] { "Mã bảng giá", "Người tạo", "Ngày bắt đầu", "Ngày kết thúc", "Trạng thái" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -250,6 +264,38 @@ public class BangGiaUI {
             }
         });
 
+        // Status badge renderer for column 4
+        table.getColumnModel().getColumn(4).setCellRenderer(new javax.swing.table.TableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                JPanel cell = new JPanel(new java.awt.GridBagLayout());
+                String status = value != null ? value.toString() : "";
+                boolean active = "Đang áp dụng".equals(status);
+                java.awt.Color badgeBg = active ? new java.awt.Color(220, 252, 231) : new java.awt.Color(241, 245, 249);
+                java.awt.Color badgeFg = active ? new java.awt.Color(22, 163, 74) : new java.awt.Color(100, 116, 139);
+                cell.setBackground(isSelected ? AppColors.PRIMARY_TINT_HOVER : (row == hoveredRow[0] ? AppColors.SLATE_50 : AppColors.WHITE));
+                cell.setBorder(new CompoundBorder(new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200), new EmptyBorder(0, 6, 0, 6)));
+
+                JLabel badge = new JLabel(status) {
+                    @Override
+                    protected void paintComponent(java.awt.Graphics g) {
+                        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+                        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(badgeBg);
+                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+                        super.paintComponent(g);
+                        g2.dispose();
+                    }
+                };
+                badge.setFont(new java.awt.Font("Be Vietnam Pro", java.awt.Font.BOLD, 11));
+                badge.setForeground(badgeFg);
+                badge.setBorder(new EmptyBorder(3, 10, 3, 10));
+                cell.add(badge);
+                return cell;
+            }
+        });
+
         // Context menu
         JPopupMenu contextMenu = new JPopupMenu();
         JMenuItem miEdit = new JMenuItem("Xem/Sửa thông tin");
@@ -305,7 +351,8 @@ public class BangGiaUI {
                     h.getMaGiaHeader(),
                     h.getGhiChu(),
                     formatDate(h.getNgayBatDau()),
-                    formatDate(h.getNgayKetThuc())
+                    formatDate(h.getNgayKetThuc()),
+                    h.getTrangThai() == 1 ? "Đang áp dụng" : "Ngừng áp dụng"
             });
         }
 
@@ -317,7 +364,8 @@ public class BangGiaUI {
                     h.getMaGiaHeader(),
                     h.getGhiChu(),
                     formatDate(h.getNgayBatDau()),
-                    formatDate(h.getNgayKetThuc())
+                    formatDate(h.getNgayKetThuc()),
+                    h.getTrangThai() == 1 ? "Đang áp dụng" : "Ngừng áp dụng"
             });
         }
     }
@@ -404,7 +452,7 @@ public class BangGiaUI {
         });
 
         for (GiaDetail d : bangGiaService.layDetailTheoHeader(header.getMaGiaHeader())) {
-            model.addRow(new Object[] { resolveTenLoai(header.getLoai(), d), d.getDonGia() });
+            model.addRow(new Object[] { resolveTenLoai(header.getLoai(), d), formatTien(d.getDonGia()) });
         }
 
         JScrollPane detailScroll = new JScrollPane(table);
@@ -573,6 +621,10 @@ public class BangGiaUI {
         try {
             batDau = parseDate(ctx.txtNgayBatDau.getText().trim(), false);
             ketThuc = parseDate(ctx.txtNgayKetThuc.getText().trim(), true);
+            // Default end date to last day of start month if blank
+            if (ketThuc == null && batDau != null) {
+                ketThuc = batDau.withDayOfMonth(batDau.lengthOfMonth());
+            }
         } catch (IllegalArgumentException ex) {
             JOptionPane.showMessageDialog(parentDlg, ex.getMessage(), "Sai định dạng", JOptionPane.WARNING_MESSAGE);
             return;
@@ -712,5 +764,11 @@ public class BangGiaUI {
             return ql.getHoTen() + " (" + ql.getMaTaiKhoan() + ")";
         }
         return taiKhoan.getEmail() + " (" + taiKhoan.getMaTaiKhoan() + ")";
+    }
+
+    private String formatTien(double value) {
+        if (value == 0) return "0 đ";
+        NumberFormat nf = NumberFormat.getNumberInstance(new java.util.Locale("vi", "VN"));
+        return nf.format((long) value) + " đ";
     }
 }

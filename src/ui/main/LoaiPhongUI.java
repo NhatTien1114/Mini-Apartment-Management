@@ -221,7 +221,7 @@ public class LoaiPhongUI {
                 owner instanceof Frame ? (Frame) owner : null,
                 editing ? "Sửa loại phòng" : "Thêm loại phòng", true);
         dlg.setUndecorated(true);
-        dlg.setSize(420, 200);
+        dlg.setSize(420, 220);
         dlg.setLocationRelativeTo(owner);
         dlg.setBackground(new Color(0, 0, 0, 0));
 
@@ -262,7 +262,7 @@ public class LoaiPhongUI {
         // FIELD
         ui.util.RoundedTextField fTen = new ui.util.RoundedTextField(6);
         fTen.setPlaceholder("Nhập tên loại phòng, Vd: Phòng Đơn");
-        fTen.setPreferredSize(new Dimension(0, 42));
+        fTen.setPreferredSize(new Dimension(0, 52));
         if (editing)
             fTen.setText(editLoaiPhong.getTenLoaiPhong());
 

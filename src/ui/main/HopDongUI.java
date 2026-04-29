@@ -76,6 +76,14 @@ public class HopDongUI {
     }
 
     public void loadDataToTable() {
+        if (table != null && table.isEditing()) {
+            table.getCellEditor().cancelCellEditing();
+        }
+        // Reset bộ lọc về mặc định
+        if (txtSearch != null)
+            txtSearch.setText("");
+        if (cboFilterHanHopDong != null)
+            cboFilterHanHopDong.setSelectedIndex(0);
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         model.setRowCount(0);
         ArrayList<HopDong> listHD = HopDongDao.getAllHopDongDangHieuLuc();
@@ -107,6 +115,13 @@ public class HopDongUI {
         } catch (Exception e) {
             return dateStr;
         }
+    }
+
+    private boolean isContractEnded(int modelRow) {
+        if (modelRow < 0 || modelRow >= model.getRowCount())
+            return false;
+        Object statusValue = model.getValueAt(modelRow, 7);
+        return statusValue != null && "Đã Kết Thúc".equalsIgnoreCase(statusValue.toString().trim());
     }
 
     public JPanel getPanel() {
@@ -212,6 +227,22 @@ public class HopDongUI {
         contextMenu.add(miMembers);
         contextMenu.add(miThanhToan);
         contextMenu.add(miDelete);
+        contextMenu.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) {
+                int selectedRow = table.getSelectedRow();
+                int modelRow = selectedRow >= 0 ? table.convertRowIndexToModel(selectedRow) : -1;
+                miThanhToan.setVisible(!isContractEnded(modelRow));
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) {
+            }
+
+            @Override
+            public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) {
+            }
+        });
 
         miMembers.addActionListener(e -> {
             int row = table.getSelectedRow();
@@ -290,9 +321,13 @@ public class HopDongUI {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r, int c) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                int modelRow = t.convertRowIndexToModel(r);
+                Object statusObj = model.getValueAt(modelRow, 7);
+                boolean expired = statusObj != null && statusObj.toString().contains("Kết Thúc");
+                Color rowBg = expired ? new Color(248, 248, 250) : MAU_CARD;
                 l.setFont(new Font("Inter", Font.PLAIN, 13));
-                l.setForeground(MAU_TEXT);
-                l.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
+                l.setForeground(expired ? new Color(180, 180, 190) : MAU_TEXT);
+                l.setBackground(isSel ? t.getSelectionBackground() : rowBg);
                 l.setOpaque(true);
                 if (c == 0) l.setFont(new Font("Inter", Font.BOLD, 13));
                 else if (c == 1) { l.setForeground(new Color(37, 99, 235)); l.setFont(new Font("Inter", Font.BOLD, 13)); }
@@ -307,7 +342,7 @@ public class HopDongUI {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r, int c) {
                 JPanel pnl = new JPanel(new GridBagLayout());
-                pnl.setBackground(isSel ? t.getSelectionBackground() : MAU_CARD);
+                pnl.setBackground(isSel ? t.getSelectionBackground() : rowBg);
                 pnl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
                 String status = v != null ? v.toString() : "";
                 boolean active = status.equals("Đang hiệu lực");
@@ -543,9 +578,10 @@ public class HopDongUI {
         String[] maKhachHangRef = {null};
         if (isEdit && row != -1) {
             String roomCode = model.getValueAt(row, 1).toString();
+            String maHopDong = model.getValueAt(row, 0).toString();
             txtPhongEdit.setText(roomCode);
             txtKhach.setText(model.getValueAt(row, 2).toString());
-            KhachHang kh = HDKHdao.getNguoiDaiDienByMaPhong(roomCode);
+            KhachHang kh = HDKHdao.getNguoiDaiDienByMaHopDong(maHopDong);
             if (kh != null) {
                 maKhachHangRef[0] = kh.getMaKhachHang();
                 txtSoDienThoai.setText(kh.getSoDienThoai());

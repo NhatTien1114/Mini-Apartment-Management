@@ -57,6 +57,16 @@ public class PhuongTienUI {
         root.add(createTableCard(), BorderLayout.CENTER);
 
         loadData();
+        root.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentShown(java.awt.event.ComponentEvent e) {
+                if (txtTimKiem != null)
+                    txtTimKiem.setText("");
+                if (cboFilterType != null)
+                    cboFilterType.setSelectedIndex(0);
+                loadData();
+            }
+        });
         return root;
     }
 
@@ -391,7 +401,17 @@ public class PhuongTienUI {
         KhachHangItem selectedKH = null;
         cboKhachHang.addItem(new KhachHangItem("", "-- Chọn Khách Hàng --"));
         for (KhachHang kh : dskh) {
-            KhachHangItem item = new KhachHangItem(kh.getMaKhachHang(), kh.getMaKhachHang() + " - " + kh.getHoTen());
+            String maPhongHienTai = khachHangDAO.layMaPhongHienTaiTheoKhach(kh.getMaKhachHang());
+            boolean dangO = maPhongHienTai != null && !maPhongHienTai.trim().isEmpty();
+            boolean laKhachDangSua = isEdit && kh.getMaKhachHang().equals(editPt.getMaKhachHang());
+            if (!dangO && !laKhachDangSua) {
+                continue;
+            }
+
+            KhachHangItem item = new KhachHangItem(
+                    kh.getMaKhachHang(),
+                    kh.getMaKhachHang() + " - " + kh.getHoTen(),
+                    dangO ? maPhongHienTai.trim() : (editPt.getMaPhong() != null ? editPt.getMaPhong() : ""));
             cboKhachHang.addItem(item);
             if (isEdit && kh.getMaKhachHang().equals(editPt.getMaKhachHang())) {
                 selectedKH = item;
@@ -440,7 +460,7 @@ public class PhuongTienUI {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 KhachHangItem it = (KhachHangItem) cboKhachHang.getSelectedItem();
                 if (it != null && !it.maKH.isEmpty()) {
-                    String p = khachHangDAO.layMaPhongHienTaiTheoKhach(it.maKH);
+                    String p = it.maPhong;
                     txtPhong.setText(p != null ? p : "");
                 } else {
                     txtPhong.setText("");
@@ -468,7 +488,8 @@ public class PhuongTienUI {
 
         JButton btnLuu = primaryButton.makePrimaryButton(isEdit ? "Cập nhật" : "Lưu dữ liệu");
         btnLuu.addActionListener(e -> {
-            String bsx = txtBienSo.getText().trim();
+            String bsx = normalizeBienSo(txtBienSo.getText().trim());
+            txtBienSo.setText(bsx);
             if (bsx.isEmpty()) {
                 ValidationPopup.show(txtBienSo, "Biển số xe không được để trống");
                 txtBienSo.requestFocus();
@@ -546,7 +567,7 @@ public class PhuongTienUI {
 
     /**
      * Auto-format biển số: uppercase letters, auto-insert dash and dot.
-     * Format: 59A-123.45 (5 số) hoặc 59A1-1234 (4 số)
+     * Format: 59Y3-628.59 (đuôi 5 số) hoặc 60B2-1234 (đuôi 4 số)
      */
     private void applyBienSoFilter(JTextField field) {
         ((AbstractDocument) field.getDocument()).setDocumentFilter(new DocumentFilter() {
@@ -600,6 +621,48 @@ public class PhuongTienUI {
         });
     }
 
+    private String normalizeBienSo(String input) {
+        String cleaned = input == null ? "" : input.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        if (cleaned.length() > 9) {
+            cleaned = cleaned.substring(0, 9);
+        }
+
+        int prefixLen = 0;
+        if (cleaned.length() >= 4
+                && Character.isDigit(cleaned.charAt(0))
+                && Character.isDigit(cleaned.charAt(1))
+                && Character.isLetter(cleaned.charAt(2))
+                && Character.isDigit(cleaned.charAt(3))) {
+            prefixLen = 4;
+        } else if (cleaned.length() >= 3
+                && Character.isDigit(cleaned.charAt(0))
+                && Character.isDigit(cleaned.charAt(1))
+                && Character.isLetter(cleaned.charAt(2))) {
+            prefixLen = 3;
+        }
+
+        if (prefixLen == 0 || cleaned.length() <= prefixLen) {
+            return cleaned;
+        }
+
+        String prefix = cleaned.substring(0, prefixLen);
+        String suffix = cleaned.substring(prefixLen);
+        if (suffix.length() > 5) {
+            suffix = suffix.substring(0, 5);
+        }
+
+        if (suffix.length() <= 4) {
+            return prefix + "-" + suffix;
+        }
+        return prefix + "-" + suffix.substring(0, 3) + "." + suffix.substring(3);
+    }
+
+    private boolean isBienSoHopLe(String bsx) {
+        return bsx != null
+                && (bsx.matches("^\\d{2}[A-Z]\\d-\\d{3}\\.\\d{2}$")
+                        || bsx.matches("^\\d{2}[A-Z]\\d-\\d{4}$"));
+    }
+
     private JButton makeOutlineButton(String text) {
         JButton btn = new JButton(text);
         btn.setFont(FONT_PLAIN);
@@ -627,10 +690,16 @@ public class PhuongTienUI {
     static class KhachHangItem {
         String maKH;
         String display;
+        String maPhong;
 
         KhachHangItem(String maKH, String display) {
+            this(maKH, display, "");
+        }
+
+        KhachHangItem(String maKH, String display, String maPhong) {
             this.maKH = maKH;
             this.display = display;
+            this.maPhong = maPhong;
         }
 
         @Override
