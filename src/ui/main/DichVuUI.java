@@ -377,6 +377,10 @@ public class DichVuUI {
                 if (dao.insertDichVu(newDv)) {
                     MessageDialog.show(dlg, "Thêm Thành Công", "Đã tạo dịch vụ mới.",
                             MessageDialog.MessageType.SUCCESS);
+                    ui.util.NotificationManager.getInstance().addNotification(
+                            "📋 Dịch vụ mới",
+                            "Dịch vụ \"" + ten + "\" chưa được cập nhật giá. Vui lòng cập nhật tại Bảng giá."
+                    );
                     dlg.dispose();
                     loadTable();
                 } else {

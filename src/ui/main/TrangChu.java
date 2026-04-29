@@ -14,6 +14,11 @@ import javax.swing.border.EmptyBorder;
 import ui.util.AppColors;
 import ui.util.PhongInfo;
 import ui.util.RoundedPanel;
+import dao.HopDongDAO;
+import entity.HopDong;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import ui.util.NotificationManager;
 
 public class TrangChu extends JFrame {
     // ===== LAYOUT COMPONENTS =====
@@ -37,6 +42,8 @@ public class TrangChu extends JFrame {
     private JLabel lblTen;
     private JLabel lblRole;
     private final QuanLyPhongDAO phongDAO = new QuanLyPhongDAO();
+
+    private final NotificationManager notifManager = NotificationManager.getInstance();
 
     private static class MenuItem {
         String name;
@@ -427,8 +434,112 @@ public class TrangChu extends JFrame {
 
         pnlHeader.add(pnlUser, BorderLayout.WEST);
 
-        JPanel pnlRightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JPanel pnlRightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
         pnlRightButtons.setBackground(Color.WHITE);
+
+        // Load contract expiry notifications into NotificationManager
+        List<HopDong> expiringContracts = new HopDongDAO().getAllHopDongDangHieuLuc().stream()
+                .filter(hd -> {
+                    long days = ChronoUnit.DAYS.between(LocalDate.now(), hd.getNgayKetThuc());
+                    return days >= 0 && days <= 30;
+                })
+                .collect(Collectors.toList());
+        for (HopDong hd : expiringContracts) {
+            long days = ChronoUnit.DAYS.between(LocalDate.now(), hd.getNgayKetThuc());
+            notifManager.addNotification(
+                    "⚠ Hợp đồng sắp hết hạn",
+                    "Phòng " + hd.getPhong().getMaPhong() + " sẽ hết hạn sau " + days + " ngày."
+            );
+        }
+
+        JLabel lblBell = new JLabel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                int count = notifManager.getUnviewedCount();
+                if (count > 0) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setColor(Color.RED);
+                    int d = 18;
+                    int x = getWidth() - d;
+                    int y = 0;
+                    g2.fillOval(x, y, d, d);
+                    g2.setColor(Color.WHITE);
+                    g2.setFont(new Font("Arial", Font.BOLD, 10));
+                    String txt = count > 99 ? "99+" : String.valueOf(count);
+                    FontMetrics fm = g2.getFontMetrics();
+                    int tw = fm.stringWidth(txt);
+                    int th = fm.getAscent();
+                    g2.drawString(txt, x + (d - tw) / 2, y + (d + th) / 2 - 2);
+                    g2.dispose();
+                }
+            }
+        };
+        ImageIcon iconBell = new ImageIcon("img/icons/bell.png");
+        Image imgBell = iconBell.getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+        lblBell.setIcon(new ImageIcon(imgBell));
+        lblBell.setPreferredSize(new Dimension(34, 34));
+        lblBell.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Listen for new notifications and repaint the bell badge
+        notifManager.addListener(n -> {
+            SwingUtilities.invokeLater(() -> lblBell.repaint());
+        });
+
+        lblBell.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                notifManager.markAsViewed();
+                lblBell.repaint();
+
+                JPopupMenu popupNotifications = new JPopupMenu();
+                JPanel pnlNotifs = new JPanel();
+                pnlNotifs.setLayout(new BoxLayout(pnlNotifs, BoxLayout.Y_AXIS));
+                pnlNotifs.setBackground(Color.WHITE);
+
+                List<NotificationManager.Notification> allNotifs = notifManager.getNotifications();
+                if (allNotifs.isEmpty()) {
+                    JLabel lblNoNotif = new JLabel("Không có thông báo mới.");
+                    lblNoNotif.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+                    lblNoNotif.setBorder(new EmptyBorder(10, 15, 10, 15));
+                    pnlNotifs.add(lblNoNotif);
+                } else {
+                    for (NotificationManager.Notification notif : allNotifs) {
+                        JPanel itemPanel = new JPanel(new BorderLayout());
+                        itemPanel.setBackground(Color.WHITE);
+                        itemPanel.setBorder(new EmptyBorder(8, 15, 8, 15));
+
+                        JLabel lblTitle = new JLabel(notif.title);
+                        lblTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 12));
+                        lblTitle.setForeground(new Color(37, 99, 235));
+
+                        JLabel lblMsg = new JLabel("<html>" + notif.message + "</html>");
+                        lblMsg.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
+                        lblMsg.setForeground(new Color(71, 85, 105));
+
+                        itemPanel.add(lblTitle, BorderLayout.NORTH);
+                        itemPanel.add(lblMsg, BorderLayout.CENTER);
+                        itemPanel.setMaximumSize(new Dimension(280, 60));
+                        pnlNotifs.add(itemPanel);
+
+                        JSeparator sep = new JSeparator();
+                        sep.setMaximumSize(new Dimension(Short.MAX_VALUE, 1));
+                        pnlNotifs.add(sep);
+                    }
+                }
+
+                JScrollPane scrollNotifs = new JScrollPane(pnlNotifs);
+                scrollNotifs.setBorder(null);
+                int notifH = allNotifs.isEmpty() ? 50 : allNotifs.size() * 65;
+                scrollNotifs.setPreferredSize(new Dimension(300, Math.min(350, notifH)));
+                scrollNotifs.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+                popupNotifications.add(scrollNotifs);
+                popupNotifications.show(lblBell, -300 + lblBell.getWidth(), lblBell.getHeight() + 5);
+            }
+        });
+
+        pnlRightButtons.add(lblBell);
 
         if ("admin@gmail.com".equalsIgnoreCase(taiKhoan.getEmail())) {
             JButton btnTaoTaiKhoan = new ui.util.PrimaryButton().makePrimaryButton("Tạo Tài Khoản");

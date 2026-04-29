@@ -117,6 +117,9 @@ public class HoaDonUI {
 
     private String currentMonth = "";
     private String currentYear = "";
+    private boolean isUpdatingTable = false;
+    private boolean isUpdatingCheckbox = false;
+    private JCheckBox chkSelectAll;
 
     private Runnable onInvoiceSaved;
     private Runnable onNavigateToChiSo;
@@ -350,11 +353,29 @@ public class HoaDonUI {
         lblSummaryTitle.setFont(FONT_BOLD);
         lblSummaryTitle.setForeground(MAU_TEXT);
 
+        JPanel pnlAction = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        pnlAction.setOpaque(false);
+
+        chkSelectAll = new JCheckBox("Chọn tất cả");
+        chkSelectAll.setFont(FONT_BOLD);
+        chkSelectAll.setForeground(new Color(37, 99, 235));
+        chkSelectAll.setOpaque(false);
+        chkSelectAll.setFocusPainted(false);
+        chkSelectAll.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        chkSelectAll.addActionListener(e -> {
+            if (isUpdatingCheckbox) return;
+            boolean isChecked = chkSelectAll.isSelected();
+            selectAll(isChecked, chkSelectAll);
+        });
+
         JButton btnExport = primaryButton.makePrimaryButton("Xuất hóa đơn");
         btnExport.addActionListener(e -> exportCurrentMonth());
 
+        pnlAction.add(chkSelectAll);
+        pnlAction.add(btnExport);
+
         head.add(lblSummaryTitle, BorderLayout.WEST);
-        head.add(btnExport, BorderLayout.EAST);
+        head.add(pnlAction, BorderLayout.EAST);
 
         summaryModel = new DefaultTableModel(new String[] {}, 0);
 
@@ -600,7 +621,8 @@ public class HoaDonUI {
             String maHopDongEx = hdkhDAO.getMaHopDongHienTai(existS.maPhong);
             ed.maHopDong = maHopDongEx != null ? maHopDongEx : "";
             ChiSoDienNuoc curFullEx = (maHopDongEx != null)
-                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongEx, m, y) : null;
+                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongEx, m, y)
+                    : null;
             if (curFullEx != null) {
                 int[] old = dienNuocDAO.layChiSoTruocNgay(maHopDongEx, curFullEx.getNgayGhi());
                 ed.soDienCu = old[0];
@@ -646,13 +668,14 @@ public class HoaDonUI {
             String maHopDongNew = hdkhDAO.getMaHopDongHienTai(room.getMaPhong());
             d.maHopDong = maHopDongNew != null ? maHopDongNew : "";
             ChiSoDienNuoc curFull = (maHopDongNew != null)
-                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongNew, m, y) : null;
+                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongNew, m, y)
+                    : null;
             d.hasChiSoMoi = curFull != null;
             int[] old = curFull != null
                     ? dienNuocDAO.layChiSoTruocNgay(maHopDongNew, curFull.getNgayGhi())
                     : (maHopDongNew != null
                             ? dienNuocDAO.layChiSoThangTruoc(maHopDongNew, m, y)
-                            : new int[]{0, 0});
+                            : new int[] { 0, 0 });
             d.soDienCu = old[0];
             d.soNuocCu = old[1];
             d.soDienMoi = curFull == null ? old[0] : curFull.getSoDien();
@@ -712,7 +735,8 @@ public class HoaDonUI {
             if (d.isExisting || d.hasChiSoMoi)
                 continue;
             int ngayHD = LocalDate.of(nam, thang, 1).lengthOfMonth();
-            ChiSoDienNuoc chiSo = new ChiSoDienNuoc(d.maHopDong, LocalDate.of(nam, thang, ngayHD), d.soDienMoi, d.soNuocMoi);
+            ChiSoDienNuoc chiSo = new ChiSoDienNuoc(d.maHopDong, LocalDate.of(nam, thang, ngayHD), d.soDienMoi,
+                    d.soNuocMoi);
             String err = dienNuocDAO.luuHoacCapNhat(chiSo);
             if (err != null) {
                 loiChiSo.add(d.maPhong + ": " + err);
@@ -764,6 +788,52 @@ public class HoaDonUI {
         }
     }
 
+    private void updateSelectAllCheckboxState() {
+        if (chkSelectAll == null || currentDrafts == null || currentDrafts.isEmpty()) return;
+        boolean allChecked = true;
+        for (MonthlyRoomDraft d : currentDrafts) {
+            if (!d.daThanhToan) {
+                allChecked = false;
+                break;
+            }
+        }
+        isUpdatingCheckbox = true;
+        chkSelectAll.setSelected(allChecked);
+        isUpdatingCheckbox = false;
+    }
+
+    private void selectAll(boolean paid, JCheckBox chk) {
+        if (summaryModel == null || currentDrafts == null || currentDrafts.isEmpty()) {
+            if (chk != null) chk.setSelected(!paid);
+            return;
+        }
+        
+        String action = paid ? "Xác nhận ĐÃ thanh toán" : "Hủy thanh toán";
+        int confirm = JOptionPane.showConfirmDialog(
+                summaryCard,
+                action + " cho TẤT CẢ các phòng trong danh sách?",
+                "Xác nhận thay đổi hàng loạt",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+                
+        if (confirm != JOptionPane.YES_OPTION) {
+            if (chk != null) chk.setSelected(!paid);
+            return;
+        }
+
+        isUpdatingTable = true;
+        for (int i = 0; i < currentDrafts.size(); i++) {
+            MonthlyRoomDraft d = currentDrafts.get(i);
+            d.daThanhToan = paid;
+            summaryModel.setValueAt(paid, i, 6);
+            if (d.isExisting && !currentMonth.isEmpty() && !currentYear.isEmpty()) {
+                hdDAO.updateTrangThaiThanhToan(d.maPhong,
+                        Integer.parseInt(currentMonth), Integer.parseInt(currentYear), paid);
+            }
+        }
+        isUpdatingTable = false;
+    }
+
     private void rebuildSummaryModel() {
         summaryModel = new DefaultTableModel(
                 new String[] { "Phòng", "Tiền phòng", "Điện", "Nước", "Dịch vụ", "Tổng", "Đã TT" },
@@ -782,11 +852,10 @@ public class HoaDonUI {
                 return col == 6 ? Boolean.class : Object.class;
             }
         };
-        final boolean[] updating = { false };
         summaryModel.addTableModelListener(e -> {
             int row = e.getFirstRow(), col = e.getColumn();
             if (row >= 0 && row < currentDrafts.size() && col == 6) {
-                if (updating[0])
+                if (isUpdatingTable)
                     return;
                 boolean paid = Boolean.TRUE.equals(summaryModel.getValueAt(row, 6));
                 MonthlyRoomDraft d = currentDrafts.get(row);
@@ -798,9 +867,9 @@ public class HoaDonUI {
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.QUESTION_MESSAGE);
                 if (confirm != JOptionPane.YES_OPTION) {
-                    updating[0] = true;
+                    isUpdatingTable = true;
                     summaryModel.setValueAt(!paid, row, 6);
-                    updating[0] = false;
+                    isUpdatingTable = false;
                     return;
                 }
                 d.daThanhToan = paid;
@@ -808,6 +877,7 @@ public class HoaDonUI {
                     hdDAO.updateTrangThaiThanhToan(d.maPhong,
                             Integer.parseInt(currentMonth), Integer.parseInt(currentYear), paid);
                 }
+                updateSelectAllCheckboxState();
             }
         });
         tblSummary.setModel(summaryModel);
@@ -879,6 +949,7 @@ public class HoaDonUI {
                     d.daThanhToan
             });
         }
+        updateSelectAllCheckboxState();
     }
 
     private void loadCurrentMonthDrafts() {
@@ -918,7 +989,8 @@ public class HoaDonUI {
             String maHopDongDB = hdkhDAO.getMaHopDongHienTai(s.maPhong);
             d.maHopDong = maHopDongDB != null ? maHopDongDB : "";
             ChiSoDienNuoc curFullDB = (maHopDongDB != null)
-                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongDB, m, y) : null;
+                    ? dienNuocDAO.layChiSoTheoThangVoiNgay(maHopDongDB, m, y)
+                    : null;
             if (curFullDB != null) {
                 int[] old = dienNuocDAO.layChiSoTruocNgay(maHopDongDB, curFullDB.getNgayGhi());
                 d.soDienCu = old[0];
@@ -1464,18 +1536,16 @@ public class HoaDonUI {
         int stt = 1;
 
         rows.add(new Object[] { String.valueOf(stt++), "Tiền phòng", "1", formatMoney(d.tienPhong), ROW_NORMAL });
-        rows.add(new Object[] { "", "Chỉ số mới", String.valueOf(d.soDienMoi), "", ROW_SUBITEM });
-        rows.add(new Object[] { "", "Chỉ số cũ", String.valueOf(d.soDienCu), "", ROW_SUBITEM });
-        rows.add(new Object[] { "", "Số kWh điện tiêu thụ", String.valueOf(d.tieuThuDien()), "", ROW_SUBITEM_BOLD });
         rows.add(new Object[] {
                 String.valueOf(stt++),
-                "Thành tiền (×" + NF.format((long) d.donGiaDien) + " VND)",
-                "",
+                "Tiền điện (×" + NF.format((long) d.donGiaDien) + " VND)",
+                d.tieuThuDien() + " kWh",
                 formatMoney((double) d.tieuThuDien() * d.donGiaDien),
                 ROW_NORMAL
         });
         rows.add(new Object[] {
-                String.valueOf(stt++), "Tiền nước",
+                String.valueOf(stt++),
+                "Tiền nước (×" + NF.format((long) d.donGiaNuoc) + " VND)",
                 d.tieuThuNuoc() + " m³",
                 formatMoney((double) d.tieuThuNuoc() * d.donGiaNuoc),
                 ROW_NORMAL
