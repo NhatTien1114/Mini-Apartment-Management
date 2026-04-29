@@ -669,6 +669,11 @@ public class BangGiaUI {
         }
 
         loadTongHop();
+        String loaiText = ctx.loai == 0 ? "phòng" : "dịch vụ";
+        ui.util.NotificationManager.getInstance().addNotification(
+                "✅ Cập nhật giá",
+                "Đã cập nhật bảng giá " + loaiText + " thành công."
+        );
         JOptionPane.showMessageDialog(parentDlg, "Đã lưu bảng giá", "Thành công", JOptionPane.INFORMATION_MESSAGE);
         parentDlg.dispose();
     }

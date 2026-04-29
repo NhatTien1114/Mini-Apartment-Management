@@ -473,7 +473,62 @@ public class HopDongDAO {
         return Double.parseDouble(digits);
     }
 
-    public boolean ketThucHopDong(String maHopDong, String maPhong) {
+    public boolean capNhatThongTinHopDong(String maHopDong, String ngayBatDau, String ngayKetThuc,
+            double tienCoc, double tienThueThang, String maKhachHang,
+            String hoTen, String soDienThoai, String cccd, String diaChi) {
+        Connection con = null;
+        try {
+            con = connectDB.getConnection();
+            con.setAutoCommit(false);
+
+            // Cập nhật hợp đồng
+            String sqlHD = "UPDATE HopDong SET ngayBatDau = ?, ngayKetThuc = ?, tienCoc = ?, tienThueThang = ? WHERE maHopDong = ?";
+            try (PreparedStatement ps = con.prepareStatement(sqlHD)) {
+                ps.setDate(1, java.sql.Date.valueOf(convertToSqlDate(ngayBatDau)));
+                ps.setDate(2, java.sql.Date.valueOf(convertToSqlDate(ngayKetThuc)));
+                ps.setDouble(3, tienCoc);
+                ps.setDouble(4, tienThueThang);
+                ps.setString(5, maHopDong);
+                ps.executeUpdate();
+            }
+
+            // Cập nhật khách hàng
+            if (maKhachHang != null && !maKhachHang.isEmpty()) {
+                String sqlKH = "UPDATE KhachHang SET hoTen = ?, soDienThoai = ?, soCCCD = ?, diaChiThuongTru = ? WHERE maKhachHang = ?";
+                try (PreparedStatement ps = con.prepareStatement(sqlKH)) {
+                    ps.setString(1, hoTen);
+                    ps.setString(2, soDienThoai);
+                    ps.setString(3, cccd);
+                    ps.setString(4, diaChi);
+                    ps.setString(5, maKhachHang);
+                    ps.executeUpdate();
+                }
+            }
+
+            con.commit();
+            return true;
+        } catch (Exception e) {
+            lastError = e.getMessage();
+            e.printStackTrace();
+            try {
+                if (con != null) con.rollback();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            return false;
+        } finally {
+            try {
+                if (con != null) {
+                    con.setAutoCommit(true);
+                    con.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public boolean ketThucHopDong(String maHopDong, String maPhong, LocalDate ngayKetThuc) {
         Connection con = null;
         try {
             con = connectDB.getConnection();
@@ -486,9 +541,10 @@ public class HopDongDAO {
                 ps.executeUpdate();
             }
 
-            String sqlHD = "UPDATE HopDong SET trangThai = 0 WHERE maHopDong = ?";
+            String sqlHD = "UPDATE HopDong SET trangThai = 0, ngayKetThuc = ? WHERE maHopDong = ?";
             try (PreparedStatement ps = con.prepareStatement(sqlHD)) {
-                ps.setString(1, maHopDong);
+                ps.setObject(1, ngayKetThuc);
+                ps.setString(2, maHopDong);
                 ps.executeUpdate();
             }
 

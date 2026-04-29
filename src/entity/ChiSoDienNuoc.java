@@ -1,55 +1,54 @@
 package entity;
 
+import java.time.LocalDate;
+
 public class ChiSoDienNuoc {
-    private String maPhong;
-    private int thang;
-    private int nam;
-    private int ngay;
+    private int maChiSo;
+    private String maHopDong;
+    private LocalDate ngayGhi;
     private int soDien;
     private int soNuoc;
 
     public ChiSoDienNuoc() {
     }
 
-    public ChiSoDienNuoc(String maPhong, int thang, int nam, int ngay, int soDien, int soNuoc) {
-        this.maPhong = maPhong;
-        this.thang = thang;
-        this.nam = nam;
-        this.ngay = ngay;
+    public ChiSoDienNuoc(String maHopDong, LocalDate ngayGhi, int soDien, int soNuoc) {
+        this.maHopDong = maHopDong;
+        this.ngayGhi = ngayGhi;
         this.soDien = soDien;
         this.soNuoc = soNuoc;
     }
 
-    public String getMaPhong() {
-        return maPhong;
+    public ChiSoDienNuoc(int maChiSo, String maHopDong, LocalDate ngayGhi, int soDien, int soNuoc) {
+        this.maChiSo = maChiSo;
+        this.maHopDong = maHopDong;
+        this.ngayGhi = ngayGhi;
+        this.soDien = soDien;
+        this.soNuoc = soNuoc;
     }
 
-    public void setMaPhong(String maPhong) {
-        this.maPhong = maPhong;
+    public int getMaChiSo() {
+        return maChiSo;
     }
 
-    public int getThang() {
-        return thang;
+    public void setMaChiSo(int maChiSo) {
+        this.maChiSo = maChiSo;
     }
 
-    public void setThang(int thang) {
-        this.thang = thang;
+    public String getMaHopDong() {
+        return maHopDong;
     }
 
-    public int getNam() {
-        return nam;
+    public void setMaHopDong(String maHopDong) {
+        this.maHopDong = maHopDong;
     }
 
-    public void setNam(int nam) {
-        this.nam = nam;
+    public LocalDate getNgayGhi() {
+        return ngayGhi;
     }
 
-    public int getNgay() {
-        return ngay;
-    }
-
-    public void setNgay(int ngay) {
-        this.ngay = ngay;
+    public void setNgayGhi(LocalDate ngayGhi) {
+        this.ngayGhi = ngayGhi;
     }
 
     public int getSoDien() {
@@ -70,8 +69,7 @@ public class ChiSoDienNuoc {
 
     @Override
     public String toString() {
-        return "ChiSoDienNuoc{maPhong=" + maPhong + ", thang=" + thang
-                + ", nam=" + nam + ", ngay=" + ngay
-                + ", soDien=" + soDien + ", soNuoc=" + soNuoc + "}";
+        return "ChiSoDienNuoc{maChiSo=" + maChiSo + ", maHopDong=" + maHopDong
+                + ", ngayGhi=" + ngayGhi + ", soDien=" + soDien + ", soNuoc=" + soNuoc + "}";
     }
 }
