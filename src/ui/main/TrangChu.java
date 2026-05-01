@@ -448,32 +448,41 @@ public class TrangChu extends JFrame {
             long days = ChronoUnit.DAYS.between(LocalDate.now(), hd.getNgayKetThuc());
             notifManager.addNotification(
                     "⚠ Hợp đồng sắp hết hạn",
-                    "Phòng " + hd.getPhong().getMaPhong() + " sẽ hết hạn sau " + days + " ngày."
-            );
+                    "Phòng " + hd.getPhong().getMaPhong() + " sẽ hết hạn sau " + days + " ngày.",
+                    "contract_expiry");
         }
 
         JLabel lblBell = new JLabel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                int count = notifManager.getUnviewedCount();
-                if (count > 0) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setColor(Color.RED);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int unviewedCount = notifManager.getUnviewedCount();
+                if (unviewedCount > 0) {
+                    // Hiển thị SỐ thông báo chưa xem
+                    g2.setColor(new Color(239, 68, 68));
                     int d = 18;
                     int x = getWidth() - d;
                     int y = 0;
                     g2.fillOval(x, y, d, d);
                     g2.setColor(Color.WHITE);
                     g2.setFont(new Font("Arial", Font.BOLD, 10));
-                    String txt = count > 99 ? "99+" : String.valueOf(count);
+                    String txt = unviewedCount > 99 ? "99+" : String.valueOf(unviewedCount);
                     FontMetrics fm = g2.getFontMetrics();
                     int tw = fm.stringWidth(txt);
                     int th = fm.getAscent();
                     g2.drawString(txt, x + (d - tw) / 2, y + (d + th) / 2 - 2);
-                    g2.dispose();
+                } else if (notifManager.hasUnresolved()) {
+                    // Đã xem nhưng vẫn còn thông báo chưa xử lý → chấm đỏ nhỏ
+                    g2.setColor(new Color(239, 68, 68));
+                    int d = 10;
+                    int x = getWidth() - d;
+                    int y = 2;
+                    g2.fillOval(x, y, d, d);
                 }
+                g2.dispose();
             }
         };
         ImageIcon iconBell = new ImageIcon("img/icons/bell.png");
@@ -486,6 +495,11 @@ public class TrangChu extends JFrame {
         notifManager.addListener(n -> {
             SwingUtilities.invokeLater(() -> lblBell.repaint());
         });
+        notifManager.addRemovedListener(() -> {
+            SwingUtilities.invokeLater(() -> lblBell.repaint());
+        });
+
+        final String currentRole = this.role;
 
         lblBell.addMouseListener(new MouseAdapter() {
             @Override
@@ -494,48 +508,166 @@ public class TrangChu extends JFrame {
                 lblBell.repaint();
 
                 JPopupMenu popupNotifications = new JPopupMenu();
+                popupNotifications.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
+
                 JPanel pnlNotifs = new JPanel();
                 pnlNotifs.setLayout(new BoxLayout(pnlNotifs, BoxLayout.Y_AXIS));
                 pnlNotifs.setBackground(Color.WHITE);
 
+                // Header of popup
+                JPanel headerPanel = new JPanel(new BorderLayout());
+                headerPanel.setBackground(new Color(248, 250, 252));
+                headerPanel.setBorder(new EmptyBorder(10, 14, 10, 14));
+                headerPanel.setMaximumSize(new Dimension(340, 40));
+                JLabel lblHeader = new JLabel("Thông báo");
+                lblHeader.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
+                lblHeader.setForeground(new Color(15, 23, 42));
+                headerPanel.add(lblHeader, BorderLayout.WEST);
+                pnlNotifs.add(headerPanel);
+
+                // Filter notifications based on role
                 List<NotificationManager.Notification> allNotifs = notifManager.getNotifications();
-                if (allNotifs.isEmpty()) {
-                    JLabel lblNoNotif = new JLabel("Không có thông báo mới.");
-                    lblNoNotif.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
-                    lblNoNotif.setBorder(new EmptyBorder(10, 15, 10, 15));
-                    pnlNotifs.add(lblNoNotif);
+                List<NotificationManager.Notification> filteredNotifs = new java.util.ArrayList<>();
+                for (NotificationManager.Notification notif : allNotifs) {
+                    // service_price notifications only for Chủ
+                    if ("service_price".equals(notif.type) && !"Chủ".equals(currentRole)) {
+                        continue;
+                    }
+                    filteredNotifs.add(notif);
+                }
+
+                if (filteredNotifs.isEmpty()) {
+                    JPanel emptyPanel = new JPanel(new BorderLayout());
+                    emptyPanel.setBackground(Color.WHITE);
+                    emptyPanel.setBorder(new EmptyBorder(24, 14, 24, 14));
+                    emptyPanel.setMaximumSize(new Dimension(340, 70));
+                    JLabel lblEmpty = new JLabel("Không có thông báo nào", SwingConstants.CENTER);
+                    lblEmpty.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+                    lblEmpty.setForeground(new Color(148, 163, 184));
+                    emptyPanel.add(lblEmpty, BorderLayout.CENTER);
+                    pnlNotifs.add(emptyPanel);
                 } else {
-                    for (NotificationManager.Notification notif : allNotifs) {
-                        JPanel itemPanel = new JPanel(new BorderLayout());
+                    for (int idx = 0; idx < filteredNotifs.size(); idx++) {
+                        NotificationManager.Notification notif = filteredNotifs.get(idx);
+                        final int notifIdx = idx;
+
+                        JPanel itemPanel = new JPanel(new BorderLayout(8, 0));
                         itemPanel.setBackground(Color.WHITE);
-                        itemPanel.setBorder(new EmptyBorder(8, 15, 8, 15));
+                        itemPanel.setBorder(BorderFactory.createCompoundBorder(
+                                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
+                                new EmptyBorder(10, 14, 10, 10)));
+                        itemPanel.setMaximumSize(new Dimension(340, 80));
+
+                        // Left color bar based on type
+                        Color barColor;
+                        String icon;
+                        if ("contract_expiry".equals(notif.type)) {
+                            barColor = new Color(245, 158, 11);
+                            icon = "⚠";
+                        } else if ("service_price".equals(notif.type)) {
+                            barColor = new Color(59, 130, 246);
+                            icon = "📋";
+                        } else if ("price_update".equals(notif.type)) {
+                            barColor = new Color(34, 197, 94);
+                            icon = "✅";
+                        } else {
+                            barColor = new Color(148, 163, 184);
+                            icon = "🔔";
+                        }
+
+                        JPanel colorBar = new JPanel();
+                        colorBar.setBackground(barColor);
+                        colorBar.setPreferredSize(new Dimension(4, 0));
+                        itemPanel.add(colorBar, BorderLayout.WEST);
+
+                        // Content
+                        JPanel contentPanel = new JPanel();
+                        contentPanel.setOpaque(false);
+                        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
 
                         JLabel lblTitle = new JLabel(notif.title);
                         lblTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 12));
-                        lblTitle.setForeground(new Color(37, 99, 235));
+                        lblTitle.setForeground(new Color(15, 23, 42));
+                        lblTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-                        JLabel lblMsg = new JLabel("<html>" + notif.message + "</html>");
-                        lblMsg.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 12));
-                        lblMsg.setForeground(new Color(71, 85, 105));
+                        JLabel lblMsg = new JLabel("<html><div style='width:220px'>" + notif.message + "</div></html>");
+                        lblMsg.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 11));
+                        lblMsg.setForeground(new Color(100, 116, 139));
+                        lblMsg.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-                        itemPanel.add(lblTitle, BorderLayout.NORTH);
-                        itemPanel.add(lblMsg, BorderLayout.CENTER);
-                        itemPanel.setMaximumSize(new Dimension(280, 60));
+                        // Timestamp
+                        long elapsed = System.currentTimeMillis() - notif.timestamp;
+                        String timeAgo;
+                        if (elapsed < 60_000) timeAgo = "Vừa xong";
+                        else if (elapsed < 3_600_000) timeAgo = (elapsed / 60_000) + " phút trước";
+                        else if (elapsed < 86_400_000) timeAgo = (elapsed / 3_600_000) + " giờ trước";
+                        else timeAgo = (elapsed / 86_400_000) + " ngày trước";
+
+                        JLabel lblTime = new JLabel(timeAgo);
+                        lblTime.setFont(new Font("Be Vietnam Pro", Font.ITALIC, 10));
+                        lblTime.setForeground(new Color(148, 163, 184));
+                        lblTime.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+                        contentPanel.add(lblTitle);
+                        contentPanel.add(Box.createVerticalStrut(2));
+                        contentPanel.add(lblMsg);
+                        contentPanel.add(Box.createVerticalStrut(2));
+                        contentPanel.add(lblTime);
+                        itemPanel.add(contentPanel, BorderLayout.CENTER);
+
+                        // Dismiss button
+                        JLabel btnDismiss = new JLabel("✕");
+                        btnDismiss.setFont(new Font("Inter", Font.BOLD, 12));
+                        btnDismiss.setForeground(new Color(203, 213, 225));
+                        btnDismiss.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                        btnDismiss.setBorder(new EmptyBorder(0, 4, 0, 4));
+                        btnDismiss.setVerticalAlignment(SwingConstants.TOP);
+                        btnDismiss.addMouseListener(new MouseAdapter() {
+                            @Override
+                            public void mouseClicked(MouseEvent ev) {
+                                notifManager.removeNotification(notif);
+                                popupNotifications.setVisible(false);
+                                lblBell.repaint();
+                            }
+
+                            @Override
+                            public void mouseEntered(MouseEvent ev) {
+                                btnDismiss.setForeground(new Color(239, 68, 68));
+                            }
+
+                            @Override
+                            public void mouseExited(MouseEvent ev) {
+                                btnDismiss.setForeground(new Color(203, 213, 225));
+                            }
+                        });
+                        itemPanel.add(btnDismiss, BorderLayout.EAST);
+
+                        // Hover effect for item
+                        itemPanel.addMouseListener(new MouseAdapter() {
+                            @Override
+                            public void mouseEntered(MouseEvent ev) {
+                                itemPanel.setBackground(new Color(248, 250, 252));
+                                contentPanel.setBackground(new Color(248, 250, 252));
+                            }
+
+                            @Override
+                            public void mouseExited(MouseEvent ev) {
+                                itemPanel.setBackground(Color.WHITE);
+                                contentPanel.setBackground(Color.WHITE);
+                            }
+                        });
+
                         pnlNotifs.add(itemPanel);
-
-                        JSeparator sep = new JSeparator();
-                        sep.setMaximumSize(new Dimension(Short.MAX_VALUE, 1));
-                        pnlNotifs.add(sep);
                     }
                 }
 
                 JScrollPane scrollNotifs = new JScrollPane(pnlNotifs);
                 scrollNotifs.setBorder(null);
-                int notifH = allNotifs.isEmpty() ? 50 : allNotifs.size() * 65;
-                scrollNotifs.setPreferredSize(new Dimension(300, Math.min(350, notifH)));
+                int notifH = filteredNotifs.isEmpty() ? 120 : Math.min(400, filteredNotifs.size() * 85 + 45);
+                scrollNotifs.setPreferredSize(new Dimension(340, notifH));
                 scrollNotifs.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
                 popupNotifications.add(scrollNotifs);
-                popupNotifications.show(lblBell, -300 + lblBell.getWidth(), lblBell.getHeight() + 5);
+                popupNotifications.show(lblBell, -340 + lblBell.getWidth(), lblBell.getHeight() + 5);
             }
         });
 
@@ -957,26 +1089,257 @@ public class TrangChu extends JFrame {
 
     private void showRoomContextMenu(JPanel card, Phong phong, int x, int y) {
         JPopupMenu popupMenu = new JPopupMenu();
+        String trangThai = phong.getTrangThai() != null ? phong.getTrangThai().getTen() : "";
 
         JMenuItem menuItemInfo = new JMenuItem("Xem thông tin phòng");
+        menuItemInfo.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
         menuItemInfo.addActionListener(e -> {
             new PhongInfo(phong.getMaPhong()).showDialog();
             refreshTrangChuTab();
         });
+        popupMenu.add(menuItemInfo);
 
-        JMenuItem menuItemContract = new JMenuItem("Tạo hợp đồng");
-        menuItemContract.addActionListener(e -> {
-            // Switch to contract page and show add contract form with pre-selected room
-            selectMenuTab(1); // Switch to contract page (panel "1")
-            if (hopDongUI != null) {
-                hopDongUI.showAddContractForm(phong.getMaPhong());
+        if ("Đang sửa".equals(trangThai)) {
+            popupMenu.addSeparator();
+            JMenuItem menuItemTrong = new JMenuItem("Chuyển sang Trống");
+            menuItemTrong.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+            menuItemTrong.setForeground(new Color(22, 163, 74));
+            menuItemTrong.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(
+                        this,
+                        "Chuyển phòng " + phong.getMaPhong() + " sang trạng thái Trống?",
+                        "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    if (phongDAO.updateTrangThaiPhong(phong.getMaPhong(), "Trống")) {
+                        ui.util.MessageDialog.show(this, "Thành công",
+                                "Phòng " + phong.getMaPhong() + " đã chuyển sang trạng thái Trống.",
+                                ui.util.MessageDialog.MessageType.SUCCESS);
+                        refreshTrangChuTab();
+                    } else {
+                        ui.util.MessageDialog.show(this, "Lỗi",
+                                "Không thể cập nhật trạng thái phòng.",
+                                ui.util.MessageDialog.MessageType.ERROR);
+                    }
+                }
+            });
+            popupMenu.add(menuItemTrong);
+        }
+
+        if ("Trống".equals(trangThai)) {
+            popupMenu.addSeparator();
+            JMenuItem menuItemCoc = new JMenuItem("Đặt cọc phòng");
+            menuItemCoc.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+            menuItemCoc.setForeground(new Color(37, 99, 235));
+            menuItemCoc.addActionListener(e -> showDatCocDialog(phong));
+            popupMenu.add(menuItemCoc);
+
+            JMenuItem menuItemContract = new JMenuItem("Tạo hợp đồng");
+            menuItemContract.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+            menuItemContract.addActionListener(ev -> {
+                selectMenuTab(1);
+                if (hopDongUI != null) {
+                    hopDongUI.showAddContractForm(phong.getMaPhong());
+                }
+            });
+            popupMenu.add(menuItemContract);
+        }
+
+        if ("Đã cọc".equals(trangThai)) {
+            popupMenu.addSeparator();
+            JMenuItem menuItemContract = new JMenuItem("Lập hợp đồng");
+            menuItemContract.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
+            menuItemContract.setForeground(new Color(37, 99, 235));
+            menuItemContract.addActionListener(ev -> {
+                dao.DatCocDAO datCocDAO = new dao.DatCocDAO();
+                entity.DatCoc dc = datCocDAO.layTheoPhong(phong.getMaPhong());
+                selectMenuTab(1);
+                if (hopDongUI != null) {
+                    if (dc != null) {
+                        hopDongUI.showAddContractForm(phong.getMaPhong(), dc.getHoTen(), dc.getSoCCCD());
+                    } else {
+                        hopDongUI.showAddContractForm(phong.getMaPhong());
+                    }
+                }
+            });
+            popupMenu.add(menuItemContract);
+        }
+
+        popupMenu.show(card, x, y);
+    }
+
+    private void showDatCocDialog(Phong phong) {
+        JDialog dlg = new JDialog(this, "Đặt cọc phòng " + phong.getMaPhong(), true);
+        dlg.setUndecorated(true);
+        dlg.setSize(440, 340);
+        dlg.setLocationRelativeTo(this);
+        dlg.setBackground(new Color(0, 0, 0, 0));
+
+        ui.util.RoundedPanel root = new ui.util.RoundedPanel(16);
+        root.setLayout(new BorderLayout(0, 12));
+        root.setBackground(Color.WHITE);
+        root.setBorder(new EmptyBorder(20, 24, 20, 24));
+
+        // Header
+        JPanel headerRow = new JPanel(new BorderLayout());
+        headerRow.setOpaque(false);
+        JLabel dlgTitle = new JLabel("Đặt cọc phòng " + phong.getMaPhong());
+        dlgTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 17));
+        dlgTitle.setForeground(new Color(15, 23, 42));
+
+        JLabel btnClose = new JLabel("✕");
+        btnClose.setFont(new Font("Inter", Font.BOLD, 14));
+        btnClose.setForeground(new Color(148, 163, 184));
+        btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnClose.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) { dlg.dispose(); }
+            public void mouseEntered(MouseEvent e) { btnClose.setForeground(new Color(239, 68, 68)); }
+            public void mouseExited(MouseEvent e) { btnClose.setForeground(new Color(148, 163, 184)); }
+        });
+        headerRow.add(dlgTitle, BorderLayout.WEST);
+        headerRow.add(btnClose, BorderLayout.EAST);
+        root.add(headerRow, BorderLayout.NORTH);
+
+        // Form fields
+        JPanel formPanel = new JPanel(new GridLayout(4, 2, 12, 10));
+        formPanel.setOpaque(false);
+
+        JTextField txtHoTen = new JTextField();
+        txtHoTen.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+        txtHoTen.setBorder(BorderFactory.createCompoundBorder(
+                new javax.swing.border.LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(8, 10, 8, 10)));
+
+        JTextField txtSoTien = new JTextField();
+        txtSoTien.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+        txtSoTien.setBorder(BorderFactory.createCompoundBorder(
+                new javax.swing.border.LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(8, 10, 8, 10)));
+
+        JTextField txtCCCD = new JTextField();
+        txtCCCD.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+        txtCCCD.setBorder(BorderFactory.createCompoundBorder(
+                new javax.swing.border.LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(8, 10, 8, 10)));
+
+        // Số ngày giữ chỗ (hiển thị cố định 3 ngày)
+        JPanel soNgayPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        soNgayPanel.setOpaque(false);
+        JLabel lblSoNgay = new JLabel("3 ngày");
+        lblSoNgay.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
+        lblSoNgay.setForeground(new Color(245, 158, 11));
+        JLabel lblNote = new JLabel("(sau 3 ngày sẽ chuyển về Trống)");
+        lblNote.setFont(new Font("Be Vietnam Pro", Font.ITALIC, 11));
+        lblNote.setForeground(new Color(148, 163, 184));
+        soNgayPanel.add(lblSoNgay);
+        soNgayPanel.add(lblNote);
+
+        formPanel.add(makeFormLabel("Họ tên *"));
+        formPanel.add(txtHoTen);
+        formPanel.add(makeFormLabel("Số tiền cọc *"));
+        formPanel.add(txtSoTien);
+        formPanel.add(makeFormLabel("Số CCCD/CMND *"));
+        formPanel.add(txtCCCD);
+        formPanel.add(makeFormLabel("Thời gian giữ chỗ"));
+        formPanel.add(soNgayPanel);
+
+        root.add(formPanel, BorderLayout.CENTER);
+
+        // Buttons
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        btnRow.setOpaque(false);
+
+        JButton btnCancel = new JButton("Hủy");
+        btnCancel.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+        btnCancel.setPreferredSize(new Dimension(80, 36));
+        btnCancel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnCancel.addActionListener(e -> dlg.dispose());
+
+        JButton btnSave = new ui.util.PrimaryButton().makePrimaryButton("Đặt cọc");
+        btnSave.addActionListener(e -> {
+            String hoTen = txtHoTen.getText().trim();
+            String soTien = txtSoTien.getText().trim();
+            String cccd = txtCCCD.getText().trim();
+
+            if (hoTen.isEmpty()) {
+                ui.util.ValidationPopup.show(txtHoTen, "Họ tên không được để trống!");
+                return;
+            }
+            if (soTien.isEmpty()) {
+                ui.util.ValidationPopup.show(txtSoTien, "Số tiền cọc không được để trống!");
+                return;
+            }
+            if (cccd.isEmpty() || (!cccd.matches("\\d{9}") && !cccd.matches("\\d{12}"))) {
+                ui.util.ValidationPopup.show(txtCCCD, "CCCD phải có 12 số hoặc CMND 9 số!");
+                return;
+            }
+
+            double tien;
+            try {
+                tien = Double.parseDouble(soTien.replace(",", "").replace(".", ""));
+            } catch (NumberFormatException ex) {
+                ui.util.ValidationPopup.show(txtSoTien, "Số tiền không hợp lệ!");
+                return;
+            }
+
+            entity.DatCoc dc = new entity.DatCoc();
+            dc.setMaPhong(phong.getMaPhong());
+            dc.setHoTen(hoTen);
+            dc.setSoCCCD(cccd);
+            dc.setSoTien(tien);
+            dc.setNgayDatCoc(LocalDate.now());
+            dc.setSoNgay(3);
+
+            dao.DatCocDAO datCocDAO = new dao.DatCocDAO();
+            if (datCocDAO.them(dc)) {
+                phongDAO.updateTrangThaiPhong(phong.getMaPhong(), "Đã cọc");
+                ui.util.MessageDialog.show(dlg, "Thành công",
+                        "Đã đặt cọc phòng " + phong.getMaPhong() + " thành công.\n"
+                        + "Giữ chỗ trong 3 ngày.",
+                        ui.util.MessageDialog.MessageType.SUCCESS);
+                dlg.dispose();
+                refreshTrangChuTab();
+            } else {
+                ui.util.MessageDialog.show(dlg, "Lỗi",
+                        "Không thể đặt cọc phòng.",
+                        ui.util.MessageDialog.MessageType.ERROR);
             }
         });
 
-        popupMenu.add(menuItemInfo);
-        popupMenu.add(menuItemContract);
+        btnRow.add(btnCancel);
+        btnRow.add(btnSave);
+        root.add(btnRow, BorderLayout.SOUTH);
 
-        popupMenu.show(card, x, y);
+        // Glass pane overlay
+        Component oldGlassPane = this.getGlassPane();
+        JPanel overlay = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(new Color(0, 0, 0, 110));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        overlay.setOpaque(false);
+        overlay.addMouseListener(new MouseAdapter() {});
+        this.setGlassPane(overlay);
+        overlay.setVisible(true);
+
+        dlg.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                overlay.setVisible(false);
+                TrangChu.this.setGlassPane(oldGlassPane);
+            }
+        });
+
+        dlg.setContentPane(root);
+        dlg.setVisible(true);
+    }
+
+    private JLabel makeFormLabel(String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+        lbl.setForeground(new Color(71, 85, 105));
+        return lbl;
     }
 
     private Color mauTheoLoaiPhong(entity.LoaiPhong loaiPhong) {

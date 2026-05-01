@@ -539,7 +539,8 @@ public class HoaDonUI {
             // Kiểm tra chỉ số điện/nước
             java.util.List<String> phongChuaNhap = new java.util.ArrayList<>();
             for (Phong p : phongDAO.getAllPhongDaThue()) {
-                if (dienNuocDAO.layChiSoTheoThangVoiNgay(p.getMaPhong(), m, y) == null) {
+                String maHD = hdkhDAO.getMaHopDongHienTai(p.getMaPhong());
+                if (maHD == null || dienNuocDAO.layChiSoTheoThangVoiNgay(maHD, m, y) == null) {
                     phongChuaNhap.add(p.getMaPhong());
                 }
             }

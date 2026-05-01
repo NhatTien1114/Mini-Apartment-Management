@@ -379,7 +379,8 @@ public class DichVuUI {
                             MessageDialog.MessageType.SUCCESS);
                     ui.util.NotificationManager.getInstance().addNotification(
                             "📋 Dịch vụ mới",
-                            "Dịch vụ \"" + ten + "\" chưa được cập nhật giá. Vui lòng cập nhật tại Bảng giá."
+                            "Dịch vụ \"" + ten + "\" chưa được cập nhật giá. Vui lòng cập nhật tại Bảng giá.",
+                            "service_price"
                     );
                     dlg.dispose();
                     loadTable();

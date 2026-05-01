@@ -111,12 +111,35 @@ public class DichVuDAO {
     }
 
     public boolean deleteDichVu(String maDichVu) {
-        String sql = "DELETE FROM DichVu WHERE maDichVu = ?";
+        String sqlDelPhongDV = "DELETE FROM PhongDichVu WHERE maDichVu = ?";
+        String sqlClearGiaDetail = "UPDATE GiaDetail SET maDichVu = NULL WHERE maDichVu = ?";
+        String sqlDelDichVu = "DELETE FROM DichVu WHERE maDichVu = ?";
         try {
             Connection con = connectDB.getConnection();
-            try (PreparedStatement ps = con.prepareStatement(sql)) {
-                ps.setString(1, maDichVu);
-                return ps.executeUpdate() > 0;
+            con.setAutoCommit(false);
+            try {
+                // 1. Xóa liên kết PhongDichVu
+                try (PreparedStatement ps = con.prepareStatement(sqlDelPhongDV)) {
+                    ps.setString(1, maDichVu);
+                    ps.executeUpdate();
+                }
+                // 2. Xóa tham chiếu GiaDetail
+                try (PreparedStatement ps = con.prepareStatement(sqlClearGiaDetail)) {
+                    ps.setString(1, maDichVu);
+                    ps.executeUpdate();
+                }
+                // 3. Xóa dịch vụ
+                try (PreparedStatement ps = con.prepareStatement(sqlDelDichVu)) {
+                    ps.setString(1, maDichVu);
+                    int rows = ps.executeUpdate();
+                    con.commit();
+                    return rows > 0;
+                }
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            } finally {
+                con.setAutoCommit(true);
             }
         } catch (SQLException e) {
             System.err.println("Lỗi delete DichVu: " + e.getMessage());

@@ -409,8 +409,9 @@ public class BangGiaUI {
 
     private void showDetailDialog(GiaHeader header) {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+        boolean isActive = header.getTrangThai() == 1;
         JDialog dlg = new JDialog(owner, "Chi tiết " + header.getMaGiaHeader(), Dialog.ModalityType.APPLICATION_MODAL);
-        dlg.setSize(620, 430);
+        dlg.setSize(660, isActive ? 530 : 430);
         dlg.setLocationRelativeTo(owner);
 
         JPanel root = new JPanel(new BorderLayout(0, 12));
@@ -421,10 +422,27 @@ public class BangGiaUI {
         lblTitle.setFont(new java.awt.Font("Be Vietnam Pro", java.awt.Font.BOLD, 17));
         root.add(lblTitle, BorderLayout.NORTH);
 
+        // Load existing details
+        List<GiaDetail> existingDetails = bangGiaService.layDetailTheoHeader(header.getMaGiaHeader());
+        int existingCount = existingDetails.size();
+
+        // Load combo options for adding new rows
+        List<ComboItem> comboItems = new ArrayList<>();
+        if (header.getLoai() == 0) {
+            for (BangGiaService.LoaiPhongItem p : bangGiaService.layDanhSachLoaiPhong()) {
+                comboItems.add(new ComboItem(String.valueOf(p.getId()), p.getTen()));
+            }
+        } else {
+            for (DichVu d : bangGiaService.layDanhSachDichVu()) {
+                comboItems.add(new ComboItem(d.getMaDichVu(), d.toString()));
+            }
+        }
+
         DefaultTableModel model = new DefaultTableModel(new String[] { "Loại", "Đơn giá" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false;
+                // Chỉ cho sửa các dòng mới (sau existingCount)
+                return isActive && row >= existingCount;
             }
         };
         JTable table = new JTable(model);
@@ -443,16 +461,31 @@ public class BangGiaUI {
                 if (isSelected) {
                     setBackground(AppColors.PRIMARY_TINT_HOVER);
                     setForeground(AppColors.SLATE_900);
+                } else if (row >= existingCount) {
+                    // Dòng mới - highlight nhẹ
+                    setBackground(new java.awt.Color(239, 246, 255));
+                    setForeground(AppColors.SLATE_900);
                 } else {
                     setBackground(AppColors.WHITE);
                     setForeground(AppColors.SLATE_900);
+                }
+                // Render ComboItem nicely
+                if (value instanceof ComboItem item) {
+                    setText(item.toString());
                 }
                 return this;
             }
         });
 
-        for (GiaDetail d : bangGiaService.layDetailTheoHeader(header.getMaGiaHeader())) {
+        // Load existing data
+        for (GiaDetail d : existingDetails) {
             model.addRow(new Object[] { resolveTenLoai(header.getLoai(), d), formatTien(d.getDonGia()) });
+        }
+
+        // Set up combo editor for column 0 on new rows only
+        if (isActive && !comboItems.isEmpty()) {
+            JComboBox<ComboItem> combo = new JComboBox<>(comboItems.toArray(ComboItem[]::new));
+            table.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(combo));
         }
 
         JScrollPane detailScroll = new JScrollPane(table);
@@ -460,35 +493,148 @@ public class BangGiaUI {
         detailScroll.getViewport().setBackground(AppColors.WHITE);
         root.add(detailScroll, BorderLayout.CENTER);
 
-        JPanel south = new JPanel(new BorderLayout(8, 0));
+        JPanel south = new JPanel(new BorderLayout(8, 8));
         south.setBackground(AppColors.WHITE);
 
-        JTextField txtNgayKetThuc = new JTextField(formatDate(header.getNgayKetThuc()));
-        south.add(makeField("Ngày kết thúc (yyyy-MM-dd, để trống nếu không có)", txtNgayKetThuc), BorderLayout.CENTER);
+        if (isActive) {
+            // Action buttons for adding/removing new rows
+            JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            actionRow.setBackground(AppColors.WHITE);
 
-        JButton btnSave = primaryButtonHelper.makePrimaryButton("Lưu ngày kết thúc");
-        btnSave.addActionListener(e -> {
-            LocalDate ketThuc;
-            try {
-                ketThuc = parseDate(txtNgayKetThuc.getText().trim(), true);
-            } catch (IllegalArgumentException ex) {
-                JOptionPane.showMessageDialog(dlg, ex.getMessage(), "Sai định dạng", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+            JButton btnAddRow = new JButton("+ Thêm dòng mới");
+            btnAddRow.setFont(FONT_PLAIN);
+            btnAddRow.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+            btnAddRow.addActionListener(e -> {
+                if (comboItems.isEmpty()) {
+                    JOptionPane.showMessageDialog(dlg, "Không có dữ liệu để chọn", "Thông báo",
+                            JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                model.addRow(new Object[] { comboItems.get(0), "0" });
+            });
 
-            String err = bangGiaService.capNhatNgayKetThuc(header.getMaGiaHeader(), ketThuc, tenNguoiCapNhat);
-            if (err != null) {
-                JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            loadTongHop();
-            dlg.dispose();
-        });
+            JButton btnDeleteRow = new JButton("Xóa dòng mới");
+            btnDeleteRow.setFont(FONT_PLAIN);
+            btnDeleteRow.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+            btnDeleteRow.addActionListener(e -> {
+                int row = table.getSelectedRow();
+                if (row >= existingCount) {
+                    model.removeRow(row);
+                } else if (row >= 0) {
+                    JOptionPane.showMessageDialog(dlg, "Không thể xóa dòng giá đã tồn tại.",
+                            "Thông báo", JOptionPane.WARNING_MESSAGE);
+                }
+            });
 
-        JPanel btnWrap = new JPanel(new BorderLayout());
-        btnWrap.setBackground(AppColors.WHITE);
-        btnWrap.add(btnSave, BorderLayout.EAST);
-        south.add(btnWrap, BorderLayout.SOUTH);
+            actionRow.add(btnAddRow);
+            actionRow.add(btnDeleteRow);
+            south.add(actionRow, BorderLayout.NORTH);
+
+            // Save button
+            JButton btnSave = primaryButtonHelper.makePrimaryButton("Lưu thay đổi");
+            btnSave.addActionListener(e -> {
+                if (table.isEditing()) {
+                    table.getCellEditor().stopCellEditing();
+                }
+
+                // Only process if there are new rows
+                if (model.getRowCount() <= existingCount) {
+                    JOptionPane.showMessageDialog(dlg, "Không có thay đổi mới.", "Thông báo",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+
+                // Build full list: existing + new
+                List<BangGiaService.LuuChiTietItem> items = new ArrayList<>();
+
+                // Add existing items back
+                for (GiaDetail d : existingDetails) {
+                    String ma;
+                    if (header.getLoai() == 0) {
+                        ma = String.valueOf(d.getLoaiPhong());
+                    } else {
+                        ma = d.getMaDichVu();
+                    }
+                    items.add(new BangGiaService.LuuChiTietItem(ma, d.getDonGia()));
+                }
+
+                // Add new items
+                for (int i = existingCount; i < model.getRowCount(); i++) {
+                    Object typeVal = model.getValueAt(i, 0);
+                    ComboItem combo2 = null;
+                    if (typeVal instanceof ComboItem item) {
+                        combo2 = item;
+                    } else if (typeVal != null) {
+                        String text = typeVal.toString();
+                        for (ComboItem ci : comboItems) {
+                            if (ci.toString().equals(text) || ci.getValue().equals(text)) {
+                                combo2 = ci;
+                                break;
+                            }
+                        }
+                    }
+                    if (combo2 == null) {
+                        JOptionPane.showMessageDialog(dlg, "Dòng " + (i + 1) + " chưa chọn loại.",
+                                "Thiếu dữ liệu", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+
+                    double donGia;
+                    try {
+                        donGia = parseDonGia(model.getValueAt(i, 1));
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(dlg, "Đơn giá dòng " + (i + 1) + " không hợp lệ.",
+                                "Sai dữ liệu", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    items.add(new BangGiaService.LuuChiTietItem(combo2.getValue(), donGia));
+                }
+
+                String err = bangGiaService.luuChiTiet(header.getMaGiaHeader(), header.getLoai(), items, tenNguoiCapNhat);
+                if (err != null) {
+                    JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                loadTongHop();
+                JOptionPane.showMessageDialog(dlg, "Đã lưu thay đổi thành công.", "Thành công",
+                        JOptionPane.INFORMATION_MESSAGE);
+                dlg.dispose();
+            });
+
+            JPanel btnWrap = new JPanel(new BorderLayout());
+            btnWrap.setBackground(AppColors.WHITE);
+            btnWrap.add(btnSave, BorderLayout.EAST);
+            south.add(btnWrap, BorderLayout.SOUTH);
+        } else {
+            // Non-active: just show end date editing
+            JTextField txtNgayKetThuc = new JTextField(formatDate(header.getNgayKetThuc()));
+            south.add(makeField("Ngày kết thúc (yyyy-MM-dd, để trống nếu không có)", txtNgayKetThuc), BorderLayout.CENTER);
+
+            JButton btnSave = primaryButtonHelper.makePrimaryButton("Lưu ngày kết thúc");
+            btnSave.addActionListener(e -> {
+                LocalDate ketThuc;
+                try {
+                    ketThuc = parseDate(txtNgayKetThuc.getText().trim(), true);
+                } catch (IllegalArgumentException ex) {
+                    JOptionPane.showMessageDialog(dlg, ex.getMessage(), "Sai định dạng", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                String err = bangGiaService.capNhatNgayKetThuc(header.getMaGiaHeader(), ketThuc, tenNguoiCapNhat);
+                if (err != null) {
+                    JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                loadTongHop();
+                dlg.dispose();
+            });
+
+            JPanel btnWrap = new JPanel(new BorderLayout());
+            btnWrap.setBackground(AppColors.WHITE);
+            btnWrap.add(btnSave, BorderLayout.EAST);
+            south.add(btnWrap, BorderLayout.SOUTH);
+        }
 
         root.add(south, BorderLayout.SOUTH);
         dlg.setContentPane(root);
