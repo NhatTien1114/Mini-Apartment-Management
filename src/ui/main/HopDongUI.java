@@ -3,7 +3,6 @@ package ui.main;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.print.*;
-import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -133,14 +132,14 @@ public class HopDongUI {
         pnlRoot = new JPanel(new BorderLayout(0, 24));
         pnlRoot.setBorder(new EmptyBorder(32, 32, 32, 32));
         pnlRoot.setBackground(MAU_NEN);
-        
+
         pnlRoot.addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentShown(java.awt.event.ComponentEvent e) {
                 loadDataToTable();
             }
         });
-        
+
         table = new JTable();
         JPanel pnlHeader = new JPanel(new BorderLayout());
         pnlHeader.setOpaque(false);
@@ -398,7 +397,7 @@ public class HopDongUI {
                 pnl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)));
                 String status = v != null ? v.toString() : "";
                 boolean active = status.toLowerCase().contains("hiệu lực");
-                
+
                 Color bg;
                 Color fg = Color.WHITE;
                 if (expired) {
@@ -507,13 +506,27 @@ public class HopDongUI {
         showContractForm(false, -1, preselectedMaPhong);
     }
 
+    private String prefillHoTen = null;
+    private String prefillCccd = null;
+
+    public void showAddContractForm(String preselectedMaPhong, String hoTen, String cccd) {
+        this.prefillHoTen = hoTen;
+        this.prefillCccd = cccd;
+        showContractForm(false, -1, preselectedMaPhong);
+    }
+
     private TableCellRenderer boldPaddedRenderer() {
         return new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object v, boolean sel, boolean foc, int r, int c) {
                 super.getTableCellRendererComponent(t, v, sel, foc, r, c);
+                int modelRow = t.convertRowIndexToModel(r);
+                Object statusObj = model.getValueAt(modelRow, 7);
+                boolean expired = statusObj != null && statusObj.toString().contains("Kết Thúc");
                 setFont(FONT_BOLD);
-                setForeground(AppColors.SLATE_900);
+                setForeground(expired ? new Color(180, 180, 190) : AppColors.SLATE_900);
+                setBackground(sel ? t.getSelectionBackground() : (expired ? new Color(248, 248, 250) : MAU_CARD));
+                setOpaque(true);
                 setBorder(BorderFactory.createCompoundBorder(
                         new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200), new EmptyBorder(0, 16, 0, 8)));
                 return this;
@@ -588,6 +601,12 @@ public class HopDongUI {
         pnlGrid.setOpaque(false);
 
         ArrayList<Phong> dsPhongTrong = PhongDAO.getAllPhongTrong();
+        // Thêm cả phòng đã cọc vào danh sách tạo hợp đồng
+        for (Phong p : PhongDAO.layTatCa()) {
+            if (p.getTrangThai() != null && "Đã cọc".equals(p.getTrangThai().getTen())) {
+                dsPhongTrong.add(p);
+            }
+        }
         String[] roomOptions = new String[dsPhongTrong.size()];
         Map<String, Long> roomPriceByCode = new HashMap<>();
         for (int i = 0; i < dsPhongTrong.size(); i++) {
@@ -652,6 +671,16 @@ public class HopDongUI {
             }
         }
         roomListener.actionPerformed(null);
+
+        // Pre-fill deposit info if available
+        if (!isEdit && prefillHoTen != null && !prefillHoTen.isEmpty()) {
+            txtKhach.setText(prefillHoTen);
+        }
+        if (!isEdit && prefillCccd != null && !prefillCccd.isEmpty()) {
+            txtCccd.setText(prefillCccd);
+        }
+        prefillHoTen = null;
+        prefillCccd = null;
 
         String[] maKhachHangRef = { null };
         if (isEdit && row != -1) {
@@ -816,8 +845,7 @@ public class HopDongUI {
                         txtKhach.getText().trim(),
                         txtSoDienThoai.getText().trim(),
                         txtCccd.getText().trim(),
-                        txtDiaChi.getText().trim()
-                );
+                        txtDiaChi.getText().trim());
                 if (success) {
                     loadDataToTable();
                     showToast("Cập nhật hợp đồng thành công");
@@ -1646,11 +1674,7 @@ public class HopDongUI {
 
     private void addDocFillIndent(JPanel doc, String label, String value, Font font, int indent) {
         String safeVal = value != null ? value : "";
-        String dots = " ................................................................................";
-        int maxDots = Math.max(5, 50 - label.length() - safeVal.length());
-        String filling = dots.substring(0, Math.min(maxDots, dots.length()));
-        JLabel lbl = new JLabel("<html>" + label + " :" + filling + "<b>" + safeVal + "</b>"
-                + filling.substring(0, Math.min(8, filling.length())) + "</html>");
+        JLabel lbl = new JLabel("<html>" + label + ": <b>" + safeVal + "</b></html>");
         lbl.setFont(font);
         lbl.setForeground(MAU_TEXT);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
