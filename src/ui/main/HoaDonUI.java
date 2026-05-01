@@ -1523,6 +1523,7 @@ public class HoaDonUI {
     private static final int ROW_SUBITEM_BOLD = 2;
     private static final int ROW_TOTAL = 3;
     private static final int ROW_EMPTY = 4;
+    private static final int ROW_SECTION = 5;
 
     private JPanel buildInvoicePanel(MonthlyRoomDraft d) {
         Color borderC = new Color(160, 160, 160);
@@ -1536,20 +1537,20 @@ public class HoaDonUI {
         int stt = 1;
 
         rows.add(new Object[] { String.valueOf(stt++), "Tiền phòng", "1", formatMoney(d.tienPhong), ROW_NORMAL });
-        rows.add(new Object[] {
-                String.valueOf(stt++),
-                "Tiền điện (×" + NF.format((long) d.donGiaDien) + " VND)",
-                d.tieuThuDien() + " kWh",
-                formatMoney((double) d.tieuThuDien() * d.donGiaDien),
-                ROW_NORMAL
-        });
-        rows.add(new Object[] {
-                String.valueOf(stt++),
-                "Tiền nước (×" + NF.format((long) d.donGiaNuoc) + " VND)",
-                d.tieuThuNuoc() + " m³",
-                formatMoney((double) d.tieuThuNuoc() * d.donGiaNuoc),
-                ROW_NORMAL
-        });
+
+        // Tiền điện (expanded)
+        rows.add(new Object[] { String.valueOf(stt++), "Tiền điện", "", "", ROW_SECTION });
+        rows.add(new Object[] { "", "Số cũ", String.valueOf(d.soDienCu), "", ROW_SUBITEM });
+        rows.add(new Object[] { "", "Số mới", String.valueOf(d.soDienMoi), "", ROW_SUBITEM });
+        rows.add(new Object[] { "", "Tổng số kWh tiêu thụ", String.valueOf(d.tieuThuDien()), "", ROW_SUBITEM });
+        rows.add(new Object[] { "", "Thành tiền (×" + NF.format((long) d.donGiaDien) + " VND)", "", formatMoney(d.getTienDien()), ROW_SUBITEM_BOLD });
+
+        // Tiền nước (expanded)
+        rows.add(new Object[] { String.valueOf(stt++), "Tiền nước", "", "", ROW_SECTION });
+        rows.add(new Object[] { "", "Số cũ", String.valueOf(d.soNuocCu), "", ROW_SUBITEM });
+        rows.add(new Object[] { "", "Số mới", String.valueOf(d.soNuocMoi), "", ROW_SUBITEM });
+        rows.add(new Object[] { "", "Tổng số m³ tiêu thụ", String.valueOf(d.tieuThuNuoc()), "", ROW_SUBITEM });
+        rows.add(new Object[] { "", "Thành tiền (×" + NF.format((long) d.donGiaNuoc) + " VND)", "", formatMoney(d.getTienNuoc()), ROW_SUBITEM_BOLD });
         for (ServiceOption op : d.options) {
             if (op.selected) {
                 rows.add(new Object[] { String.valueOf(stt++), op.tenDichVu, "1", formatMoney(op.donGia), ROW_NORMAL });
@@ -1577,15 +1578,14 @@ public class HoaDonUI {
 
         JTable table = new JTable(model);
         table.setFont(fNormal);
-        table.setRowHeight(28);
-        table.setShowGrid(true);
-        table.setGridColor(borderC);
+        table.setRowHeight(26);
+        table.setShowGrid(false);
         table.setIntercellSpacing(new Dimension(0, 0));
         table.setFocusable(false);
         table.setSelectionBackground(Color.WHITE);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        // Cột: STT=45, DỊCH VỤ=240, CHỈ SỐ=110, SỐ TIỀN=130
-        int[] colWidths = { 45, 240, 110, 130 };
+        // Cột: STT=40, DỊCH VỤ=230, CHỈ SỐ=120, SỐ TIỀN=135
+        int[] colWidths = { 40, 230, 120, 135 };
         for (int c = 0; c < 4; c++)
             table.getColumnModel().getColumn(c).setPreferredWidth(colWidths[c]);
 
@@ -1628,13 +1628,19 @@ public class HoaDonUI {
                     int type = rowTypes[row];
 
                     // Màu nền
-                    lbl.setBackground(type == ROW_TOTAL ? totalBg : Color.WHITE);
+                    Color subBg = new Color(248, 248, 250);
+                    Color sectionBg = new Color(232, 240, 254);
+                    if (type == ROW_TOTAL) lbl.setBackground(totalBg);
+                    else if (type == ROW_SECTION) lbl.setBackground(sectionBg);
+                    else if (type == ROW_SUBITEM || type == ROW_SUBITEM_BOLD) lbl.setBackground(subBg);
+                    else lbl.setBackground(Color.WHITE);
                     lbl.setForeground(Color.BLACK);
 
                     // Font
                     boolean bold = (type == ROW_TOTAL)
+                            || (type == ROW_SECTION)
                             || (type == ROW_NORMAL && col == 0)
-                            || (type == ROW_SUBITEM_BOLD && col == 2);
+                            || (type == ROW_SUBITEM_BOLD && (col == 1 || col == 3));
                     lbl.setFont(bold ? fBold : fNormal);
 
                     // Căn lề
@@ -1648,7 +1654,10 @@ public class HoaDonUI {
 
                     // Indent cho sub-item cột DỊCH VỤ
                     int leftPad = (col == 1 && (type == ROW_SUBITEM || type == ROW_SUBITEM_BOLD)) ? 22 : 6;
-                    lbl.setBorder(new EmptyBorder(3, leftPad, 3, 6));
+                    // Vẽ đường kẻ ô tường minh để không bị nền che khuất
+                    lbl.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createMatteBorder(0, 0, 1, col < 3 ? 1 : 0, borderC),
+                            new EmptyBorder(3, leftPad, 3, 6)));
                     lbl.setOpaque(true);
                     return lbl;
                 }
