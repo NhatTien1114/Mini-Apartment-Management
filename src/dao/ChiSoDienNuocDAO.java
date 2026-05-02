@@ -149,6 +149,54 @@ public class ChiSoDienNuocDAO {
     }
 
     /**
+     * Lấy chỉ số điện/nước gần nhất của một PHÒNG (tất cả hợp đồng, kể cả cũ).
+     * Dùng khi người mới vào ở, cần lấy chỉ số từ hợp đồng/người ở trước đó.
+     * Trả về int[]{soDien, soNuoc}, hoặc {0,0} nếu chưa có dữ liệu.
+     */
+    public int[] layChiSoGanNhatTheoPhong(String maPhong) {
+        String sql = "SELECT TOP 1 cs.soDien, cs.soNuoc FROM ChiSoDienNuoc cs "
+                + "JOIN HopDong hd ON cs.maHopDong = hd.maHopDong "
+                + "WHERE hd.maPhong = ? "
+                + "ORDER BY cs.ngayGhi DESC";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new int[]{rs.getInt("soDien"), rs.getInt("soNuoc")};
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi layChiSoGanNhatTheoPhong: " + e.getMessage());
+        }
+        return new int[]{0, 0};
+    }
+
+    /**
+     * Lấy chỉ số điện/nước gần nhất của một PHÒNG trước một ngày cụ thể
+     * (tìm qua tất cả hợp đồng kể cả đã hết hạn).
+     */
+    public int[] layChiSoGanNhatTheoPhongTruocNgay(String maPhong, LocalDate ngay) {
+        String sql = "SELECT TOP 1 cs.soDien, cs.soNuoc FROM ChiSoDienNuoc cs "
+                + "JOIN HopDong hd ON cs.maHopDong = hd.maHopDong "
+                + "WHERE hd.maPhong = ? AND cs.ngayGhi < ? "
+                + "ORDER BY cs.ngayGhi DESC";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            ps.setDate(2, Date.valueOf(ngay));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new int[]{rs.getInt("soDien"), rs.getInt("soNuoc")};
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi layChiSoGanNhatTheoPhongTruocNgay: " + e.getMessage());
+        }
+        return new int[]{0, 0};
+    }
+
+    /**
      * Lưu hoặc cập nhật chỉ số theo khóa duy nhất (maHopDong, ngayGhi).
      * Trả về null nếu thành công, chuỗi lỗi nếu thất bại.
      */

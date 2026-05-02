@@ -491,6 +491,12 @@ public class ChiSoDienNuocUI {
 
         data.ngay = ngay;
         int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(data.maHopDong, LocalDate.of(nam, thang, ngay));
+        if (chiSoCu[0] == 0 && chiSoCu[1] == 0) {
+            chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhongTruocNgay(data.maPhong, LocalDate.of(nam, thang, ngay));
+            if (chiSoCu[0] == 0 && chiSoCu[1] == 0) {
+                chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhong(data.maPhong);
+            }
+        }
         data.dienCu = chiSoCu[0];
         data.nuocCu = chiSoCu[1];
 
@@ -560,21 +566,31 @@ public class ChiSoDienNuocUI {
 
         for (Phong phong : dsPhong) {
             String maPhong = phong.getMaPhong();
-            String maHopDong = hopDongKhachHangDAO.getMaHopDongHienTai(maPhong);
+
+            // Lấy hợp đồng tại tháng đang xem (không phải hợp đồng hiện tại)
+            String maHopDong = hopDongKhachHangDAO.getMaHopDongTaiThang(maPhong, thang, nam);
             if (maHopDong == null)
                 continue;
 
-            String tenKhachHienTai = "";
-            KhachHang khHT = hopDongKhachHangDAO.getNguoiDaiDienByMaPhong(maPhong);
-            if (khHT != null)
-                tenKhachHienTai = khHT.getHoTen();
+            // Lấy tên khách đại diện tại tháng đang xem (không phải người hiện tại)
+            String tenKhachTaiThang = "";
+            KhachHang khTaiThang = hopDongKhachHangDAO.getNguoiDaiDienByMaPhongTaiThang(maPhong, thang, nam);
+            if (khTaiThang != null)
+                tenKhachTaiThang = khTaiThang.getHoTen();
+            // Fallback: lấy người đại diện hiện tại
+            if (tenKhachTaiThang.isEmpty()) {
+                KhachHang khHT = hopDongKhachHangDAO.getNguoiDaiDienByMaPhong(maPhong);
+                if (khHT != null)
+                    tenKhachTaiThang = khHT.getHoTen();
+            }
 
             java.util.List<ChiSoDienNuoc> savedForRoom = savedByHopDong.getOrDefault(maHopDong,
                     java.util.Collections.emptyList());
 
             if (!savedForRoom.isEmpty()) {
                 for (ChiSoDienNuoc cs : savedForRoom) {
-                    int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(maHopDong, cs.getNgayGhi());
+                    // Lấy chỉ số cũ: ưu tiên tuyệt đối theo lịch sử của căn phòng (đồng hồ vật lý)
+                    int[] chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhongTruocNgay(maPhong, cs.getNgayGhi());
                     int dienCu = chiSoCu[0];
                     int nuocCu = chiSoCu[1];
                     int dienMoi = cs.getSoDien();
@@ -584,7 +600,7 @@ public class ChiSoDienNuocUI {
                     int ngay = cs.getNgayGhi().getDayOfMonth();
 
                     KhachHang khTaiNgay = hopDongKhachHangDAO.getNguoiDaiDienByMaPhongTaiNgay(maPhong, cs.getNgayGhi());
-                    String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachHienTai;
+                    String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachTaiThang;
 
                     currentRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhach, ngay,
                             dienCu, dienMoi, nuocCu, nuocMoi, true));
@@ -605,7 +621,8 @@ public class ChiSoDienNuocUI {
                 HoaDonUI.RoomMonthSummary invoice = invoiceByRoom.get(maPhong);
                 if (invoice != null) {
                     LocalDate ngayGhi = LocalDate.of(nam, thang, 1);
-                    int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(maHopDong, ngayGhi);
+                    // Lấy chỉ số cũ: ưu tiên tuyệt đối theo lịch sử của căn phòng (đồng hồ vật lý)
+                    int[] chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhongTruocNgay(maPhong, ngayGhi);
                     int dienCu = chiSoCu[0];
                     int nuocCu = chiSoCu[1];
                     int dienMoi = dienCu + invoice.tieuThuDien;
@@ -616,7 +633,7 @@ public class ChiSoDienNuocUI {
                     chiSoDAO.luuHoacCapNhat(new ChiSoDienNuoc(maHopDong, ngayGhi, dienMoi, nuocMoi));
 
                     KhachHang khTaiNgay = hopDongKhachHangDAO.getNguoiDaiDienByMaPhongTaiNgay(maPhong, ngayGhi);
-                    String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachHienTai;
+                    String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachTaiThang;
 
                     currentRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhach, 1,
                             dienCu, dienMoi, nuocCu, nuocMoi, true));
@@ -633,14 +650,15 @@ public class ChiSoDienNuocUI {
                     });
                     daNhap++;
                 } else {
-                    int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(maHopDong, LocalDate.of(nam, thang, todayDay));
+                    // Chưa nhập: lấy chỉ số cũ tuyệt đối theo lịch sử căn phòng
+                    int[] chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhongTruocNgay(maPhong, LocalDate.of(nam, thang, todayDay));
                     int dienCu = chiSoCu[0];
                     int nuocCu = chiSoCu[1];
 
-                    currentRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhachHienTai, todayDay,
+                    currentRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhachTaiThang, todayDay,
                             dienCu, dienCu, nuocCu, nuocCu, false));
                     tableModel.addRow(new Object[] {
-                            maPhong, tenKhachHienTai,
+                            maPhong, tenKhachTaiThang,
                             String.valueOf(todayDay),
                             String.valueOf(dienCu),
                             String.valueOf(dienCu),

@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import ui.util.AppColors;
+import ui.util.ThemeManager;
 import ui.util.PhongInfo;
 import ui.util.RoundedPanel;
 import dao.HopDongDAO;
@@ -673,6 +674,9 @@ public class TrangChu extends JFrame {
 
         pnlRightButtons.add(lblBell);
 
+        // ===== DARK MODE TOGGLE =====
+        pnlRightButtons.add(createDarkModeToggle());
+
         if ("admin@gmail.com".equalsIgnoreCase(taiKhoan.getEmail())) {
             JButton btnTaoTaiKhoan = new ui.util.PrimaryButton().makePrimaryButton("Tạo Tài Khoản");
             btnTaoTaiKhoan.addActionListener(e -> {
@@ -693,6 +697,104 @@ public class TrangChu extends JFrame {
         pnlHeader.add(pnlRightButtons, BorderLayout.EAST);
 
         return pnlHeader;
+    }
+
+    // ================= DARK MODE TOGGLE =================
+    private JPanel createDarkModeToggle() {
+        final ThemeManager theme = ThemeManager.getInstance();
+        final int TRACK_W = 70, TRACK_H = 34, KNOB_D = 28, ARC = TRACK_H;
+        final int PADDING = (TRACK_H - KNOB_D) / 2;
+        final int LEFT_X = PADDING, RIGHT_X = TRACK_W - KNOB_D - PADDING;
+
+        // Load sun and moon icons
+        ImageIcon sunRaw = new ImageIcon("img/icons/sun.png");
+        Image sunImg = sunRaw.getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH);
+        ImageIcon sunIcon = new ImageIcon(sunImg);
+
+        ImageIcon moonRaw = new ImageIcon("img/icons/moon.png");
+        Image moonImg = moonRaw.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+        ImageIcon moonIcon = new ImageIcon(moonImg);
+
+        final float[] knobPos = { theme.isDarkMode() ? RIGHT_X : LEFT_X };
+
+        JPanel toggle = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Track background
+                boolean dark = theme.isDarkMode();
+                Color trackBg = dark ? new Color(51, 65, 85) : new Color(203, 213, 225);
+                g2.setColor(trackBg);
+                g2.fillRoundRect(0, 0, TRACK_W, TRACK_H, ARC, ARC);
+
+                // Moon icon (left side of track)
+                int moonX = PADDING + 2;
+                int moonY = (TRACK_H - 16) / 2;
+                moonIcon.paintIcon(this, g2, moonX, moonY);
+
+                // Sun icon (right side of track)
+                int sunX = TRACK_W - 18 - PADDING - 2;
+                int sunY = (TRACK_H - 18) / 2;
+                sunIcon.paintIcon(this, g2, sunX, sunY);
+
+                // Knob (sliding circle)
+                int kx = Math.round(knobPos[0]);
+                int ky = PADDING;
+                g2.setColor(Color.WHITE);
+                g2.fillOval(kx, ky, KNOB_D, KNOB_D);
+
+                // Shadow on knob
+                g2.setColor(new Color(0, 0, 0, 20));
+                g2.drawOval(kx, ky, KNOB_D, KNOB_D);
+
+                g2.dispose();
+            }
+        };
+        toggle.setOpaque(false);
+        toggle.setPreferredSize(new Dimension(TRACK_W, TRACK_H));
+        toggle.setMinimumSize(new Dimension(TRACK_W, TRACK_H));
+        toggle.setMaximumSize(new Dimension(TRACK_W, TRACK_H));
+        toggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        toggle.setToolTipText(theme.isDarkMode() ? "Chuyển sang sáng" : "Chuyển sang tối");
+
+        // Animation timer
+        final javax.swing.Timer[] animTimer = { null };
+
+        toggle.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                theme.toggle();
+                float target = theme.isDarkMode() ? RIGHT_X : LEFT_X;
+                toggle.setToolTipText(theme.isDarkMode() ? "Chuyển sang sáng" : "Chuyển sang tối");
+                
+                // Cập nhật UI ngay lập tức
+                Window w = SwingUtilities.getWindowAncestor(toggle);
+                if (w != null) {
+                    theme.applyTheme(w);
+                }
+
+                if (animTimer[0] != null && animTimer[0].isRunning()) {
+                    animTimer[0].stop();
+                }
+
+                animTimer[0] = new javax.swing.Timer(10, null);
+                animTimer[0].addActionListener(evt -> {
+                    float diff = target - knobPos[0];
+                    if (Math.abs(diff) < 1f) {
+                        knobPos[0] = target;
+                        animTimer[0].stop();
+                    } else {
+                        knobPos[0] += diff * 0.3f;
+                    }
+                    toggle.repaint();
+                });
+                animTimer[0].start();
+            }
+        });
+
+        return toggle;
     }
 
     // ================= TRANG CHỦ CONTENT =================

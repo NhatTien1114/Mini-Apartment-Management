@@ -50,6 +50,70 @@ public class HopDongKhachHangDAO {
         return null;
     }
 
+    /**
+     * Lấy mã hợp đồng hiệu lực tại một tháng/năm cụ thể cho phòng.
+     * Tìm hợp đồng mà ngayBatDau <= cuối tháng VÀ ngayKetThuc >= đầu tháng.
+     */
+    public String getMaHopDongTaiThang(String maPhong, int thang, int nam) {
+        if (maPhong == null || maPhong.trim().isEmpty()) return null;
+        String sql = "SELECT TOP 1 maHopDong FROM HopDong " +
+                "WHERE maPhong = ? " +
+                "AND ngayBatDau <= ? AND ngayKetThuc >= ? " +
+                "ORDER BY ngayBatDau DESC";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            // cuối tháng
+            java.time.LocalDate cuoiThang = java.time.LocalDate.of(nam, thang, 1)
+                    .withDayOfMonth(java.time.LocalDate.of(nam, thang, 1).lengthOfMonth());
+            // đầu tháng
+            java.time.LocalDate dauThang = java.time.LocalDate.of(nam, thang, 1);
+            ps.setObject(2, cuoiThang);
+            ps.setObject(3, dauThang);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("maHopDong");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        // Fallback: lấy hợp đồng hiện tại
+        return getMaHopDongHienTai(maPhong);
+    }
+
+    /**
+     * Lấy người đại diện của phòng tại một tháng/năm cụ thể.
+     * Kiểm tra qua tất cả hợp đồng (kể cả đã hết hạn).
+     */
+    public KhachHang getNguoiDaiDienByMaPhongTaiThang(String maPhong, int thang, int nam) {
+        if (maPhong == null || maPhong.trim().isEmpty()) return null;
+
+        java.time.LocalDate dauThang = java.time.LocalDate.of(nam, thang, 1);
+        java.time.LocalDate cuoiThang = dauThang.withDayOfMonth(dauThang.lengthOfMonth());
+
+        String sql = "SELECT TOP 1 k.* FROM KhachHang k " +
+                "JOIN HopDongKhachHang hdkh ON k.maKhachHang = hdkh.maKhachHang " +
+                "JOIN HopDong hd ON hdkh.maHopDong = hd.maHopDong " +
+                "WHERE hd.maPhong = ? " +
+                "AND hd.ngayBatDau <= ? AND hd.ngayKetThuc >= ? " +
+                "AND (hdkh.vaiTro = 0 OR hdkh.vaiTro = 2) " +
+                "ORDER BY CASE WHEN hdkh.vaiTro = 0 THEN 0 ELSE 1 END ASC, hd.ngayBatDau DESC";
+
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            ps.setObject(2, cuoiThang);
+            ps.setObject(3, dauThang);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapKhachHang(rs);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public KhachHang getNguoiDaiDienByMaPhong(String maPhong) {
         if (maPhong == null || maPhong.trim().isEmpty()) {
             return null;
