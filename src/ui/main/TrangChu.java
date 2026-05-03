@@ -15,10 +15,13 @@ import ui.util.AppColors;
 import ui.util.ThemeManager;
 import ui.util.PhongInfo;
 import ui.util.RoundedPanel;
+import dao.HoaDonDAO;
 import dao.HopDongDAO;
 import entity.HopDong;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Locale;
 import ui.util.NotificationManager;
 
 public class TrangChu extends JFrame {
@@ -108,6 +111,7 @@ public class TrangChu extends JFrame {
             @Override
             public void windowOpened(WindowEvent e) {
                 setExtendedState(JFrame.MAXIMIZED_BOTH);
+                checkAndUpdateOverdueInvoices();
             }
         });
 
@@ -1520,6 +1524,52 @@ public class TrangChu extends JFrame {
             }
         }
         return dem;
+    }
+
+    // ================= KIỂM TRA HOÁ ĐƠN QUÁ HẠN =================
+    private void checkAndUpdateOverdueInvoices() {
+        new Thread(() -> {
+            HoaDonDAO dao = new HoaDonDAO();
+            HoaDonDAO.CauHinhPhat cfg = dao.getCauHinhPhat();
+            List<HoaDonDAO.QuaHanInfo> list = dao.getHoaDonChuaTTQuaHan(cfg.ngayHanThanhToan);
+            if (list.isEmpty()) return;
+
+            NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+
+            for (HoaDonDAO.QuaHanInfo info : list) {
+                long ngay = info.soNgayQuaHan;
+                String phong = info.maPhong;
+
+                if (ngay <= cfg.soNgayAnHan) {
+                    // Giai đoạn ân hạn: chỉ thông báo, không đổi trạng thái
+                    String msg = String.format(
+                            "Phòng %s đã quá hạn thanh toán %d ngày (trong thời gian ân hạn).", phong, ngay);
+                    SwingUtilities.invokeLater(() ->
+                            notifManager.addNotification("⏰ Nhắc thanh toán", msg));
+                } else {
+                    // Giai đoạn tính phạt (ngày 4-7) hoặc chế tài (>7 ngày)
+                    long ngayTinhPhat = ngay - cfg.soNgayAnHan;
+                    double tienPhat = info.tongTien * cfg.mucPhatNgay * ngayTinhPhat;
+                    dao.capNhatTrangThaiQuaHan(info.maHoaDon, tienPhat);
+
+                    String title;
+                    String msg;
+                    if (ngay <= 7) {
+                        title = "⚠ Quá hạn thanh toán";
+                        msg = String.format(
+                                "Phòng %s đã quá hạn %d ngày. Tiền phạt: %s VNĐ.",
+                                phong, ngay, nf.format(Math.round(tienPhat)));
+                    } else {
+                        title = "🚨 Cần xử lý khẩn";
+                        msg = String.format(
+                                "Phòng %s đã quá hạn thanh toán %d ngày - Cần được xử lý hoặc ngưng cung cấp dịch vụ.",
+                                phong, ngay);
+                    }
+                    SwingUtilities.invokeLater(() ->
+                            notifManager.addNotification(title, msg));
+                }
+            }
+        }, "overdue-check").start();
     }
 
     // ================= MAIN =================

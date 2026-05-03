@@ -9,13 +9,15 @@ public class HoaDon {
     private String maPhong;
     private Date tuNgay;
     private Date denNgay;
-    private int trangThaiThanhToan; // 0: Chưa thanh toán, 1: Đã thanh toán
+    private int trangThaiThanhToan; // 0: Chưa TT, 1: Đã TT, 2: Thanh toán trễ
+    private double tienPhat;        // Tiền phạt cộng dồn (tính từ ngày 4 quá hạn)
     private TaiKhoan nguoiLap;
     private Timestamp createdAt;
 
     public enum TrangThaiThanhToan {
         CHUA_THANH_TOAN("Chưa Thanh Toán"),
-        DA_THANH_TOAN("Đã Thanh Toán");
+        DA_THANH_TOAN("Đã Thanh Toán"),
+        THANH_TOAN_TRE("Thanh Toán Trễ");
 
         private String ten;
 
@@ -34,11 +36,16 @@ public class HoaDon {
         public static TrangThaiThanhToan fromInt(int value) {
             if (value == 1) return DA_THANH_TOAN;
             if (value == 0) return CHUA_THANH_TOAN;
+            if (value == 2) return THANH_TOAN_TRE;
             return CHUA_THANH_TOAN; // Mặc định nếu dữ liệu lạ
         }
-        // Chuyển từ Enum sang số (0, 1) để lưu xuống Database
+        // Chuyển từ Enum sang số (0, 1, 2) để lưu xuống Database
         public int toInt() {
-            return this == DA_THANH_TOAN ? 1 : 0;
+            switch (this) {
+                case DA_THANH_TOAN:   return 1;
+                case THANH_TOAN_TRE:  return 2;
+                default:              return 0;
+            }
         }
         @Override
         public String toString() {
@@ -112,6 +119,14 @@ public class HoaDon {
 
     public void setTrangThaiThanhToan(int trangThaiThanhToan) {
         this.trangThaiThanhToan = trangThaiThanhToan;
+    }
+
+    public double getTienPhat() {
+        return tienPhat;
+    }
+
+    public void setTienPhat(double tienPhat) {
+        this.tienPhat = tienPhat;
     }
 
     public TaiKhoan getNguoiLap() {
