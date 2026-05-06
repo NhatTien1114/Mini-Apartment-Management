@@ -1,6 +1,7 @@
 package ui.util;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -15,16 +16,22 @@ public class NotificationManager {
         public final String message;
         public final long timestamp;
         public final String type; // "contract_expiry", "service_price", "price_update", etc.
+        public final String referenceId; // ID tham chiếu để kiểm tra đã xử lý chưa (vd: mã hợp đồng, mã phòng)
 
         public Notification(String title, String message) {
-            this(title, message, "general");
+            this(title, message, "general", null);
         }
 
         public Notification(String title, String message, String type) {
+            this(title, message, type, null);
+        }
+
+        public Notification(String title, String message, String type, String referenceId) {
             this.title = title;
             this.message = message;
             this.timestamp = System.currentTimeMillis();
             this.type = type;
+            this.referenceId = referenceId;
         }
     }
 
@@ -48,11 +55,23 @@ public class NotificationManager {
     }
 
     public void addNotification(String title, String message) {
-        addNotification(title, message, "general");
+        addNotification(title, message, "general", null);
     }
 
     public void addNotification(String title, String message, String type) {
-        Notification n = new Notification(title, message, type);
+        addNotification(title, message, type, null);
+    }
+
+    public void addNotification(String title, String message, String type, String referenceId) {
+        // Tránh trùng lặp: nếu đã có thông báo cùng type + referenceId thì không thêm nữa
+        if (referenceId != null) {
+            for (Notification n : notifications) {
+                if (type.equals(n.type) && referenceId.equals(n.referenceId)) {
+                    return; // Đã tồn tại, bỏ qua
+                }
+            }
+        }
+        Notification n = new Notification(title, message, type, referenceId);
         notifications.add(0, n); // Thêm vào đầu danh sách
         unviewedCount++;
         for (NotificationListener l : listeners) {
@@ -101,6 +120,59 @@ public class NotificationManager {
     public void removeNotification(int index) {
         if (index >= 0 && index < notifications.size()) {
             notifications.remove(index);
+            for (NotificationRemovedListener l : removedListeners) {
+                l.onNotificationRemoved();
+            }
+        }
+    }
+
+    /**
+     * Xóa tất cả thông báo theo loại (type).
+     * Dùng khi muốn refresh lại thông báo của một loại cụ thể.
+     */
+    public void clearByType(String type) {
+        boolean removed = false;
+        Iterator<Notification> it = notifications.iterator();
+        while (it.hasNext()) {
+            if (type.equals(it.next().type)) {
+                it.remove();
+                removed = true;
+            }
+        }
+        if (removed) {
+            for (NotificationRemovedListener l : removedListeners) {
+                l.onNotificationRemoved();
+            }
+        }
+    }
+
+    /**
+     * Xóa tất cả thông báo.
+     */
+    public void clearAll() {
+        notifications.clear();
+        unviewedCount = 0;
+        for (NotificationRemovedListener l : removedListeners) {
+            l.onNotificationRemoved();
+        }
+    }
+
+    /**
+     * Xóa thông báo theo referenceId.
+     * Dùng khi một vấn đề cụ thể đã được xử lý (vd: gia hạn hợp đồng).
+     */
+    public void removeByReference(String type, String referenceId) {
+        if (referenceId == null) return;
+        boolean removed = false;
+        Iterator<Notification> it = notifications.iterator();
+        while (it.hasNext()) {
+            Notification n = it.next();
+            if (type.equals(n.type) && referenceId.equals(n.referenceId)) {
+                it.remove();
+                removed = true;
+            }
+        }
+        if (removed) {
             for (NotificationRemovedListener l : removedListeners) {
                 l.onNotificationRemoved();
             }

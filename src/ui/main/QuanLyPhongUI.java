@@ -80,12 +80,14 @@ public class QuanLyPhongUI {
         currentKeyword = "";
         selectedTangFilter = "Tất cả";
         selectedLoaiPhongFilter = "Tất cả";
+        selectedStatusFilter = null;
         if (txtSearch != null)
             txtSearch.setText("");
         if (cboTangFilter != null)
             cboTangFilter.setSelectedIndex(0);
         if (cboLoaiPhongFilter != null)
             cboLoaiPhongFilter.setSelectedIndex(0);
+        updateFilterButtonStyles();
         rebuildFloors();
     }
 
