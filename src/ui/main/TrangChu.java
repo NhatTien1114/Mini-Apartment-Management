@@ -261,6 +261,7 @@ public class TrangChu extends JFrame {
 
         if (panelIndex == 0) {
             refreshTrangChuTab();
+            refreshNotifications();
         }
         if (panelIndex == 2) {
             refreshQuanLyPhongTab();
@@ -350,6 +351,10 @@ public class TrangChu extends JFrame {
         if (pnlContent == null) {
             return;
         }
+
+        // Reset bộ lọc về mặc định khi quay lại trang chủ
+        currentLoaiPhongFilter = "Tất cả";
+        currentTangFilter = "Tất cả";
 
         if (pnlTrangChuContent != null) {
             pnlContent.remove(pnlTrangChuContent);
@@ -443,19 +448,7 @@ public class TrangChu extends JFrame {
         pnlRightButtons.setBackground(Color.WHITE);
 
         // Load contract expiry notifications into NotificationManager
-        List<HopDong> expiringContracts = new HopDongDAO().getAllHopDongDangHieuLuc().stream()
-                .filter(hd -> {
-                    long days = ChronoUnit.DAYS.between(LocalDate.now(), hd.getNgayKetThuc());
-                    return days >= 0 && days <= 30;
-                })
-                .collect(Collectors.toList());
-        for (HopDong hd : expiringContracts) {
-            long days = ChronoUnit.DAYS.between(LocalDate.now(), hd.getNgayKetThuc());
-            notifManager.addNotification(
-                    "⚠ Hợp đồng sắp hết hạn",
-                    "Phòng " + hd.getPhong().getMaPhong() + " sẽ hết hạn sau " + days + " ngày.",
-                    "contract_expiry");
-        }
+        refreshNotifications();
 
         JLabel lblBell = new JLabel() {
             @Override
@@ -575,6 +568,15 @@ public class TrangChu extends JFrame {
                         } else if ("price_update".equals(notif.type)) {
                             barColor = new Color(34, 197, 94);
                             icon = "✅";
+                        } else if ("overdue_grace".equals(notif.type)) {
+                            barColor = new Color(234, 179, 8);
+                            icon = "⏰";
+                        } else if ("overdue_payment".equals(notif.type)) {
+                            barColor = new Color(239, 68, 68);
+                            icon = "⚠";
+                        } else if ("overdue_urgent".equals(notif.type)) {
+                            barColor = new Color(220, 38, 38);
+                            icon = "🚨";
                         } else {
                             barColor = new Color(148, 163, 184);
                             icon = "🔔";
@@ -1527,6 +1529,41 @@ public class TrangChu extends JFrame {
     }
 
     // ================= KIỂM TRA HOÁ ĐƠN QUÁ HẠN =================
+    /**
+     * Làm mới toàn bộ thông báo: xóa thông báo cũ đã hết hiệu lực, thêm lại các thông báo mới.
+     * Gọi khi quay lại Trang Chủ hoặc sau khi thực hiện thao tác liên quan.
+     */
+    private void refreshNotifications() {
+        new Thread(() -> {
+            // 1. Xóa thông báo hợp đồng hết hạn cũ
+            notifManager.clearByType("contract_expiry");
+
+            // 2. Kiểm tra lại hợp đồng sắp hết hạn từ DB
+            List<HopDong> expiringContracts = new HopDongDAO().getAllHopDongDangHieuLuc().stream()
+                    .filter(hd -> {
+                        long days = ChronoUnit.DAYS.between(LocalDate.now(), hd.getNgayKetThuc());
+                        return days >= 0 && days <= 30;
+                    })
+                    .collect(Collectors.toList());
+
+            // 3. Xóa thông báo quá hạn cũ
+            notifManager.clearByType("overdue_payment");
+            notifManager.clearByType("overdue_grace");
+            notifManager.clearByType("overdue_urgent");
+
+            SwingUtilities.invokeLater(() -> {
+                for (HopDong hd : expiringContracts) {
+                    long days = ChronoUnit.DAYS.between(LocalDate.now(), hd.getNgayKetThuc());
+                    notifManager.addNotification(
+                            "⚠ Hợp đồng sắp hết hạn",
+                            "Phòng " + hd.getPhong().getMaPhong() + " sẽ hết hạn sau " + days + " ngày.",
+                            "contract_expiry",
+                            hd.getMaHopDong());
+                }
+            });
+        }, "refresh-notifications").start();
+    }
+
     private void checkAndUpdateOverdueInvoices() {
         new Thread(() -> {
             HoaDonDAO dao = new HoaDonDAO();
@@ -1541,32 +1578,33 @@ public class TrangChu extends JFrame {
                 String phong = info.maPhong;
 
                 if (ngay <= cfg.soNgayAnHan) {
-                    // Giai đoạn ân hạn: chỉ thông báo, không đổi trạng thái
                     String msg = String.format(
                             "Phòng %s đã quá hạn thanh toán %d ngày (trong thời gian ân hạn).", phong, ngay);
                     SwingUtilities.invokeLater(() ->
-                            notifManager.addNotification("⏰ Nhắc thanh toán", msg));
+                            notifManager.addNotification("⏰ Nhắc thanh toán", msg, "overdue_grace", info.maHoaDon));
                 } else {
-                    // Giai đoạn tính phạt (ngày 4-7) hoặc chế tài (>7 ngày)
                     long ngayTinhPhat = ngay - cfg.soNgayAnHan;
                     double tienPhat = info.tongTien * cfg.mucPhatNgay * ngayTinhPhat;
                     dao.capNhatTrangThaiQuaHan(info.maHoaDon, tienPhat);
 
                     String title;
                     String msg;
+                    String type;
                     if (ngay <= 7) {
                         title = "⚠ Quá hạn thanh toán";
                         msg = String.format(
                                 "Phòng %s đã quá hạn %d ngày. Tiền phạt: %s VNĐ.",
                                 phong, ngay, nf.format(Math.round(tienPhat)));
+                        type = "overdue_payment";
                     } else {
                         title = "🚨 Cần xử lý khẩn";
                         msg = String.format(
                                 "Phòng %s đã quá hạn thanh toán %d ngày - Cần được xử lý hoặc ngưng cung cấp dịch vụ.",
                                 phong, ngay);
+                        type = "overdue_urgent";
                     }
                     SwingUtilities.invokeLater(() ->
-                            notifManager.addNotification(title, msg));
+                            notifManager.addNotification(title, msg, type, info.maHoaDon));
                 }
             }
         }, "overdue-check").start();

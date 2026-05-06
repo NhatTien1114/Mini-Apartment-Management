@@ -1,6 +1,7 @@
 package ui.util;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +23,9 @@ public final class ThemeManager {
     private final Map<Color, Color> lightToDarkFg = new HashMap<>();
     private final Map<Color, Color> darkToLightFg = new HashMap<>();
 
+    // Cache for tinted icons
+    private final Map<String, ImageIcon> iconCache = new HashMap<>();
+
     private ThemeManager() {
         // --- BACKGROUND MAPPINGS ---
         // Nền app chính
@@ -41,6 +45,10 @@ public final class ThemeManager {
         addBgMapping(new Color(248, 250, 252), new Color(24, 33, 50)); // Table header
         addBgMapping(new Color(250, 250, 250), new Color(30, 41, 59));
 
+        // Thêm mapping cho các màu nền thường gặp
+        addBgMapping(new Color(239, 246, 255), new Color(30, 58, 95)); // Selection blue light -> dark blue
+        addBgMapping(new Color(241, 245, 249), new Color(30, 41, 59)); // Slate 100 exact
+
         // --- FOREGROUND MAPPINGS ---
         // Text chính
         addFgMapping(AppColors.SLATE_900, new Color(241, 245, 249)); // Slate 100
@@ -53,6 +61,9 @@ public final class ThemeManager {
         addFgMapping(AppColors.SLATE_400, new Color(100, 116, 139));
         addFgMapping(new Color(100, 116, 139), new Color(148, 163, 184));
         addFgMapping(new Color(71, 85, 105), new Color(148, 163, 184));
+
+        // Text xám nhạt (cho labels phụ)
+        addFgMapping(new Color(100, 100, 100), new Color(160, 175, 195));
     }
 
     private void addBgMapping(Color light, Color dark) {
@@ -76,6 +87,7 @@ public final class ThemeManager {
     public void setDarkMode(boolean dark) {
         if (this.darkMode != dark) {
             this.darkMode = dark;
+            iconCache.clear(); // Clear icon cache on theme change
             for (Runnable l : listeners) {
                 l.run();
             }
@@ -88,6 +100,70 @@ public final class ThemeManager {
 
     public void addListener(Runnable listener) {
         listeners.add(listener);
+    }
+
+    // ===== ICON TINTING =====
+
+    /**
+     * Tint một Image sang màu chỉ định, giữ nguyên alpha channel.
+     */
+    public static Image tintImage(Image original, Color tint) {
+        if (original == null) return null;
+        int w = original.getWidth(null);
+        int h = original.getHeight(null);
+        if (w <= 0 || h <= 0) return original;
+
+        BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = bi.createGraphics();
+        g2.drawImage(original, 0, 0, null);
+        g2.dispose();
+
+        int tintRGB = (tint.getRed() << 16) | (tint.getGreen() << 8) | tint.getBlue();
+
+        for (int x = 0; x < w; x++) {
+            for (int y = 0; y < h; y++) {
+                int argb = bi.getRGB(x, y);
+                int alpha = (argb >> 24) & 0xFF;
+                if (alpha > 0) {
+                    bi.setRGB(x, y, (alpha << 24) | tintRGB);
+                }
+            }
+        }
+        return bi;
+    }
+
+    /**
+     * Trả về icon đã tint trắng nếu đang dark mode, ngược lại trả về icon gốc.
+     * Sử dụng cache để tránh tint lại nhiều lần.
+     */
+    public ImageIcon getThemedIcon(ImageIcon original) {
+        if (original == null) return null;
+        if (!darkMode) return original;
+
+        String key = String.valueOf(System.identityHashCode(original));
+        if (iconCache.containsKey(key)) {
+            return iconCache.get(key);
+        }
+
+        Image tinted = tintImage(original.getImage(), new Color(220, 230, 245));
+        ImageIcon result = new ImageIcon(tinted);
+        iconCache.put(key, result);
+        return result;
+    }
+
+    /**
+     * Tint icon từ file path, trả về phiên bản phù hợp với theme hiện tại.
+     */
+    public ImageIcon loadThemedIcon(String path, int width, int height) {
+        ImageIcon raw = new ImageIcon(path);
+        if (raw.getIconWidth() <= 0 || raw.getIconHeight() <= 0) return null;
+        Image scaled = raw.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        ImageIcon scaledIcon = new ImageIcon(scaled);
+        if (darkMode) {
+            Image tinted = tintImage(scaled, new Color(220, 230, 245));
+            return new ImageIcon(tinted);
+        }
+        return scaledIcon;
     }
 
     // ===== UI UPDATER TỰ ĐỘNG =====
@@ -117,6 +193,27 @@ public final class ThemeManager {
                     c.setBackground(getMappedBg(c.getBackground()));
                 if (c.isForegroundSet())
                     c.setForeground(getMappedFg(c.getForeground()));
+            }
+            // Tint icon trên JButton
+            if (btn.getIcon() instanceof ImageIcon) {
+                ImageIcon icon = (ImageIcon) btn.getIcon();
+                if (shouldTintIcon(icon)) {
+                    btn.setIcon(getThemedIcon(icon));
+                }
+            }
+        } else if (c instanceof JLabel) {
+            // Components thông thường
+            if (c.isBackgroundSet())
+                c.setBackground(getMappedBg(c.getBackground()));
+            if (c.isForegroundSet())
+                c.setForeground(getMappedFg(c.getForeground()));
+            // Tint icon trên JLabel
+            JLabel lbl = (JLabel) c;
+            if (lbl.getIcon() instanceof ImageIcon) {
+                ImageIcon icon = (ImageIcon) lbl.getIcon();
+                if (shouldTintIcon(icon)) {
+                    lbl.setIcon(getThemedIcon(icon));
+                }
             }
         } else {
             // Components thông thường
@@ -170,6 +267,46 @@ public final class ThemeManager {
         }
     }
 
+    /**
+     * Kiểm tra xem icon có cần tint không (icon tối trên nền tối sẽ bị che).
+     * Chỉ tint nếu icon có pixel tối chiếm đa số.
+     */
+    private boolean shouldTintIcon(ImageIcon icon) {
+        if (icon == null || icon.getIconWidth() <= 0) return false;
+        // Trong dark mode, luôn tint các icon nhỏ (thường là icon UI đen)
+        if (darkMode) {
+            Image img = icon.getImage();
+            int w = img.getWidth(null);
+            int h = img.getHeight(null);
+            if (w <= 0 || h <= 0 || w > 64 || h > 64) return false; // Chỉ tint icon nhỏ
+
+            BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = bi.createGraphics();
+            g2.drawImage(img, 0, 0, null);
+            g2.dispose();
+
+            int darkPixels = 0;
+            int totalVisible = 0;
+            for (int x = 0; x < w; x++) {
+                for (int y = 0; y < h; y++) {
+                    int argb = bi.getRGB(x, y);
+                    int alpha = (argb >> 24) & 0xFF;
+                    if (alpha > 50) {
+                        totalVisible++;
+                        int r = (argb >> 16) & 0xFF;
+                        int g = (argb >> 8) & 0xFF;
+                        int b = argb & 0xFF;
+                        double lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+                        if (lum < 0.4) darkPixels++;
+                    }
+                }
+            }
+            // Tint nếu phần lớn pixel là tối
+            return totalVisible > 0 && (double) darkPixels / totalVisible > 0.5;
+        }
+        return false;
+    }
+
     private Color getMappedBg(Color c) {
         if (c == null)
             return null;
@@ -199,6 +336,11 @@ public final class ThemeManager {
             }
             // Heuristic: Nếu màu chữ sáng (do dark mode chuyển lại) -> chuyển về tối
             if (c.equals(new Color(241, 245, 249))) {
+                return AppColors.SLATE_900;
+            }
+            // Chuyển lại các màu sáng khác
+            double luminance = (0.299 * c.getRed() + 0.587 * c.getGreen() + 0.114 * c.getBlue()) / 255;
+            if (luminance > 0.7) {
                 return AppColors.SLATE_900;
             }
             return c;

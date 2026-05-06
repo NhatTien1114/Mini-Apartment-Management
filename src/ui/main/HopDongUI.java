@@ -146,13 +146,39 @@ public class HopDongUI {
         JLabel lblTitle = new JLabel("Quản lý hợp đồng");
         lblTitle.setFont(new Font("Inter", Font.BOLD, 20));
         lblTitle.setForeground(MAU_TEXT);
+
+        JPanel pnlTitleLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        pnlTitleLeft.setOpaque(false);
+        pnlTitleLeft.add(lblTitle);
+
+        // Nút quản lý điều khoản
+        JButton btnDieuKhoan = new JButton("📋 Điều khoản");
+        btnDieuKhoan.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+        btnDieuKhoan.setFocusPainted(false);
+        btnDieuKhoan.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnDieuKhoan.setBackground(new Color(241, 245, 249));
+        btnDieuKhoan.setForeground(new Color(51, 65, 85));
+        btnDieuKhoan.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(6, 14, 6, 14)));
+        btnDieuKhoan.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                btnDieuKhoan.setBackground(new Color(226, 232, 240));
+            }
+            public void mouseExited(MouseEvent e) {
+                btnDieuKhoan.setBackground(new Color(241, 245, 249));
+            }
+        });
+        btnDieuKhoan.addActionListener(e -> showDieuKhoanDialog());
+        pnlTitleLeft.add(btnDieuKhoan);
+
         JButton btnAdd = primaryButton.makePrimaryButton("Tạo Hợp Đồng");
         btnAdd.setBorder(new EmptyBorder(8, 16, 8, 16));
         btnAdd.addActionListener(e -> showContractForm(false, -1));
         JPanel pnlHeaderRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         pnlHeaderRight.setOpaque(false);
         pnlHeaderRight.add(btnAdd);
-        pnlHeader.add(lblTitle, BorderLayout.WEST);
+        pnlHeader.add(pnlTitleLeft, BorderLayout.WEST);
         pnlHeader.add(pnlHeaderRight, BorderLayout.EAST);
         pnlRoot.add(pnlHeader, BorderLayout.NORTH);
 
@@ -1351,32 +1377,31 @@ public class HopDongUI {
         addDocFillIndent(page2, "Tên tài khoản", "Tống Nguyễn Nhật Tiến", docFont, 16);
         page2.add(Box.createVerticalStrut(8));
         addDocHtml(page2, "<b>1.3.</b>&nbsp;&nbsp;Hai bên cùng thỏa thuận và cam kết rằng:", docFont, 0);
-        addDocHtml(page2,
-                "<b>a.</b> Bên B cam kết đến kí hợp đồng thuê nhà và dọn vào ở không quá 2 ngày so với ngày dọn vào dự kiến;",
-                docFont, 16);
-        addDocHtml(page2,
-                "<b>b.</b> Bên B cam kết đến kí hợp đồng theo thời gian đã nêu tại điều khoản 1.3.a, đóng đủ tiền nhà và các phí dịch vụ của tòa nhà tháng đầu tiên;",
-                docFont, 16);
-        addDocHtml(page2,
-                "<b>c.</b> Nếu quá thời hạn nêu trên mà bên B vẫn không Ký hợp đồng theo như điều 1.3.a nêu trên thì bên B sẽ mất toàn bộ số tiền đặt cọc;",
-                docFont, 16);
-        addDocHtml(page2,
-                "<b>d.</b> Trong trường hợp tòa nhà có quy định khách hàng được sang nhượng hợp đồng thuê thì bên B có thể tự sang nhượng hoặc nhờ bên A tìm khách \nsang nhượng trên tinh thần tự nguyện. Bên A không có trách nhiệm bắt buộc sang nhượng cho bên B;",
-                docFont, 16);
+
+        // Load dynamic clauses
+        DieuKhoanManager dkManager = DieuKhoanManager.getInstance();
+        dkManager.reload();
+        java.util.List<String> listDK = dkManager.getAll();
+
+        // Tách điều khoản 1.3 và Điều 2
+        // Thường 4 cái đầu là của 1.3 (a, b, c, d)
+        char sub = 'a';
+        int idx = 0;
+        for (; idx < listDK.size() && idx < 4; idx++) {
+            addDocHtml(page2, "<b>" + sub + ".</b> " + listDK.get(idx), docFont, 16);
+            sub++;
+        }
+
         page2.add(Box.createVerticalStrut(10));
         addDocLine(page2, "Điều 2 \u2013 Điều khoản chung:", docBold, 0);
-        addDocHtml(page2,
-                "<b>2.1.</b> Thỏa thuận này có hiệu lực từ thời điểm hai bên ký kết. Trường hợp khách hàng đặt cọc bằng hình thức chuyển khoản, hợp đồng này có hiệu lực khi Bên B đã đồng ý \nđặt cọc cho bên A (có xác thực bằng tin nhắn hoặc ghi âm) và đã chuyển khoản tiền cọc cho bên A mà không cần phải có chữ ký của Bên B;",
-                docFont, 0);
-        addDocHtml(page2,
-                "<b>2.2.</b> Thỏa thuận này sẽ chấm dứt hiệu lực trong các trường hợp sau: Bên B không ký hợp đồng và dọn vào ở theo quy định tại điều 1.3.b;",
-                docFont, 0);
-        addDocHtml(page2,
-                "<b>2.3.</b> Bên A không cho bất kì một bên nào khác bên B đặt cọc hoặc thuê phòng là đối tượng được quy định trên hợp đồng này trong thời hạn thỏa thuận;",
-                docFont, 0);
-        addDocHtml(page2,
-                "<b>2.4.</b> Ngay khi bên B ký hợp đồng thuê với chủ đầu tư, toàn bộ số tiền cọc sẽ được chuyển thành tiền ký quỹ trong hợp đồng thuê của Bên B;",
-                docFont, 0);
+
+        // Các điều khoản còn lại cho Điều 2
+        int sttDieu2 = 1;
+        for (; idx < listDK.size(); idx++) {
+            addDocHtml(page2, "<b>2." + sttDieu2 + ".</b> " + listDK.get(idx), docFont, 0);
+            sttDieu2++;
+        }
+
         page2.add(Box.createVerticalStrut(36));
 
         JPanel signPanel = new JPanel(new GridLayout(1, 2, 40, 0));
@@ -2652,5 +2677,416 @@ public class HopDongUI {
             b.setCursor(new Cursor(Cursor.HAND_CURSOR));
             return b;
         }
+    }
+
+    private void showDieuKhoanDialog() {
+        Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+        JDialog dlg = new JDialog(owner, "Quản lý điều khoản hợp đồng", Dialog.ModalityType.APPLICATION_MODAL);
+        dlg.setSize(940, 640);
+        dlg.setMinimumSize(new Dimension(720, 480));
+        dlg.setLocationRelativeTo(owner);
+        dlg.setResizable(true);
+
+        DieuKhoanManager dkm = DieuKhoanManager.getInstance();
+        dkm.reload();
+
+        Color BG        = new Color(248, 250, 252);
+        Color CARD      = Color.WHITE;
+        Color ACCENT    = new Color(37, 99, 235);
+        Color ACCENT_DK = new Color(29, 78, 216);
+        Color ACCENT_LT = new Color(239, 246, 255);
+        Color TXT_MAIN  = new Color(15, 23, 42);
+        Color TXT_SUB   = new Color(100, 116, 139);
+        Color BORDER    = new Color(226, 232, 240);
+        Color RED_BG    = new Color(254, 226, 226);
+        Color RED_FG    = new Color(220, 38, 38);
+        Color RED_DK    = new Color(185, 28, 28);
+        Color GREEN_BG  = new Color(220, 252, 231);
+        Color GREEN_FG  = new Color(22, 163, 74);
+
+        Font fontTitle  = new Font("Be Vietnam Pro", Font.BOLD, 17);
+        Font fontBold14 = new Font("Be Vietnam Pro", Font.BOLD, 14);
+        Font fontPlain  = new Font("Be Vietnam Pro", Font.PLAIN, 13);
+        Font fontSmall  = new Font("Be Vietnam Pro", Font.PLAIN, 12);
+        Font fontBold12 = new Font("Be Vietnam Pro", Font.BOLD, 12);
+        Font fontBold11 = new Font("Be Vietnam Pro", Font.BOLD, 11);
+
+        JPanel contentPane = new JPanel(new BorderLayout());
+        contentPane.setBackground(BG);
+
+        // ── Header ────────────────────────────────────────────────────────────
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(CARD);
+        header.setBorder(BorderFactory.createCompoundBorder(
+                new MatteBorder(0, 0, 1, 0, BORDER),
+                new EmptyBorder(18, 24, 18, 24)));
+        JLabel lblH1 = new JLabel("Quản lý điều khoản hợp đồng");
+        lblH1.setFont(fontTitle);
+        lblH1.setForeground(TXT_MAIN);
+        JLabel lblH2 = new JLabel("Điều chỉnh các điều khoản xuất hiện trong bản xem trước hợp đồng");
+        lblH2.setFont(fontSmall);
+        lblH2.setForeground(TXT_SUB);
+        JPanel hLeft = new JPanel();
+        hLeft.setOpaque(false);
+        hLeft.setLayout(new BoxLayout(hLeft, BoxLayout.Y_AXIS));
+        hLeft.add(lblH1);
+        hLeft.add(Box.createVerticalStrut(4));
+        hLeft.add(lblH2);
+        header.add(hLeft, BorderLayout.WEST);
+        contentPane.add(header, BorderLayout.NORTH);
+
+        // ── Left panel – clause list ───────────────────────────────────────────
+        DefaultListModel<String> listModel = new DefaultListModel<>();
+        for (String dk : dkm.getAll()) listModel.addElement(dk);
+
+        JList<String> clauseList = new JList<>(listModel);
+        clauseList.setFont(fontPlain);
+        clauseList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        clauseList.setBackground(CARD);
+        clauseList.setFixedCellHeight(-1);
+        clauseList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                JPanel cell = new JPanel(new BorderLayout(10, 0));
+                cell.setOpaque(true);
+
+                JLabel numLbl = new JLabel(String.valueOf(index + 1));
+                numLbl.setFont(fontBold11);
+                numLbl.setPreferredSize(new Dimension(24, 24));
+                numLbl.setHorizontalAlignment(SwingConstants.CENTER);
+                numLbl.setVerticalAlignment(SwingConstants.CENTER);
+                numLbl.setOpaque(true);
+
+                String txt = value.toString();
+                String preview = txt.length() > 95 ? txt.substring(0, 95) + "…" : txt;
+                JLabel textLbl = new JLabel(
+                        "<html><body style='width:195px;padding:2px 0'>" + preview + "</body></html>");
+                textLbl.setFont(fontSmall);
+
+                if (isSelected) {
+                    cell.setBackground(ACCENT_LT);
+                    cell.setBorder(BorderFactory.createCompoundBorder(
+                            new MatteBorder(0, 0, 1, 0, BORDER),
+                            BorderFactory.createCompoundBorder(
+                                    new MatteBorder(0, 3, 0, 0, ACCENT),
+                                    new EmptyBorder(10, 11, 10, 10))));
+                    numLbl.setBackground(ACCENT);
+                    numLbl.setForeground(Color.WHITE);
+                    textLbl.setForeground(ACCENT);
+                } else {
+                    cell.setBackground(CARD);
+                    cell.setBorder(BorderFactory.createCompoundBorder(
+                            new MatteBorder(0, 0, 1, 0, BORDER),
+                            new EmptyBorder(10, 14, 10, 10)));
+                    numLbl.setBackground(new Color(241, 245, 249));
+                    numLbl.setForeground(TXT_SUB);
+                    textLbl.setForeground(TXT_MAIN);
+                }
+
+                JPanel numWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+                numWrap.setOpaque(false);
+                numWrap.setPreferredSize(new Dimension(30, 28));
+                numWrap.add(numLbl);
+                cell.add(numWrap, BorderLayout.WEST);
+                cell.add(textLbl, BorderLayout.CENTER);
+                return cell;
+            }
+        });
+
+        JScrollPane listScroll = new JScrollPane(clauseList);
+        listScroll.setBorder(null);
+        listScroll.getViewport().setBackground(CARD);
+
+        // Left header bar
+        JPanel leftHeader = new JPanel(new BorderLayout(8, 0));
+        leftHeader.setBackground(new Color(248, 250, 252));
+        leftHeader.setBorder(BorderFactory.createCompoundBorder(
+                new MatteBorder(0, 0, 1, 0, BORDER),
+                new EmptyBorder(10, 14, 10, 14)));
+        JLabel lblListTitle = new JLabel("Danh sách điều khoản");
+        lblListTitle.setFont(fontBold14);
+        lblListTitle.setForeground(TXT_MAIN);
+
+        JButton btnAdd = new JButton("+ Thêm");
+        btnAdd.setFont(fontBold12);
+        btnAdd.setBackground(ACCENT);
+        btnAdd.setForeground(Color.WHITE);
+        btnAdd.setBorder(new EmptyBorder(5, 12, 5, 12));
+        btnAdd.setFocusPainted(false);
+        btnAdd.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnAdd.setOpaque(true);
+        btnAdd.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { btnAdd.setBackground(ACCENT_DK); }
+            public void mouseExited(MouseEvent e)  { btnAdd.setBackground(ACCENT); }
+        });
+        leftHeader.add(lblListTitle, BorderLayout.WEST);
+        leftHeader.add(btnAdd, BorderLayout.EAST);
+
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setBackground(CARD);
+        leftPanel.setBorder(new MatteBorder(0, 0, 0, 1, BORDER));
+        leftPanel.add(leftHeader, BorderLayout.NORTH);
+        leftPanel.add(listScroll, BorderLayout.CENTER);
+
+        // ── Right panel – detail / editor ─────────────────────────────────────
+        JPanel emptyState = new JPanel(new GridBagLayout());
+        emptyState.setOpaque(false);
+        JPanel emptyCard = new JPanel();
+        emptyCard.setOpaque(false);
+        emptyCard.setLayout(new BoxLayout(emptyCard, BoxLayout.Y_AXIS));
+        JLabel emptyIcon = new JLabel("📋");
+        emptyIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 34));
+        emptyIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel emptyLbl = new JLabel("Chọn một điều khoản để xem và chỉnh sửa");
+        emptyLbl.setFont(fontPlain);
+        emptyLbl.setForeground(TXT_SUB);
+        emptyLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        emptyCard.add(emptyIcon);
+        emptyCard.add(Box.createVerticalStrut(10));
+        emptyCard.add(emptyLbl);
+        emptyState.add(emptyCard);
+
+        JLabel lblEditorIdx = new JLabel("Điều khoản 1");
+        lblEditorIdx.setFont(fontBold12);
+        lblEditorIdx.setForeground(ACCENT);
+        JLabel lblEditorTitle = new JLabel("Nội dung điều khoản");
+        lblEditorTitle.setFont(fontBold14);
+        lblEditorTitle.setForeground(TXT_MAIN);
+        JPanel editorTitlePanel = new JPanel();
+        editorTitlePanel.setOpaque(false);
+        editorTitlePanel.setLayout(new BoxLayout(editorTitlePanel, BoxLayout.Y_AXIS));
+        editorTitlePanel.add(lblEditorIdx);
+        editorTitlePanel.add(Box.createVerticalStrut(2));
+        editorTitlePanel.add(lblEditorTitle);
+
+        JTextArea txtContent = new JTextArea();
+        txtContent.setFont(fontPlain);
+        txtContent.setLineWrap(true);
+        txtContent.setWrapStyleWord(true);
+        txtContent.setBackground(BG);
+        txtContent.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER),
+                new EmptyBorder(10, 12, 10, 12)));
+        JScrollPane txtScroll = new JScrollPane(txtContent);
+        txtScroll.setBorder(null);
+
+        txtContent.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent e) {
+                txtContent.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ACCENT),
+                        new EmptyBorder(10, 12, 10, 12)));
+            }
+            public void focusLost(java.awt.event.FocusEvent e) {
+                txtContent.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER),
+                        new EmptyBorder(10, 12, 10, 12)));
+            }
+        });
+
+        JButton btnSave = new JButton("Lưu thay đổi");
+        btnSave.setFont(fontBold14);
+        btnSave.setBackground(ACCENT);
+        btnSave.setForeground(Color.WHITE);
+        btnSave.setBorder(new EmptyBorder(9, 18, 9, 18));
+        btnSave.setFocusPainted(false);
+        btnSave.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnSave.setOpaque(true);
+        btnSave.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { if (btnSave.isEnabled()) btnSave.setBackground(ACCENT_DK); }
+            public void mouseExited(MouseEvent e)  { if (btnSave.isEnabled()) btnSave.setBackground(ACCENT); }
+        });
+
+        JButton btnDel = new JButton("Xóa điều khoản");
+        btnDel.setFont(fontBold14);
+        btnDel.setBackground(RED_BG);
+        btnDel.setForeground(RED_FG);
+        btnDel.setBorder(new EmptyBorder(9, 18, 9, 18));
+        btnDel.setFocusPainted(false);
+        btnDel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnDel.setOpaque(true);
+        btnDel.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { btnDel.setBackground(new Color(252, 202, 202)); }
+            public void mouseExited(MouseEvent e)  { btnDel.setBackground(RED_BG); }
+        });
+
+        JPanel editorBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        editorBtns.setOpaque(false);
+        editorBtns.add(btnDel);
+        editorBtns.add(btnSave);
+
+        JPanel editorCard = new JPanel(new BorderLayout(0, 14));
+        editorCard.setBackground(CARD);
+        editorCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER, 1, true),
+                new EmptyBorder(18, 18, 18, 18)));
+        editorCard.add(editorTitlePanel, BorderLayout.NORTH);
+        editorCard.add(txtScroll, BorderLayout.CENTER);
+        editorCard.add(editorBtns, BorderLayout.SOUTH);
+
+        JPanel rightContent = new JPanel(new CardLayout());
+        rightContent.setOpaque(false);
+        rightContent.add(emptyState, "empty");
+        rightContent.add(editorCard, "editor");
+        CardLayout rightCL = (CardLayout) rightContent.getLayout();
+
+        JPanel rightPanel = new JPanel(new BorderLayout());
+        rightPanel.setBackground(BG);
+        rightPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
+        rightPanel.add(rightContent, BorderLayout.CENTER);
+
+        // ── Split pane ────────────────────────────────────────────────────────
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
+        split.setDividerLocation(310);
+        split.setDividerSize(1);
+        split.setBorder(null);
+        contentPane.add(split, BorderLayout.CENTER);
+
+        // ── Footer ────────────────────────────────────────────────────────────
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 12));
+        footer.setBackground(CARD);
+        footer.setBorder(new MatteBorder(1, 0, 0, 0, BORDER));
+        JButton btnClose = new JButton("Đóng");
+        btnClose.setFont(fontBold14);
+        btnClose.setBackground(new Color(241, 245, 249));
+        btnClose.setForeground(TXT_MAIN);
+        btnClose.setBorder(new EmptyBorder(8, 20, 8, 20));
+        btnClose.setFocusPainted(false);
+        btnClose.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnClose.setOpaque(true);
+        btnClose.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { btnClose.setBackground(new Color(226, 232, 240)); }
+            public void mouseExited(MouseEvent e)  { btnClose.setBackground(new Color(241, 245, 249)); }
+        });
+        btnClose.addActionListener(e -> dlg.dispose());
+        footer.add(btnClose);
+        contentPane.add(footer, BorderLayout.SOUTH);
+
+        // ── Interactions ──────────────────────────────────────────────────────
+        clauseList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int idx = clauseList.getSelectedIndex();
+                if (idx >= 0) {
+                    txtContent.setText(listModel.get(idx));
+                    txtContent.setCaretPosition(0);
+                    lblEditorIdx.setText("Điều khoản " + (idx + 1));
+                    rightCL.show(rightContent, "editor");
+                }
+            }
+        });
+
+        btnSave.addActionListener(e -> {
+            int idx = clauseList.getSelectedIndex();
+            if (idx < 0) return;
+            String newText = txtContent.getText().trim();
+            if (newText.isEmpty()) {
+                JOptionPane.showMessageDialog(dlg, "Nội dung điều khoản không được để trống!",
+                        "Lưu ý", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            dkm.update(idx, newText);
+            listModel.set(idx, newText);
+            clauseList.repaint();
+            btnSave.setText("✓ Đã lưu");
+            btnSave.setBackground(GREEN_FG);
+            btnSave.setEnabled(false);
+            javax.swing.Timer timer = new javax.swing.Timer(1600, ev -> {
+                btnSave.setText("Lưu thay đổi");
+                btnSave.setBackground(ACCENT);
+                btnSave.setEnabled(true);
+            });
+            timer.setRepeats(false);
+            timer.start();
+        });
+
+        btnDel.addActionListener(e -> {
+            int idx = clauseList.getSelectedIndex();
+            if (idx < 0) return;
+            int confirm = JOptionPane.showConfirmDialog(dlg,
+                    "Bạn có chắc muốn xóa điều khoản " + (idx + 1) + " không?\nHành động này không thể hoàn tác.",
+                    "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                dkm.remove(idx);
+                listModel.remove(idx);
+                if (listModel.isEmpty()) {
+                    rightCL.show(rightContent, "empty");
+                } else {
+                    clauseList.setSelectedIndex(Math.min(idx, listModel.size() - 1));
+                }
+            }
+        });
+
+        btnAdd.addActionListener(e -> {
+            JDialog addDlg = new JDialog(dlg, "Thêm điều khoản mới", true);
+            addDlg.setSize(560, 300);
+            addDlg.setLocationRelativeTo(dlg);
+            addDlg.setResizable(false);
+
+            JPanel addPane = new JPanel(new BorderLayout(0, 14));
+            addPane.setBorder(new EmptyBorder(22, 22, 22, 22));
+            addPane.setBackground(CARD);
+
+            JLabel addLabel = new JLabel("Nhập nội dung điều khoản mới:");
+            addLabel.setFont(fontBold14);
+            addLabel.setForeground(TXT_MAIN);
+
+            JTextArea addArea = new JTextArea();
+            addArea.setFont(fontPlain);
+            addArea.setLineWrap(true);
+            addArea.setWrapStyleWord(true);
+            addArea.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(BORDER),
+                    new EmptyBorder(10, 12, 10, 12)));
+            JScrollPane addScroll = new JScrollPane(addArea);
+            addScroll.setBorder(null);
+
+            JPanel addBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            addBtns.setOpaque(false);
+
+            JButton cancelBtn = new JButton("Hủy");
+            cancelBtn.setFont(fontBold14);
+            cancelBtn.setFocusPainted(false);
+            cancelBtn.setBorder(new EmptyBorder(8, 18, 8, 18));
+            cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            cancelBtn.addActionListener(ev -> addDlg.dispose());
+
+            JButton confirmBtn = new JButton("Thêm điều khoản");
+            confirmBtn.setFont(fontBold14);
+            confirmBtn.setBackground(ACCENT);
+            confirmBtn.setForeground(Color.WHITE);
+            confirmBtn.setFocusPainted(false);
+            confirmBtn.setOpaque(true);
+            confirmBtn.setBorder(new EmptyBorder(8, 18, 8, 18));
+            confirmBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            confirmBtn.addMouseListener(new MouseAdapter() {
+                public void mouseEntered(MouseEvent e) { confirmBtn.setBackground(ACCENT_DK); }
+                public void mouseExited(MouseEvent e)  { confirmBtn.setBackground(ACCENT); }
+            });
+            confirmBtn.addActionListener(ev -> {
+                String text = addArea.getText().trim();
+                if (text.isEmpty()) {
+                    JOptionPane.showMessageDialog(addDlg, "Vui lòng nhập nội dung điều khoản!",
+                            "Lưu ý", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                dkm.add(text);
+                listModel.addElement(text);
+                int newIdx = listModel.size() - 1;
+                clauseList.setSelectedIndex(newIdx);
+                clauseList.ensureIndexIsVisible(newIdx);
+                addDlg.dispose();
+            });
+
+            addBtns.add(cancelBtn);
+            addBtns.add(confirmBtn);
+            addPane.add(addLabel, BorderLayout.NORTH);
+            addPane.add(addScroll, BorderLayout.CENTER);
+            addPane.add(addBtns, BorderLayout.SOUTH);
+            addDlg.setContentPane(addPane);
+            addDlg.setVisible(true);
+        });
+
+        dlg.setContentPane(contentPane);
+        dlg.setVisible(true);
     }
 }

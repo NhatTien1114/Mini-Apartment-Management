@@ -72,6 +72,7 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellEditor;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
+import ui.util.ThemeManager;
 
 public class HoaDonUI {
     private final Color MAU_NEN = AppColors.SLATE_100;
@@ -444,9 +445,10 @@ public class HoaDonUI {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
                     int c) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                ThemeManager tm = ThemeManager.getInstance();
                 l.setFont(FONT_PLAIN);
-                l.setForeground(AppColors.SLATE_900);
-                l.setBackground(isSel ? t.getSelectionBackground() : AppColors.WHITE);
+                l.setForeground(tm.getTextPrimary());
+                l.setBackground(isSel ? t.getSelectionBackground() : tm.getCardBg());
                 l.setOpaque(true);
 
                 if (c == 2) {
@@ -455,7 +457,7 @@ public class HoaDonUI {
                 }
 
                 l.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(241, 245, 249)),
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, tm.getBorderColor()),
                         new EmptyBorder(0, 16, 0, 8)));
                 return l;
             }
@@ -476,9 +478,10 @@ public class HoaDonUI {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isSel, boolean hasFocus, int r,
                     int c) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, isSel, hasFocus, r, c);
+                ThemeManager tm = ThemeManager.getInstance();
                 l.setFont(FONT_PLAIN);
-                l.setForeground(AppColors.SLATE_900);
-                l.setBackground(isSel ? t.getSelectionBackground() : AppColors.WHITE);
+                l.setForeground(tm.getTextPrimary());
+                l.setBackground(isSel ? t.getSelectionBackground() : tm.getCardBg());
                 l.setOpaque(true);
                 l.setHorizontalAlignment(SwingConstants.LEFT);
 
@@ -494,7 +497,7 @@ public class HoaDonUI {
                 }
 
                 l.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, tm.getBorderColor()),
                         new EmptyBorder(0, 16, 0, 8)));
                 return l;
             }
@@ -827,7 +830,7 @@ public class HoaDonUI {
             MonthlyRoomDraft d = currentDrafts.get(i);
             d.daThanhToan = paid;
             summaryModel.setValueAt(paid, i, 6);
-            if (d.isExisting && !currentMonth.isEmpty() && !currentYear.isEmpty()) {
+            if (!currentMonth.isEmpty() && !currentYear.isEmpty()) {
                 hdDAO.updateTrangThaiThanhToan(d.maPhong,
                         Integer.parseInt(currentMonth), Integer.parseInt(currentYear), paid);
             }
@@ -986,6 +989,7 @@ public class HoaDonUI {
             d.donGiaNuoc = s.donGiaNuoc;
             d.tienPhong = s.tienPhong;
             d.daThanhToan = s.daThanhToan;
+            d.isExisting = true;
             // Lấy chỉ số thực tế từ ChiSoDienNuoc
             String maHopDongDB = hdkhDAO.getMaHopDongHienTai(s.maPhong);
             d.maHopDong = maHopDongDB != null ? maHopDongDB : "";
@@ -1175,13 +1179,14 @@ public class HoaDonUI {
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
                 boolean hasFocus, int row, int column) {
             JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, "", isSelected, hasFocus, row, column);
+            ThemeManager tm = ThemeManager.getInstance();
             lbl.setHorizontalAlignment(SwingConstants.CENTER);
-            lbl.setBackground(isSelected ? table.getSelectionBackground() : AppColors.WHITE);
+            lbl.setBackground(isSelected ? table.getSelectionBackground() : tm.getCardBg());
             lbl.setOpaque(true);
             lbl.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, tm.getBorderColor()),
                     new EmptyBorder(0, 4, 0, 4)));
-            lbl.setIcon(eyeIcon);
+            lbl.setIcon(eyeIcon != null ? tm.getThemedIcon(eyeIcon) : null);
             lbl.setText(eyeIcon == null ? "👁" : "");
             return lbl;
         }
@@ -1721,13 +1726,14 @@ public class HoaDonUI {
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
                 boolean hasFocus, int row, int column) {
             JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, "", isSelected, hasFocus, row, column);
+            ThemeManager tm = ThemeManager.getInstance();
             lbl.setHorizontalAlignment(SwingConstants.CENTER);
-            lbl.setBackground(isSelected ? table.getSelectionBackground() : AppColors.WHITE);
+            lbl.setBackground(isSelected ? table.getSelectionBackground() : tm.getCardBg());
             lbl.setOpaque(true);
             lbl.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, tm.getBorderColor()),
                     new EmptyBorder(0, 4, 0, 4)));
-            lbl.setIcon(gearIcon);
+            lbl.setIcon(gearIcon != null ? tm.getThemedIcon(gearIcon) : null);
             lbl.setText(gearIcon == null ? "⚙" : "");
             return lbl;
         }

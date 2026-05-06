@@ -149,8 +149,10 @@ public class ChiSoDienNuocUI {
         lblYear.setForeground(AppColors.SLATE_900);
 
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-        String[] years = new String[5];
-        for (int i = 0; i < 5; i++) {
+        int currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1;
+        // Chỉ tạo danh sách năm từ quá khứ đến hiện tại (không có năm tương lai)
+        String[] years = new String[3];
+        for (int i = 0; i < 3; i++) {
             years[i] = String.valueOf(currentYear - 2 + i);
         }
         cboYear = new JComboBox<>(years);
@@ -159,7 +161,47 @@ public class ChiSoDienNuocUI {
         cboYear.setPreferredSize(new Dimension(90, 36));
         cboYear.setSelectedItem(String.valueOf(currentYear));
 
-        Runnable onMonthYearChange = this::loadData;
+        // Renderer: gray out future months when current year is selected
+        cboMonth.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setFont(FONT_PLAIN);
+                if (value != null && index >= 0) {
+                    try {
+                        int month = Integer.parseInt(value.toString());
+                        int selYear = cboYear.getSelectedItem() != null
+                                ? Integer.parseInt((String) cboYear.getSelectedItem())
+                                : currentYear;
+                        boolean isFuture = selYear > currentYear
+                                || (selYear == currentYear && month > currentMonth);
+                        if (isFuture) {
+                            setForeground(new Color(203, 213, 225));
+                            setBackground(isSelected ? new Color(248, 250, 252) : AppColors.WHITE);
+                        }
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+                return this;
+            }
+        });
+
+        // Chặn chọn tháng tương lai
+        Runnable onMonthYearChange = () -> {
+            int selMonth = Integer.parseInt((String) cboMonth.getSelectedItem());
+            int selYear = Integer.parseInt((String) cboYear.getSelectedItem());
+            if (selYear > currentYear || (selYear == currentYear && selMonth > currentMonth)) {
+                // Hoàn tác về tháng/năm hiện tại
+                cboMonth.setSelectedItem(String.valueOf(currentMonth));
+                cboYear.setSelectedItem(String.valueOf(currentYear));
+                JOptionPane.showMessageDialog(root,
+                        "Không thể chọn tháng trong tương lai!",
+                        "Lưu ý", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            loadData();
+        };
         cboMonth.addActionListener(e -> onMonthYearChange.run());
         cboYear.addActionListener(e -> onMonthYearChange.run());
 
