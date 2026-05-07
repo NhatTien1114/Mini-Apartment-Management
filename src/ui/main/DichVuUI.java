@@ -1,7 +1,7 @@
 package ui.main;
 
-import dao.DichVuDAO;
 import entity.DichVu;
+import service.DichVuService;
 import java.awt.*;
 import java.awt.event.*;
 import java.text.NumberFormat;
@@ -39,7 +39,7 @@ public class DichVuUI {
 
     private DefaultTableModel tableModel;
     private JTable table;
-    private final DichVuDAO dao = new DichVuDAO();
+    private final DichVuService service = new DichVuService();
     private List<DichVu> dsDichVu;
 
     public JPanel getPanel() {
@@ -222,18 +222,30 @@ public class DichVuUI {
                     "Bạn có chắc chắn muốn xóa dịch vụ: " + target.getTenDichVu() + " ?",
                     "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (confirm == JOptionPane.YES_OPTION) {
-                if (dao.deleteDichVu(target.getMaDichVu())) {
+                if (service.xoa(target.getMaDichVu())) {
                     MessageDialog.show(null, "Đã xóa", "Đã xóa dịch vụ thành công.",
                             MessageDialog.MessageType.SUCCESS);
                     loadTable();
                 } else {
-                    MessageDialog.show(null, "Báo lỗi", "Không thể xóa do ràng buộc dữ liệu.",
+                    MessageDialog.show(null, "Không thể xóa",
+                            "Dịch vụ này đang được sử dụng trong hóa đơn, không thể xóa.",
                             MessageDialog.MessageType.ERROR);
                 }
             }
         });
 
-        table.setComponentPopupMenu(contextMenu);
+        // Explicit right-click handler: select row then show menu (covers both mousePressed and mouseReleased)
+        table.addMouseListener(new MouseAdapter() {
+            private void maybeShowPopup(MouseEvent e) {
+                if (!e.isPopupTrigger()) return;
+                int row = table.rowAtPoint(e.getPoint());
+                if (row < 0) return;
+                table.setRowSelectionInterval(row, row);
+                contextMenu.show(table, e.getX(), e.getY());
+            }
+            @Override public void mousePressed(MouseEvent e)  { maybeShowPopup(e); }
+            @Override public void mouseReleased(MouseEvent e) { maybeShowPopup(e); }
+        });
 
         JScrollPane sp = new JScrollPane(table);
         sp.setBorder(BorderFactory.createEmptyBorder());
@@ -246,7 +258,7 @@ public class DichVuUI {
 
     private void loadTable() {
         tableModel.setRowCount(0);
-        dsDichVu = dao.layTatCa();
+        dsDichVu = service.layTatCa();
         for (DichVu dv : dsDichVu) {
             tableModel.addRow(new Object[] {
                     dv.getMaDichVu(),
@@ -363,7 +375,7 @@ public class DichVuUI {
             if (editing) {
                 editDichVu.setTenDichVu(ten);
                 editDichVu.setDonVi(donvi);
-                if (dao.updateDichVu(editDichVu)) {
+                if (service.capNhat(editDichVu)) {
                     MessageDialog.show(dlg, "Thành Công", "Đã cập nhật dịch vụ.", MessageDialog.MessageType.SUCCESS);
                     dlg.dispose();
                     loadTable();
@@ -374,7 +386,7 @@ public class DichVuUI {
                 DichVu newDv = new DichVu();
                 newDv.setTenDichVu(ten);
                 newDv.setDonVi(donvi);
-                if (dao.insertDichVu(newDv)) {
+                if (service.them(newDv)) {
                     MessageDialog.show(dlg, "Thêm Thành Công", "Đã tạo dịch vụ mới.",
                             MessageDialog.MessageType.SUCCESS);
                     ui.util.NotificationManager.getInstance().addNotification(

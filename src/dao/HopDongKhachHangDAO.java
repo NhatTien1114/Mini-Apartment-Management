@@ -6,6 +6,8 @@ import entity.KhachHang;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class HopDongKhachHangDAO {
 
@@ -78,6 +80,33 @@ public class HopDongKhachHangDAO {
         }
         // Fallback: lấy hợp đồng hiện tại
         return getMaHopDongHienTai(maPhong);
+    }
+
+    /**
+     * Lấy mã hợp đồng hiệu lực tại tháng/năm cụ thể, KHÔNG fallback.
+     * Trả về null nếu không có hợp đồng nào bao phủ tháng đó.
+     */
+    public String getMaHopDongTaiThangExact(String maPhong, int thang, int nam) {
+        if (maPhong == null || maPhong.trim().isEmpty()) return null;
+        String sql = "SELECT TOP 1 maHopDong FROM HopDong " +
+                "WHERE maPhong = ? " +
+                "AND ngayBatDau <= ? AND ngayKetThuc >= ? " +
+                "ORDER BY ngayBatDau DESC";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            java.time.LocalDate cuoiThang = java.time.LocalDate.of(nam, thang, 1)
+                    .withDayOfMonth(java.time.LocalDate.of(nam, thang, 1).lengthOfMonth());
+            java.time.LocalDate dauThang = java.time.LocalDate.of(nam, thang, 1);
+            ps.setObject(2, cuoiThang);
+            ps.setObject(3, dauThang);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("maHopDong");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**
@@ -381,6 +410,67 @@ public class HopDongKhachHangDAO {
             e.printStackTrace();
         }
         return list;
+    }
+
+    /**
+     * Lấy maHopDong cho tất cả phòng có hợp đồng bao phủ tháng/năm cho trước — 1 query duy nhất.
+     */
+    public Map<String, String> getMaHopDongTaiThangBatch(int thang, int nam) {
+        Map<String, String> result = new LinkedHashMap<>();
+        LocalDate dauThang = LocalDate.of(nam, thang, 1);
+        LocalDate cuoiThang = dauThang.withDayOfMonth(dauThang.lengthOfMonth());
+        String sql = "SELECT maPhong, maHopDong FROM ("
+                + "  SELECT maPhong, maHopDong,"
+                + "    ROW_NUMBER() OVER(PARTITION BY maPhong ORDER BY ngayBatDau DESC) rn"
+                + "  FROM HopDong"
+                + "  WHERE ngayBatDau <= ? AND ngayKetThuc >= ?"
+                + ") t WHERE t.rn = 1";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setObject(1, cuoiThang);
+            ps.setObject(2, dauThang);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next())
+                    result.put(rs.getString("maPhong"), rs.getString("maHopDong"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /**
+     * Lấy người đại diện cho tất cả phòng tại tháng/năm cho trước — 1 query duy nhất.
+     */
+    public Map<String, KhachHang> getNguoiDaiDienTaiThangBatch(int thang, int nam) {
+        Map<String, KhachHang> result = new LinkedHashMap<>();
+        LocalDate dauThang = LocalDate.of(nam, thang, 1);
+        LocalDate cuoiThang = dauThang.withDayOfMonth(dauThang.lengthOfMonth());
+        String sql = "SELECT t.maPhong, k.maKhachHang, k.hoTen, k.soDienThoai,"
+                + "       k.ngaySinh, k.soCCCD, k.diaChiThuongTru"
+                + " FROM ("
+                + "  SELECT hd.maPhong, hdkh.maKhachHang,"
+                + "    ROW_NUMBER() OVER(PARTITION BY hd.maPhong ORDER BY"
+                + "      CASE WHEN hdkh.vaiTro = 0 THEN 0 ELSE 1 END ASC,"
+                + "      hd.ngayBatDau DESC) rn"
+                + "  FROM HopDong hd"
+                + "  JOIN HopDongKhachHang hdkh ON hdkh.maHopDong = hd.maHopDong"
+                + "  WHERE hd.ngayBatDau <= ? AND hd.ngayKetThuc >= ?"
+                + "  AND (hdkh.vaiTro = 0 OR hdkh.vaiTro = 2)"
+                + " ) t JOIN KhachHang k ON k.maKhachHang = t.maKhachHang"
+                + " WHERE t.rn = 1";
+        try (Connection con = connectDB.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setObject(1, cuoiThang);
+            ps.setObject(2, dauThang);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next())
+                    result.put(rs.getString("maPhong"), mapKhachHang(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return result;
     }
 
     private KhachHang mapKhachHang(ResultSet rs) throws SQLException {
