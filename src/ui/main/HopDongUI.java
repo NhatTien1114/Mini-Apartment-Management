@@ -23,6 +23,8 @@ import dao.HopDongDAO;
 import dao.HopDongKhachHangDAO;
 import dao.PhongDichVuDAO;
 import dao.QuanLyPhongDAO;
+import entity.Bill;
+import entity.BillServiceItem;
 import entity.DichVu;
 import entity.GiaDetail;
 import entity.HopDong;
@@ -152,23 +154,35 @@ public class HopDongUI {
         pnlTitleLeft.add(lblTitle);
 
         // Nút quản lý điều khoản
-        JButton btnDieuKhoan = new JButton("📋 Điều khoản");
-        btnDieuKhoan.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+        JButton btnDieuKhoan = new JButton("Điều khoản") {
+            private static final Color BG_NORMAL = new Color(255, 255, 255);
+            private static final Color BG_HOVER = new Color(241, 245, 249);
+            private static final Color BORDER_C = new Color(203, 213, 225);
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? BG_HOVER : BG_NORMAL);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.setColor(BORDER_C);
+                g2.setStroke(new java.awt.BasicStroke(1.2f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+
+            @Override
+            protected void paintBorder(Graphics g) {
+            }
+        };
+        btnDieuKhoan.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
+        btnDieuKhoan.setForeground(new Color(51, 65, 85));
+        btnDieuKhoan.setContentAreaFilled(false);
+        btnDieuKhoan.setBorderPainted(false);
         btnDieuKhoan.setFocusPainted(false);
         btnDieuKhoan.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnDieuKhoan.setBackground(new Color(241, 245, 249));
-        btnDieuKhoan.setForeground(new Color(51, 65, 85));
-        btnDieuKhoan.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(203, 213, 225), 1, true),
-                new EmptyBorder(6, 14, 6, 14)));
-        btnDieuKhoan.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) {
-                btnDieuKhoan.setBackground(new Color(226, 232, 240));
-            }
-            public void mouseExited(MouseEvent e) {
-                btnDieuKhoan.setBackground(new Color(241, 245, 249));
-            }
-        });
+        btnDieuKhoan.setBorder(new EmptyBorder(9, 18, 9, 18));
         btnDieuKhoan.addActionListener(e -> showDieuKhoanDialog());
         pnlTitleLeft.add(btnDieuKhoan);
 
@@ -185,7 +199,7 @@ public class HopDongUI {
         JPanel pnlMainContent = new JPanel(new BorderLayout(0, 20));
         pnlMainContent.setOpaque(false);
 
-        JPanel pnlToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel pnlToolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
         pnlToolbar.setOpaque(false);
         txtSearch = new RoundedTextField(8) {
             @Override
@@ -2147,9 +2161,9 @@ public class HopDongUI {
             double tienDien = tieuThuD * donGiaDien;
             double tienNuoc = tieuThuN * donGiaNuoc;
 
-            java.util.List<HoaDonUI.BillServiceItem> dichVuKhac = new java.util.ArrayList<>();
+            java.util.List<BillServiceItem> dichVuKhac = new java.util.ArrayList<>();
             for (Object[] svc : dichVuBases) {
-                HoaDonUI.BillServiceItem si = new HoaDonUI.BillServiceItem();
+                BillServiceItem si = new BillServiceItem();
                 si.maDichVu = (String) svc[0];
                 si.tenKhoan = (String) svc[1];
                 si.soLuong = (Integer) svc[3];
@@ -2162,7 +2176,7 @@ public class HopDongUI {
             chiSoDAO.luuHoacCapNhat(cs);
 
             // Build and save invoice
-            HoaDonUI.Bill bill = new HoaDonUI.Bill();
+            Bill bill = new Bill();
             bill.phong = maPhong;
             bill.maHopDong = maHopDong;
             bill.daThanhToan = false;
@@ -2690,24 +2704,24 @@ public class HopDongUI {
         DieuKhoanManager dkm = DieuKhoanManager.getInstance();
         dkm.reload();
 
-        Color BG        = new Color(248, 250, 252);
-        Color CARD      = Color.WHITE;
-        Color ACCENT    = new Color(37, 99, 235);
+        Color BG = new Color(248, 250, 252);
+        Color CARD = Color.WHITE;
+        Color ACCENT = new Color(37, 99, 235);
         Color ACCENT_DK = new Color(29, 78, 216);
         Color ACCENT_LT = new Color(239, 246, 255);
-        Color TXT_MAIN  = new Color(15, 23, 42);
-        Color TXT_SUB   = new Color(100, 116, 139);
-        Color BORDER    = new Color(226, 232, 240);
-        Color RED_BG    = new Color(254, 226, 226);
-        Color RED_FG    = new Color(220, 38, 38);
-        Color RED_DK    = new Color(185, 28, 28);
-        Color GREEN_BG  = new Color(220, 252, 231);
-        Color GREEN_FG  = new Color(22, 163, 74);
+        Color TXT_MAIN = new Color(15, 23, 42);
+        Color TXT_SUB = new Color(100, 116, 139);
+        Color BORDER = new Color(226, 232, 240);
+        Color RED_BG = new Color(254, 226, 226);
+        Color RED_FG = new Color(220, 38, 38);
+        Color RED_DK = new Color(185, 28, 28);
+        Color GREEN_BG = new Color(220, 252, 231);
+        Color GREEN_FG = new Color(22, 163, 74);
 
-        Font fontTitle  = new Font("Be Vietnam Pro", Font.BOLD, 17);
+        Font fontTitle = new Font("Be Vietnam Pro", Font.BOLD, 17);
         Font fontBold14 = new Font("Be Vietnam Pro", Font.BOLD, 14);
-        Font fontPlain  = new Font("Be Vietnam Pro", Font.PLAIN, 13);
-        Font fontSmall  = new Font("Be Vietnam Pro", Font.PLAIN, 12);
+        Font fontPlain = new Font("Be Vietnam Pro", Font.PLAIN, 13);
+        Font fontSmall = new Font("Be Vietnam Pro", Font.PLAIN, 12);
         Font fontBold12 = new Font("Be Vietnam Pro", Font.BOLD, 12);
         Font fontBold11 = new Font("Be Vietnam Pro", Font.BOLD, 11);
 
@@ -2737,7 +2751,8 @@ public class HopDongUI {
 
         // ── Left panel – clause list ───────────────────────────────────────────
         DefaultListModel<String> listModel = new DefaultListModel<>();
-        for (String dk : dkm.getAll()) listModel.addElement(dk);
+        for (String dk : dkm.getAll())
+            listModel.addElement(dk);
 
         JList<String> clauseList = new JList<>(listModel);
         clauseList.setFont(fontPlain);
@@ -2808,18 +2823,28 @@ public class HopDongUI {
         lblListTitle.setFont(fontBold14);
         lblListTitle.setForeground(TXT_MAIN);
 
-        JButton btnAdd = new JButton("+ Thêm");
+        JButton btnAdd = new JButton("+ Thêm") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? ACCENT_DK : ACCENT);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+
+            @Override
+            protected void paintBorder(Graphics g) {
+            }
+        };
         btnAdd.setFont(fontBold12);
-        btnAdd.setBackground(ACCENT);
         btnAdd.setForeground(Color.WHITE);
-        btnAdd.setBorder(new EmptyBorder(5, 12, 5, 12));
+        btnAdd.setContentAreaFilled(false);
+        btnAdd.setBorderPainted(false);
         btnAdd.setFocusPainted(false);
         btnAdd.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnAdd.setOpaque(true);
-        btnAdd.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { btnAdd.setBackground(ACCENT_DK); }
-            public void mouseExited(MouseEvent e)  { btnAdd.setBackground(ACCENT); }
-        });
+        btnAdd.setBorder(new EmptyBorder(7, 14, 7, 14));
         leftHeader.add(lblListTitle, BorderLayout.WEST);
         leftHeader.add(btnAdd, BorderLayout.EAST);
 
@@ -2877,6 +2902,7 @@ public class HopDongUI {
                         BorderFactory.createLineBorder(ACCENT),
                         new EmptyBorder(10, 12, 10, 12)));
             }
+
             public void focusLost(java.awt.event.FocusEvent e) {
                 txtContent.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(BORDER),
@@ -2893,8 +2919,15 @@ public class HopDongUI {
         btnSave.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnSave.setOpaque(true);
         btnSave.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { if (btnSave.isEnabled()) btnSave.setBackground(ACCENT_DK); }
-            public void mouseExited(MouseEvent e)  { if (btnSave.isEnabled()) btnSave.setBackground(ACCENT); }
+            public void mouseEntered(MouseEvent e) {
+                if (btnSave.isEnabled())
+                    btnSave.setBackground(ACCENT_DK);
+            }
+
+            public void mouseExited(MouseEvent e) {
+                if (btnSave.isEnabled())
+                    btnSave.setBackground(ACCENT);
+            }
         });
 
         JButton btnDel = new JButton("Xóa điều khoản");
@@ -2906,8 +2939,13 @@ public class HopDongUI {
         btnDel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnDel.setOpaque(true);
         btnDel.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { btnDel.setBackground(new Color(252, 202, 202)); }
-            public void mouseExited(MouseEvent e)  { btnDel.setBackground(RED_BG); }
+            public void mouseEntered(MouseEvent e) {
+                btnDel.setBackground(new Color(252, 202, 202));
+            }
+
+            public void mouseExited(MouseEvent e) {
+                btnDel.setBackground(RED_BG);
+            }
         });
 
         JPanel editorBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -2955,8 +2993,13 @@ public class HopDongUI {
         btnClose.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnClose.setOpaque(true);
         btnClose.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { btnClose.setBackground(new Color(226, 232, 240)); }
-            public void mouseExited(MouseEvent e)  { btnClose.setBackground(new Color(241, 245, 249)); }
+            public void mouseEntered(MouseEvent e) {
+                btnClose.setBackground(new Color(226, 232, 240));
+            }
+
+            public void mouseExited(MouseEvent e) {
+                btnClose.setBackground(new Color(241, 245, 249));
+            }
         });
         btnClose.addActionListener(e -> dlg.dispose());
         footer.add(btnClose);
@@ -2977,7 +3020,8 @@ public class HopDongUI {
 
         btnSave.addActionListener(e -> {
             int idx = clauseList.getSelectedIndex();
-            if (idx < 0) return;
+            if (idx < 0)
+                return;
             String newText = txtContent.getText().trim();
             if (newText.isEmpty()) {
                 JOptionPane.showMessageDialog(dlg, "Nội dung điều khoản không được để trống!",
@@ -3001,7 +3045,8 @@ public class HopDongUI {
 
         btnDel.addActionListener(e -> {
             int idx = clauseList.getSelectedIndex();
-            if (idx < 0) return;
+            if (idx < 0)
+                return;
             int confirm = JOptionPane.showConfirmDialog(dlg,
                     "Bạn có chắc muốn xóa điều khoản " + (idx + 1) + " không?\nHành động này không thể hoàn tác.",
                     "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
@@ -3059,8 +3104,13 @@ public class HopDongUI {
             confirmBtn.setBorder(new EmptyBorder(8, 18, 8, 18));
             confirmBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             confirmBtn.addMouseListener(new MouseAdapter() {
-                public void mouseEntered(MouseEvent e) { confirmBtn.setBackground(ACCENT_DK); }
-                public void mouseExited(MouseEvent e)  { confirmBtn.setBackground(ACCENT); }
+                public void mouseEntered(MouseEvent e) {
+                    confirmBtn.setBackground(ACCENT_DK);
+                }
+
+                public void mouseExited(MouseEvent e) {
+                    confirmBtn.setBackground(ACCENT);
+                }
             });
             confirmBtn.addActionListener(ev -> {
                 String text = addArea.getText().trim();

@@ -468,6 +468,29 @@ public class QuanLyPhongDAO {
         }
     }
 
+    public ArrayList<Phong> getAllPhong() {
+        String sql = "SELECT maPhong, trangThaiPhong, loaiPhong, maGiaDetail, soNguoiHienTai "
+                + "FROM Phong ORDER BY maPhong";
+        ArrayList<Phong> result = new ArrayList<>();
+        try {
+            Connection con = connectDB.getConnection();
+            try (PreparedStatement ps = con.prepareStatement(sql);
+                    ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String maPhong = rs.getString("maPhong");
+                    int trangThai = rs.getInt("trangThaiPhong");
+                    Integer loaiPhong = rs.getObject("loaiPhong") == null ? null : rs.getInt("loaiPhong");
+                    String maGiaDetail = rs.getString("maGiaDetail");
+                    int soNguoi = rs.getInt("soNguoiHienTai");
+                    result.add(buildPhong(maPhong, trangThai, loaiPhong, maGiaDetail, soNguoi, null));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi getAllPhong: " + e.getMessage());
+        }
+        return result;
+    }
+
     public ArrayList<Phong> getAllPhongTrong() {
         String sql = "SELECT maPhong, maTang, tenPhong, dienTich, loaiPhong, soNguoiHienTai, maGiaDetail FROM Phong WHERE trangThaiPhong = ? ORDER BY maPhong";
         ArrayList<Phong> result = new ArrayList<>();

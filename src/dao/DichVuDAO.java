@@ -111,25 +111,44 @@ public class DichVuDAO {
     }
 
     public boolean deleteDichVu(String maDichVu) {
-        String sqlDelPhongDV = "DELETE FROM PhongDichVu WHERE maDichVu = ?";
-        String sqlClearGiaDetail = "UPDATE GiaDetail SET maDichVu = NULL WHERE maDichVu = ?";
-        String sqlDelDichVu = "DELETE FROM DichVu WHERE maDichVu = ?";
         try {
             Connection con = connectDB.getConnection();
+
+            // Kiểm tra dịch vụ có đang được dùng trong hóa đơn không
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT COUNT(*) FROM HoaDonDetail WHERE maDichVu = ?")) {
+                ps.setString(1, maDichVu);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.err.println("Dịch vụ đang được sử dụng trong hóa đơn, không thể xóa.");
+                        return false;
+                    }
+                }
+            }
+
             con.setAutoCommit(false);
             try {
-                // 1. Xóa liên kết PhongDichVu
-                try (PreparedStatement ps = con.prepareStatement(sqlDelPhongDV)) {
+                // 1. Xóa liên kết PhongDichVu → DichVu
+                try (PreparedStatement ps = con.prepareStatement(
+                        "DELETE FROM PhongDichVu WHERE maDichVu = ?")) {
                     ps.setString(1, maDichVu);
                     ps.executeUpdate();
                 }
-                // 2. Xóa tham chiếu GiaDetail
-                try (PreparedStatement ps = con.prepareStatement(sqlClearGiaDetail)) {
+                // 2. Xóa FK DichVu → GiaDetail trước để có thể xóa GiaDetail
+                try (PreparedStatement ps = con.prepareStatement(
+                        "UPDATE DichVu SET maGiaDetail = NULL WHERE maDichVu = ?")) {
                     ps.setString(1, maDichVu);
                     ps.executeUpdate();
                 }
-                // 3. Xóa dịch vụ
-                try (PreparedStatement ps = con.prepareStatement(sqlDelDichVu)) {
+                // 3. Xóa GiaDetail liên quan đến dịch vụ này
+                try (PreparedStatement ps = con.prepareStatement(
+                        "DELETE FROM GiaDetail WHERE maDichVu = ?")) {
+                    ps.setString(1, maDichVu);
+                    ps.executeUpdate();
+                }
+                // 4. Xóa DichVu
+                try (PreparedStatement ps = con.prepareStatement(
+                        "DELETE FROM DichVu WHERE maDichVu = ?")) {
                     ps.setString(1, maDichVu);
                     int rows = ps.executeUpdate();
                     con.commit();

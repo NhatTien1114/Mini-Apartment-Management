@@ -237,6 +237,9 @@ public class QuanLyPhongUI {
             selectedTangFilter = (String) cboTangFilter.getSelectedItem();
             rebuildFloors();
         });
+        cboTangFilter.setPreferredSize(new Dimension(150, 40));
+        cboTangFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        cboTangFilter.setBackground(Color.WHITE);
 
         // Build combo loại phòng
         List<LoaiPhong> dsLoai = new LoaiPhongDAO().layTatCa();
@@ -250,6 +253,10 @@ public class QuanLyPhongUI {
             selectedLoaiPhongFilter = (String) cboLoaiPhongFilter.getSelectedItem();
             rebuildFloors();
         });
+
+        cboLoaiPhongFilter.setPreferredSize(new Dimension(150, 40));
+        cboLoaiPhongFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        cboLoaiPhongFilter.setBackground(Color.WHITE);
 
         row2.add(makeFilterLabel("Lọc theo tầng:"));
         row2.add(cboTangFilter);

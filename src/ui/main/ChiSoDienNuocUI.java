@@ -1,12 +1,9 @@
 package ui.main;
 
-import dao.ChiSoDienNuocDAO;
-import dao.HoaDonDAO;
-import dao.HopDongKhachHangDAO;
-import dao.QuanLyPhongDAO;
 import entity.ChiSoDienNuoc;
 import entity.KhachHang;
 import entity.Phong;
+import entity.RoomMonthSummary;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -21,6 +18,7 @@ import javax.swing.border.MatteBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import service.ChiSoDienNuocService;
 import ui.util.AppColors;
 import ui.util.PrimaryButton;
 
@@ -30,11 +28,8 @@ public class ChiSoDienNuocUI {
     private final Font FONT_PLAIN = new Font("Be Vietnam Pro", Font.PLAIN, 14);
     private final Font FONT_SMALL = new Font("Be Vietnam Pro", Font.PLAIN, 13);
 
-    private final ChiSoDienNuocDAO chiSoDAO = new ChiSoDienNuocDAO();
-    private final QuanLyPhongDAO phongDAO = new QuanLyPhongDAO();
-    private final HopDongKhachHangDAO hopDongKhachHangDAO = new HopDongKhachHangDAO();
+    private final ChiSoDienNuocService service = new ChiSoDienNuocService();
     private final PrimaryButton primaryButton = new PrimaryButton();
-    private final HoaDonDAO hoaDonDAO = new HoaDonDAO();
 
     private JTable table;
     private DefaultTableModel tableModel;
@@ -139,9 +134,9 @@ public class ChiSoDienNuocUI {
 
         String[] months = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" };
         cboMonth = new JComboBox<>(months);
-        cboMonth.setFont(FONT_PLAIN);
-        cboMonth.setBackground(AppColors.WHITE);
-        cboMonth.setPreferredSize(new Dimension(70, 36));
+        cboMonth.setPreferredSize(new Dimension(110, 40));
+        cboMonth.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        cboMonth.setBackground(Color.WHITE);
         cboMonth.setSelectedIndex(Calendar.getInstance().get(Calendar.MONTH));
 
         JLabel lblYear = new JLabel("Năm:");
@@ -156,9 +151,9 @@ public class ChiSoDienNuocUI {
             years[i] = String.valueOf(currentYear - 2 + i);
         }
         cboYear = new JComboBox<>(years);
-        cboYear.setFont(FONT_PLAIN);
-        cboYear.setBackground(AppColors.WHITE);
-        cboYear.setPreferredSize(new Dimension(90, 36));
+        cboYear.setPreferredSize(new Dimension(130, 40));
+        cboYear.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        cboYear.setBackground(Color.WHITE);
         cboYear.setSelectedItem(String.valueOf(currentYear));
 
         // Renderer: gray out future months when current year is selected
@@ -217,7 +212,7 @@ public class ChiSoDienNuocUI {
         leftBar.add(Box.createHorizontalStrut(16));
         leftBar.add(lblStatus);
 
-        JPanel rightBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel rightBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 0));
         rightBar.setBackground(AppColors.WHITE);
 
         JButton btnSave = primaryButton.makePrimaryButton("Lưu tất cả");
@@ -532,11 +527,11 @@ public class ChiSoDienNuocUI {
         int nam = Integer.parseInt((String) cboYear.getSelectedItem());
 
         data.ngay = ngay;
-        int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(data.maHopDong, LocalDate.of(nam, thang, ngay));
+        int[] chiSoCu = service.layChiSoTruocNgay(data.maHopDong, LocalDate.of(nam, thang, ngay));
         if (chiSoCu[0] == 0 && chiSoCu[1] == 0) {
-            chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhongTruocNgay(data.maPhong, LocalDate.of(nam, thang, ngay));
+            chiSoCu = service.layChiSoGanNhatTheoPhongTruocNgay(data.maPhong, LocalDate.of(nam, thang, ngay));
             if (chiSoCu[0] == 0 && chiSoCu[1] == 0) {
-                chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhong(data.maPhong);
+                chiSoCu = service.layChiSoGanNhatTheoPhong(data.maPhong);
             }
         }
         data.dienCu = chiSoCu[0];
@@ -547,179 +542,159 @@ public class ChiSoDienNuocUI {
         updateConsumption(row);
     }
 
-    private void autoImportPrevMonthIfMissing(int thang, int nam) {
-        int thangTruoc = (thang == 1) ? 12 : thang - 1;
-        int namTruoc = (thang == 1) ? nam - 1 : nam;
-
-        ArrayList<ChiSoDienNuoc> existing = chiSoDAO.getAllChiSoThang(thangTruoc, namTruoc);
-        java.util.Set<String> savedContracts = new java.util.HashSet<>();
-        for (ChiSoDienNuoc cs : existing)
-            savedContracts.add(cs.getMaHopDong());
-
-        java.util.List<HoaDonUI.RoomMonthSummary> summaries = hoaDonDAO.getRoomSummariesTheoThang(thangTruoc, namTruoc);
-        for (HoaDonUI.RoomMonthSummary s : summaries) {
-            String maHopDong = hopDongKhachHangDAO.getMaHopDongHienTai(s.maPhong);
-            if (maHopDong == null || savedContracts.contains(maHopDong))
-                continue;
-            LocalDate ngayGhi = LocalDate.of(namTruoc, thangTruoc, 1);
-            int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(maHopDong, ngayGhi);
-            int soDienMoi = chiSoCu[0] + s.tieuThuDien;
-            int soNuocMoi = chiSoCu[1] + s.tieuThuNuoc;
-            chiSoDAO.luuHoacCapNhat(new ChiSoDienNuoc(maHopDong, ngayGhi, soDienMoi, soNuocMoi));
-        }
-    }
+    private SwingWorker<?, ?> activeWorker;
 
     private void loadData() {
         if (tableModel == null)
             return;
 
-        int thang = Integer.parseInt((String) cboMonth.getSelectedItem());
-        int nam = Integer.parseInt((String) cboYear.getSelectedItem());
+        final int thang = Integer.parseInt((String) cboMonth.getSelectedItem());
+        final int nam = Integer.parseInt((String) cboYear.getSelectedItem());
 
-        autoImportPrevMonthIfMissing(thang, nam);
+        if (activeWorker != null && !activeWorker.isDone())
+            activeWorker.cancel(false);
 
-        currentRows.clear();
-        tableModel.setRowCount(0);
+        lblStatus.setText("Đang tải...");
 
-        // Pre-fetch tất cả ChiSo của tháng, gom theo maHopDong
-        ArrayList<ChiSoDienNuoc> savedList = chiSoDAO.getAllChiSoThang(thang, nam);
-        java.util.Map<String, java.util.List<ChiSoDienNuoc>> savedByHopDong = new java.util.LinkedHashMap<>();
-        for (ChiSoDienNuoc cs : savedList) {
-            savedByHopDong.computeIfAbsent(cs.getMaHopDong(), k -> new java.util.ArrayList<>()).add(cs);
-        }
+        // Result holders — built in background, applied on EDT in done()
+        final java.util.List<RoomMeterRow> newRows = new java.util.ArrayList<>();
+        final java.util.List<Object[]> newTableRows = new java.util.ArrayList<>();
+        final int[] counts = { 0, 0, 0 }; // [daNhap, chuaNhap, total]
 
-        java.util.List<HoaDonUI.RoomMonthSummary> invoiceSummaries = hoaDonDAO.getRoomSummariesTheoThang(thang, nam);
-        java.util.Map<String, HoaDonUI.RoomMonthSummary> invoiceByRoom = new java.util.HashMap<>();
-        for (HoaDonUI.RoomMonthSummary s : invoiceSummaries) {
-            invoiceByRoom.put(s.maPhong, s);
-        }
+        activeWorker = new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() {
+                service.autoImportPrevMonthIfMissing(thang, nam);
 
-        ArrayList<Phong> dsPhong = phongDAO.getAllPhongDaThue();
-        if (dsPhong == null)
-            dsPhong = new ArrayList<>();
+                ArrayList<ChiSoDienNuoc> savedList = service.layTatCaTheoThang(thang, nam);
+                java.util.Map<String, java.util.List<ChiSoDienNuoc>> savedByHopDong = new java.util.LinkedHashMap<>();
+                for (ChiSoDienNuoc cs : savedList)
+                    savedByHopDong.computeIfAbsent(cs.getMaHopDong(), k -> new java.util.ArrayList<>()).add(cs);
 
-        int daNhap = 0;
-        int chuaNhap = 0;
+                java.util.List<RoomMonthSummary> invoiceSummaries = service.layTomTatHoaDonThang(thang, nam);
+                java.util.Map<String, RoomMonthSummary> invoiceByRoom = new java.util.HashMap<>();
+                for (RoomMonthSummary s : invoiceSummaries)
+                    invoiceByRoom.put(s.maPhong, s);
 
-        Calendar cal = Calendar.getInstance();
-        int todayDay = (thang == cal.get(Calendar.MONTH) + 1 && nam == cal.get(Calendar.YEAR))
-                ? cal.get(Calendar.DAY_OF_MONTH)
-                : 1;
+                // Batch: lấy maHopDong và nguoiDaiDien cho tất cả phòng trong 2 query
+                java.util.Map<String, String> maHopDongMap = service.getMaHopDongTaiThangBatch(thang, nam);
+                java.util.Map<String, KhachHang> nguoiDaiDienMap = service.getNguoiDaiDienTaiThangBatch(thang, nam);
 
-        for (Phong phong : dsPhong) {
-            String maPhong = phong.getMaPhong();
+                ArrayList<Phong> dsPhong = service.layTatCaPhong();
+                if (dsPhong == null)
+                    dsPhong = new ArrayList<>();
+                counts[2] = dsPhong.size();
 
-            // Lấy hợp đồng tại tháng đang xem (không phải hợp đồng hiện tại)
-            String maHopDong = hopDongKhachHangDAO.getMaHopDongTaiThang(maPhong, thang, nam);
-            if (maHopDong == null)
-                continue;
+                Calendar cal = Calendar.getInstance();
+                int todayDay = (thang == cal.get(Calendar.MONTH) + 1 && nam == cal.get(Calendar.YEAR))
+                        ? cal.get(Calendar.DAY_OF_MONTH)
+                        : 1;
 
-            // Lấy tên khách đại diện tại tháng đang xem (không phải người hiện tại)
-            String tenKhachTaiThang = "";
-            KhachHang khTaiThang = hopDongKhachHangDAO.getNguoiDaiDienByMaPhongTaiThang(maPhong, thang, nam);
-            if (khTaiThang != null)
-                tenKhachTaiThang = khTaiThang.getHoTen();
-            // Fallback: lấy người đại diện hiện tại
-            if (tenKhachTaiThang.isEmpty()) {
-                KhachHang khHT = hopDongKhachHangDAO.getNguoiDaiDienByMaPhong(maPhong);
-                if (khHT != null)
-                    tenKhachTaiThang = khHT.getHoTen();
+                for (Phong phong : dsPhong) {
+                    if (isCancelled())
+                        break;
+                    String maPhong = phong.getMaPhong();
+
+                    String maHopDong = maHopDongMap.get(maPhong);
+                    if (maHopDong == null)
+                        continue;
+
+                    // Lấy tên từ batch map; fallback per-room chỉ khi không có trong map
+                    String tenKhachTaiThang = "";
+                    KhachHang kh = nguoiDaiDienMap.get(maPhong);
+                    if (kh == null)
+                        kh = service.getNguoiDaiDienHienTai(maPhong);
+                    if (kh != null)
+                        tenKhachTaiThang = kh.getHoTen();
+
+                    java.util.List<ChiSoDienNuoc> savedForRoom = savedByHopDong.getOrDefault(
+                            maHopDong, java.util.Collections.emptyList());
+
+                    if (!savedForRoom.isEmpty()) {
+                        for (ChiSoDienNuoc cs : savedForRoom) {
+                            int[] chiSoCu = service.layChiSoGanNhatTheoPhongTruocNgay(maPhong, cs.getNgayGhi());
+                            int dienCu = chiSoCu[0], nuocCu = chiSoCu[1];
+                            int dienMoi = cs.getSoDien(), nuocMoi = cs.getSoNuoc();
+                            int tieuThuDien = Math.max(0, dienMoi - dienCu);
+                            int tieuThuNuoc = Math.max(0, nuocMoi - nuocCu);
+                            int ngay = cs.getNgayGhi().getDayOfMonth();
+
+                            KhachHang khTaiNgay = service.getNguoiDaiDienTaiNgay(maPhong, cs.getNgayGhi());
+                            String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachTaiThang;
+
+                            newRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhach, ngay,
+                                    dienCu, dienMoi, nuocCu, nuocMoi, true));
+                            newTableRows.add(new Object[] {
+                                    maPhong, tenKhach, String.valueOf(ngay),
+                                    String.valueOf(dienCu), String.valueOf(dienMoi), String.valueOf(tieuThuDien),
+                                    String.valueOf(nuocCu), String.valueOf(nuocMoi), String.valueOf(tieuThuNuoc),
+                                    "Đã nhập"
+                            });
+                            counts[0]++;
+                        }
+                    } else {
+                        RoomMonthSummary invoice = invoiceByRoom.get(maPhong);
+                        if (invoice != null) {
+                            LocalDate ngayGhi = LocalDate.of(nam, thang, 1);
+                            int[] chiSoCu = service.layChiSoGanNhatTheoPhongTruocNgay(maPhong, ngayGhi);
+                            int dienCu = chiSoCu[0], nuocCu = chiSoCu[1];
+                            int dienMoi = dienCu + invoice.tieuThuDien;
+                            int nuocMoi = nuocCu + invoice.tieuThuNuoc;
+
+                            service.luu(new ChiSoDienNuoc(maHopDong, ngayGhi, dienMoi, nuocMoi));
+
+                            KhachHang khTaiNgay = service.getNguoiDaiDienTaiNgay(maPhong, ngayGhi);
+                            String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachTaiThang;
+
+                            newRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhach, 1,
+                                    dienCu, dienMoi, nuocCu, nuocMoi, true));
+                            newTableRows.add(new Object[] {
+                                    maPhong, tenKhach, "1",
+                                    String.valueOf(dienCu), String.valueOf(dienMoi),
+                                    String.valueOf(invoice.tieuThuDien),
+                                    String.valueOf(nuocCu), String.valueOf(nuocMoi),
+                                    String.valueOf(invoice.tieuThuNuoc),
+                                    "Đã nhập"
+                            });
+                            counts[0]++;
+                        } else {
+                            int[] chiSoCu = service.layChiSoGanNhatTheoPhongTruocNgay(maPhong,
+                                    LocalDate.of(nam, thang, todayDay));
+                            int dienCu = chiSoCu[0], nuocCu = chiSoCu[1];
+
+                            newRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhachTaiThang, todayDay,
+                                    dienCu, dienCu, nuocCu, nuocCu, false));
+                            newTableRows.add(new Object[] {
+                                    maPhong, tenKhachTaiThang, String.valueOf(todayDay),
+                                    String.valueOf(dienCu), String.valueOf(dienCu), "0",
+                                    String.valueOf(nuocCu), String.valueOf(nuocCu), "0",
+                                    "Chưa nhập"
+                            });
+                            counts[1]++;
+                        }
+                    }
+                }
+                return null;
             }
 
-            java.util.List<ChiSoDienNuoc> savedForRoom = savedByHopDong.getOrDefault(maHopDong,
-                    java.util.Collections.emptyList());
-
-            if (!savedForRoom.isEmpty()) {
-                for (ChiSoDienNuoc cs : savedForRoom) {
-                    // Lấy chỉ số cũ: ưu tiên tuyệt đối theo lịch sử của căn phòng (đồng hồ vật lý)
-                    int[] chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhongTruocNgay(maPhong, cs.getNgayGhi());
-                    int dienCu = chiSoCu[0];
-                    int nuocCu = chiSoCu[1];
-                    int dienMoi = cs.getSoDien();
-                    int nuocMoi = cs.getSoNuoc();
-                    int tieuThuDien = Math.max(0, dienMoi - dienCu);
-                    int tieuThuNuoc = Math.max(0, nuocMoi - nuocCu);
-                    int ngay = cs.getNgayGhi().getDayOfMonth();
-
-                    KhachHang khTaiNgay = hopDongKhachHangDAO.getNguoiDaiDienByMaPhongTaiNgay(maPhong, cs.getNgayGhi());
-                    String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachTaiThang;
-
-                    currentRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhach, ngay,
-                            dienCu, dienMoi, nuocCu, nuocMoi, true));
-                    tableModel.addRow(new Object[] {
-                            maPhong, tenKhach,
-                            String.valueOf(ngay),
-                            String.valueOf(dienCu),
-                            String.valueOf(dienMoi),
-                            String.valueOf(tieuThuDien),
-                            String.valueOf(nuocCu),
-                            String.valueOf(nuocMoi),
-                            String.valueOf(tieuThuNuoc),
-                            "Đã nhập"
-                    });
-                    daNhap++;
-                }
-            } else {
-                HoaDonUI.RoomMonthSummary invoice = invoiceByRoom.get(maPhong);
-                if (invoice != null) {
-                    LocalDate ngayGhi = LocalDate.of(nam, thang, 1);
-                    // Lấy chỉ số cũ: ưu tiên tuyệt đối theo lịch sử của căn phòng (đồng hồ vật lý)
-                    int[] chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhongTruocNgay(maPhong, ngayGhi);
-                    int dienCu = chiSoCu[0];
-                    int nuocCu = chiSoCu[1];
-                    int dienMoi = dienCu + invoice.tieuThuDien;
-                    int nuocMoi = nuocCu + invoice.tieuThuNuoc;
-                    int tieuThuDien = invoice.tieuThuDien;
-                    int tieuThuNuoc = invoice.tieuThuNuoc;
-
-                    chiSoDAO.luuHoacCapNhat(new ChiSoDienNuoc(maHopDong, ngayGhi, dienMoi, nuocMoi));
-
-                    KhachHang khTaiNgay = hopDongKhachHangDAO.getNguoiDaiDienByMaPhongTaiNgay(maPhong, ngayGhi);
-                    String tenKhach = (khTaiNgay != null) ? khTaiNgay.getHoTen() : tenKhachTaiThang;
-
-                    currentRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhach, 1,
-                            dienCu, dienMoi, nuocCu, nuocMoi, true));
-                    tableModel.addRow(new Object[] {
-                            maPhong, tenKhach,
-                            "1",
-                            String.valueOf(dienCu),
-                            String.valueOf(dienMoi),
-                            String.valueOf(tieuThuDien),
-                            String.valueOf(nuocCu),
-                            String.valueOf(nuocMoi),
-                            String.valueOf(tieuThuNuoc),
-                            "Đã nhập"
-                    });
-                    daNhap++;
-                } else {
-                    // Chưa nhập: lấy chỉ số cũ tuyệt đối theo lịch sử căn phòng
-                    int[] chiSoCu = chiSoDAO.layChiSoGanNhatTheoPhongTruocNgay(maPhong, LocalDate.of(nam, thang, todayDay));
-                    int dienCu = chiSoCu[0];
-                    int nuocCu = chiSoCu[1];
-
-                    currentRows.add(new RoomMeterRow(maPhong, maHopDong, tenKhachTaiThang, todayDay,
-                            dienCu, dienCu, nuocCu, nuocCu, false));
-                    tableModel.addRow(new Object[] {
-                            maPhong, tenKhachTaiThang,
-                            String.valueOf(todayDay),
-                            String.valueOf(dienCu),
-                            String.valueOf(dienCu),
-                            "0",
-                            String.valueOf(nuocCu),
-                            String.valueOf(nuocCu),
-                            "0",
-                            "Chưa nhập"
-                    });
-                    chuaNhap++;
-                }
+            @Override
+            protected void done() {
+                if (isCancelled())
+                    return;
+                currentRows.clear();
+                currentRows.addAll(newRows);
+                tableModel.setRowCount(0);
+                for (Object[] row : newTableRows)
+                    tableModel.addRow(row);
+                lblTotalRooms.setText("Tổng phòng: " + counts[2]);
+                lblEnteredCount.setText("Đã nhập: " + counts[0]);
+                lblPendingCount.setText("Chưa nhập: " + counts[1]);
+                lblStatus.setText("");
+                table.revalidate();
+                table.repaint();
             }
-        }
-
-        int total = dsPhong.size();
-        lblTotalRooms.setText("Tổng phòng: " + total);
-        lblEnteredCount.setText("Đã nhập: " + daNhap);
-        lblPendingCount.setText("Chưa nhập: " + chuaNhap);
-        lblStatus.setText("");
+        };
+        activeWorker.execute();
     }
 
     private void addNewReadingForSelectedRoom() {
@@ -735,7 +710,7 @@ public class ChiSoDienNuocUI {
         String maPhong = selected.maPhong;
         String maHopDong = selected.maHopDong;
 
-        KhachHang khHienTai = hopDongKhachHangDAO.getNguoiDaiDienByMaPhong(maPhong);
+        KhachHang khHienTai = service.getNguoiDaiDienHienTai(maPhong);
         String tenKhach = (khHienTai != null) ? khHienTai.getHoTen() : selected.tenKhach;
 
         int thang = Integer.parseInt((String) cboMonth.getSelectedItem());
@@ -746,7 +721,7 @@ public class ChiSoDienNuocUI {
                 ? cal.get(Calendar.DAY_OF_MONTH)
                 : 1;
 
-        int[] chiSoCu = chiSoDAO.layChiSoTruocNgay(maHopDong, LocalDate.of(nam, thang, defaultNgay));
+        int[] chiSoCu = service.layChiSoTruocNgay(maHopDong, LocalDate.of(nam, thang, defaultNgay));
         int dienCu = chiSoCu[0];
         int nuocCu = chiSoCu[1];
 
@@ -884,7 +859,7 @@ public class ChiSoDienNuocUI {
             }
 
             ChiSoDienNuoc cs = new ChiSoDienNuoc(data.maHopDong, LocalDate.of(nam, thang, ngay), dienMoi, nuocMoi);
-            String err = chiSoDAO.luuHoacCapNhat(cs);
+            String err = service.luu(cs);
             if (err != null) {
                 errors.add(data.maPhong + ": " + err);
             } else {

@@ -7,12 +7,15 @@ import dao.HoaDonDAO;
 import dao.HopDongKhachHangDAO;
 import dao.PhuongTienDAO;
 import dao.QuanLyPhongDAO;
+import entity.Bill;
+import entity.BillServiceItem;
 import entity.ChiSoDienNuoc;
 import entity.DichVu;
 import entity.GiaDetail;
 import entity.KhachHang;
 import entity.Phong;
 import entity.PhuongTien;
+import entity.RoomMonthSummary;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -133,31 +136,6 @@ public class HoaDonUI {
         this.onNavigateToChiSo = callback;
     }
 
-    public static class BillServiceItem {
-        public String maDichVu;
-        public String tenKhoan;
-        public int soLuong;
-        public double donGia;
-    }
-
-    public static class Bill {
-        public String phong;
-        public String maHopDong;
-        public boolean daThanhToan;
-        public int tongTieuThuD;
-        public double donGiaDien;
-        public double tienDien;
-        public String maDichVuDien;
-        public int tongTieuThuN;
-        public double donGiaNuoc;
-        public double tienNuoc;
-        public String maDichVuNuoc;
-        public double tienPhong;
-        public String month;
-        public String year;
-        public List<BillServiceItem> dichVuKhac = new ArrayList<>();
-    }
-
     private static class ServiceOption {
         String maDichVu;
         String tenDichVu;
@@ -219,27 +197,6 @@ public class HoaDonUI {
         int soPhong;
         double tongDoanhThu;
         LocalDate ngayTao;
-    }
-
-    public static class MonthDetailRow {
-        public String maPhong;
-        public double tienPhong;
-        public double tienDien;
-        public double tienNuoc;
-        public double tienDichVu;
-        public double tong;
-    }
-
-    public static class RoomMonthSummary {
-        public String maHoaDon = "";
-        public String maPhong;
-        public double tienPhong;
-        public int tieuThuDien;
-        public double donGiaDien;
-        public int tieuThuNuoc;
-        public double donGiaNuoc;
-        public boolean daThanhToan;
-        public List<BillServiceItem> services = new ArrayList<>();
     }
 
     private JPanel pnlRoot;
@@ -507,23 +464,92 @@ public class HoaDonUI {
     private void showCreateDialog() {
         Window owner = SwingUtilities.getWindowAncestor(summaryCard);
         JDialog dlg = new JDialog(owner instanceof Frame ? (Frame) owner : null, "Tính hóa đơn", true);
-        dlg.setSize(420, 230);
+        dlg.setUndecorated(true);
+        dlg.setSize(460, 260);
         dlg.setLocationRelativeTo(owner);
+        dlg.setBackground(new Color(0, 0, 0, 0));
 
-        JPanel root = new JPanel(new BorderLayout(0, 12));
+        ui.util.RoundedPanel root = new ui.util.RoundedPanel(16);
+        root.setLayout(new BorderLayout(0, 0));
         root.setBackground(MAU_CARD);
-        root.setBorder(new EmptyBorder(16, 16, 16, 16));
+        root.setBorder(new EmptyBorder(24, 28, 24, 28));
 
-        JPanel form = new JPanel(new GridLayout(1, 2, 10, 0));
+        // Header
+        JPanel headerRow = new JPanel(new BorderLayout());
+        headerRow.setOpaque(false);
+        headerRow.setBorder(new EmptyBorder(0, 0, 20, 0));
+        JLabel lblDialogTitle = new JLabel("Tính hóa đơn tháng");
+        lblDialogTitle.setFont(new Font("Be Vietnam Pro", Font.BOLD, 17));
+        lblDialogTitle.setForeground(MAU_TEXT);
+        JLabel lblSub = new JLabel("Chọn tháng và năm cần tính hóa đơn");
+        lblSub.setFont(FONT_SMALL);
+        lblSub.setForeground(new Color(100, 116, 139));
+        JPanel titleStack = new JPanel();
+        titleStack.setOpaque(false);
+        titleStack.setLayout(new BoxLayout(titleStack, BoxLayout.Y_AXIS));
+        titleStack.add(lblDialogTitle);
+        titleStack.add(Box.createVerticalStrut(3));
+        titleStack.add(lblSub);
+        headerRow.add(titleStack, BorderLayout.WEST);
+        root.add(headerRow, BorderLayout.NORTH);
+
+        // Filter fields
+        JPanel form = new JPanel(new GridLayout(1, 2, 16, 0));
         form.setOpaque(false);
-        JComboBox<String> cMonth = makeCombo(MONTHS);
+        form.setBorder(new EmptyBorder(0, 0, 20, 0));
+
+        JComboBox<String> cMonth = new JComboBox<>(MONTHS);
         cMonth.setSelectedIndex(Calendar.getInstance().get(Calendar.MONTH));
-        JTextField fYear = makeField(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+        cMonth.setFont(FONT_PLAIN);
+        cMonth.setBackground(new Color(248, 250, 252));
+        cMonth.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(6, 10, 6, 10)));
+        cMonth.setPreferredSize(new Dimension(0, 42));
+
+        JTextField fYear = new JTextField(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+        fYear.setFont(FONT_PLAIN);
+        fYear.setBackground(new Color(248, 250, 252));
+        fYear.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(6, 10, 6, 10)));
+        fYear.setPreferredSize(new Dimension(0, 42));
+        fYear.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent e) {
+                fYear.setBorder(BorderFactory.createCompoundBorder(
+                        new LineBorder(new Color(37, 99, 235), 1, true),
+                        new EmptyBorder(6, 10, 6, 10)));
+            }
+            public void focusLost(java.awt.event.FocusEvent e) {
+                fYear.setBorder(BorderFactory.createCompoundBorder(
+                        new LineBorder(new Color(203, 213, 225), 1, true),
+                        new EmptyBorder(6, 10, 6, 10)));
+            }
+        });
 
         form.add(wrapField("Tháng", cMonth));
         form.add(wrapField("Năm", fYear));
+        root.add(form, BorderLayout.CENTER);
+
+        // Buttons
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        btnRow.setOpaque(false);
+
+        ui.util.RoundedButton btnCancel = new ui.util.RoundedButton("Hủy", 8);
+        btnCancel.setBackground(MAU_CARD);
+        btnCancel.setForeground(new Color(100, 116, 139));
+        btnCancel.setFont(new Font("Be Vietnam Pro", Font.BOLD, 13));
+        btnCancel.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(9, 18, 9, 18)));
+        btnCancel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnCancel.addActionListener(e -> dlg.dispose());
 
         JButton btnCalc = primaryButton.makePrimaryButton("Tính tổng tiền");
+        btnRow.add(btnCancel);
+        btnRow.add(btnCalc);
+        root.add(btnRow, BorderLayout.SOUTH);
+
         btnCalc.addActionListener(e -> {
             String month = String.valueOf(cMonth.getSelectedItem());
             String year = fYear.getText().trim();
@@ -574,9 +600,31 @@ public class HoaDonUI {
             mainCardLayout.show((java.awt.Container) pnlRoot.getComponent(0), "calc");
         });
 
-        root.add(form, BorderLayout.CENTER);
-        root.add(btnCalc, BorderLayout.SOUTH);
         dlg.setContentPane(root);
+
+        if (owner instanceof javax.swing.JFrame) {
+            javax.swing.JFrame frame = (javax.swing.JFrame) owner;
+            Component oldGlass = frame.getGlassPane();
+            JPanel overlay = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    g.setColor(new Color(0, 0, 0, 100));
+                    g.fillRect(0, 0, getWidth(), getHeight());
+                }
+            };
+            overlay.setOpaque(false);
+            overlay.addMouseListener(new MouseAdapter() {});
+            frame.setGlassPane(overlay);
+            overlay.setVisible(true);
+            dlg.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosed(java.awt.event.WindowEvent e) {
+                    overlay.setVisible(false);
+                    frame.setGlassPane(oldGlass);
+                }
+            });
+        }
+
         dlg.setVisible(true);
     }
 
@@ -942,7 +990,7 @@ public class HoaDonUI {
         summaryCard.setVisible(true);
         lblSummaryTitle.setText("Hóa đơn tháng " + currentMonth + "/" + currentYear);
         for (MonthlyRoomDraft d : currentDrafts) {
-            String tenPhong = d.isExisting ? "(cũ) " + d.maPhong : d.maPhong;
+            String tenPhong = d.maPhong;
             summaryModel.addRow(new Object[] {
                     tenPhong,
                     formatMoney(d.tienPhong),

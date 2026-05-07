@@ -1,28 +1,28 @@
 package ui.main;
 
+import dao.HoaDonDAO;
+import dao.HopDongDAO;
 import dao.QuanLyPhongDAO;
+import entity.HopDong;
 import entity.Phong;
 import java.awt.*;
 import java.awt.event.*;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import ui.util.AppColors;
-import ui.util.ThemeManager;
+import ui.util.NotificationManager;
 import ui.util.PhongInfo;
 import ui.util.RoundedPanel;
-import dao.HoaDonDAO;
-import dao.HopDongDAO;
-import entity.HopDong;
-import java.text.NumberFormat;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.Locale;
-import ui.util.NotificationManager;
+import ui.util.ThemeManager;
 
 public class TrangChu extends JFrame {
     // ===== LAYOUT COMPONENTS =====
@@ -605,10 +605,14 @@ public class TrangChu extends JFrame {
                         // Timestamp
                         long elapsed = System.currentTimeMillis() - notif.timestamp;
                         String timeAgo;
-                        if (elapsed < 60_000) timeAgo = "Vừa xong";
-                        else if (elapsed < 3_600_000) timeAgo = (elapsed / 60_000) + " phút trước";
-                        else if (elapsed < 86_400_000) timeAgo = (elapsed / 3_600_000) + " giờ trước";
-                        else timeAgo = (elapsed / 86_400_000) + " ngày trước";
+                        if (elapsed < 60_000)
+                            timeAgo = "Vừa xong";
+                        else if (elapsed < 3_600_000)
+                            timeAgo = (elapsed / 60_000) + " phút trước";
+                        else if (elapsed < 86_400_000)
+                            timeAgo = (elapsed / 3_600_000) + " giờ trước";
+                        else
+                            timeAgo = (elapsed / 86_400_000) + " ngày trước";
 
                         JLabel lblTime = new JLabel(timeAgo);
                         lblTime.setFont(new Font("Be Vietnam Pro", Font.ITALIC, 10));
@@ -774,7 +778,7 @@ public class TrangChu extends JFrame {
                 theme.toggle();
                 float target = theme.isDarkMode() ? RIGHT_X : LEFT_X;
                 toggle.setToolTipText(theme.isDarkMode() ? "Chuyển sang sáng" : "Chuyển sang tối");
-                
+
                 // Cập nhật UI ngay lập tức
                 Window w = SwingUtilities.getWindowAncestor(toggle);
                 if (w != null) {
@@ -889,9 +893,17 @@ public class TrangChu extends JFrame {
         cboLoaiPhongFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
         cboTangFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
 
+        cboTangFilter.setPreferredSize(new Dimension(150, 40));
+        cboTangFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        cboTangFilter.setBackground(Color.WHITE);
+
         // Set current selections
         cboLoaiPhongFilter.setSelectedItem(currentLoaiPhongFilter);
         cboTangFilter.setSelectedItem(currentTangFilter);
+
+        cboLoaiPhongFilter.setPreferredSize(new Dimension(150, 40));
+        cboLoaiPhongFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        cboLoaiPhongFilter.setBackground(Color.WHITE);
 
         cboLoaiPhongFilter.addActionListener(e -> {
             currentLoaiPhongFilter = String.valueOf(cboLoaiPhongFilter.getSelectedItem());
@@ -1299,9 +1311,17 @@ public class TrangChu extends JFrame {
         btnClose.setForeground(new Color(148, 163, 184));
         btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnClose.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) { dlg.dispose(); }
-            public void mouseEntered(MouseEvent e) { btnClose.setForeground(new Color(239, 68, 68)); }
-            public void mouseExited(MouseEvent e) { btnClose.setForeground(new Color(148, 163, 184)); }
+            public void mouseClicked(MouseEvent e) {
+                dlg.dispose();
+            }
+
+            public void mouseEntered(MouseEvent e) {
+                btnClose.setForeground(new Color(239, 68, 68));
+            }
+
+            public void mouseExited(MouseEvent e) {
+                btnClose.setForeground(new Color(148, 163, 184));
+            }
         });
         headerRow.add(dlgTitle, BorderLayout.WEST);
         headerRow.add(btnClose, BorderLayout.EAST);
@@ -1402,7 +1422,7 @@ public class TrangChu extends JFrame {
                 phongDAO.updateTrangThaiPhong(phong.getMaPhong(), "Đã cọc");
                 ui.util.MessageDialog.show(dlg, "Thành công",
                         "Đã đặt cọc phòng " + phong.getMaPhong() + " thành công.\n"
-                        + "Giữ chỗ trong 3 ngày.",
+                                + "Giữ chỗ trong 3 ngày.",
                         ui.util.MessageDialog.MessageType.SUCCESS);
                 dlg.dispose();
                 refreshTrangChuTab();
@@ -1427,7 +1447,8 @@ public class TrangChu extends JFrame {
             }
         };
         overlay.setOpaque(false);
-        overlay.addMouseListener(new MouseAdapter() {});
+        overlay.addMouseListener(new MouseAdapter() {
+        });
         this.setGlassPane(overlay);
         overlay.setVisible(true);
 
@@ -1530,7 +1551,8 @@ public class TrangChu extends JFrame {
 
     // ================= KIỂM TRA HOÁ ĐƠN QUÁ HẠN =================
     /**
-     * Làm mới toàn bộ thông báo: xóa thông báo cũ đã hết hiệu lực, thêm lại các thông báo mới.
+     * Làm mới toàn bộ thông báo: xóa thông báo cũ đã hết hiệu lực, thêm lại các
+     * thông báo mới.
      * Gọi khi quay lại Trang Chủ hoặc sau khi thực hiện thao tác liên quan.
      */
     private void refreshNotifications() {
@@ -1569,7 +1591,8 @@ public class TrangChu extends JFrame {
             HoaDonDAO dao = new HoaDonDAO();
             HoaDonDAO.CauHinhPhat cfg = dao.getCauHinhPhat();
             List<HoaDonDAO.QuaHanInfo> list = dao.getHoaDonChuaTTQuaHan(cfg.ngayHanThanhToan);
-            if (list.isEmpty()) return;
+            if (list.isEmpty())
+                return;
 
             NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
@@ -1580,8 +1603,8 @@ public class TrangChu extends JFrame {
                 if (ngay <= cfg.soNgayAnHan) {
                     String msg = String.format(
                             "Phòng %s đã quá hạn thanh toán %d ngày (trong thời gian ân hạn).", phong, ngay);
-                    SwingUtilities.invokeLater(() ->
-                            notifManager.addNotification("⏰ Nhắc thanh toán", msg, "overdue_grace", info.maHoaDon));
+                    SwingUtilities.invokeLater(() -> notifManager.addNotification("⏰ Nhắc thanh toán", msg,
+                            "overdue_grace", info.maHoaDon));
                 } else {
                     long ngayTinhPhat = ngay - cfg.soNgayAnHan;
                     double tienPhat = info.tongTien * cfg.mucPhatNgay * ngayTinhPhat;
@@ -1603,8 +1626,7 @@ public class TrangChu extends JFrame {
                                 phong, ngay);
                         type = "overdue_urgent";
                     }
-                    SwingUtilities.invokeLater(() ->
-                            notifManager.addNotification(title, msg, type, info.maHoaDon));
+                    SwingUtilities.invokeLater(() -> notifManager.addNotification(title, msg, type, info.maHoaDon));
                 }
             }
         }, "overdue-check").start();
@@ -1612,6 +1634,31 @@ public class TrangChu extends JFrame {
 
     // ================= MAIN =================
     public static void main(String[] args) {
+        // Ensure UIManager can find custom UI classes from the app classpath (Java 9+
+        // module fix)
+        javax.swing.UIManager.put("ClassLoader", Thread.currentThread().getContextClassLoader());
+
+        // --- Scrollbar hiện đại toàn cục ---
+        javax.swing.UIManager.put("ScrollBarUI", "ui.util.ModernScrollBarUI");
+        javax.swing.UIManager.put("ScrollBar.width", 8);
+        javax.swing.UIManager.put("ScrollBar.track", new java.awt.Color(241, 245, 249));
+        javax.swing.UIManager.put("ScrollBar.thumb", new java.awt.Color(148, 163, 184));
+        javax.swing.UIManager.put("ScrollBar.thumbShadow", new java.awt.Color(0, 0, 0, 0));
+        javax.swing.UIManager.put("ScrollBar.thumbHighlight", new java.awt.Color(0, 0, 0, 0));
+        javax.swing.UIManager.put("ScrollBar.thumbDarkShadow", new java.awt.Color(0, 0, 0, 0));
+
+        // --- ComboBox hiện đại toàn cục ---
+        javax.swing.UIManager.put("ComboBoxUI", "ui.util.ModernComboBoxUI");
+        javax.swing.UIManager.put("ComboBox.background", java.awt.Color.WHITE);
+        javax.swing.UIManager.put("ComboBox.foreground", new java.awt.Color(15, 23, 42));
+        javax.swing.UIManager.put("ComboBox.selectionBackground", new java.awt.Color(239, 246, 255));
+        javax.swing.UIManager.put("ComboBox.selectionForeground", new java.awt.Color(37, 99, 235));
+        javax.swing.UIManager.put("ComboBox.disabledBackground", new java.awt.Color(248, 250, 252));
+
+        // --- Button focus ring tắt ---
+        javax.swing.UIManager.put("Button.focus", new java.awt.Color(0, 0, 0, 0));
+        javax.swing.UIManager.put("ComboBox.focus", new java.awt.Color(0, 0, 0, 0));
+
         SwingUtilities.invokeLater(() -> new LoginUI().setVisible(true));
     }
 }

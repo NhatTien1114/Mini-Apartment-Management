@@ -1,7 +1,11 @@
 package dao;
 
 import database.connectDB;
+import entity.Bill;
+import entity.BillServiceItem;
+import entity.MonthDetailRow;
 import entity.Phong;
+import entity.RoomMonthSummary;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -12,7 +16,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import ui.main.HoaDonUI;
 
 public class HoaDonDAO {
     HopDongDAO hdDAO = new HopDongDAO();
@@ -64,7 +67,7 @@ public class HoaDonDAO {
         }
     }
 
-    public boolean luuNhieuHoaDonMoi(ArrayList<HoaDonUI.Bill> danhSachBill, String nguoiLap) {
+    public boolean luuNhieuHoaDonMoi(ArrayList<Bill> danhSachBill, String nguoiLap) {
         Connection con = null;
         try {
             con = connectDB.getConnection();
@@ -82,7 +85,7 @@ public class HoaDonDAO {
             try (PreparedStatement psHD = con.prepareStatement(sqlHD);
                     PreparedStatement psDetail = con.prepareStatement(sqlDetail)) {
 
-                for (HoaDonUI.Bill bill : danhSachBill) {
+                for (Bill bill : danhSachBill) {
                     String maHoaDon = taoMaTheoThoiGian("HD");
 
                     int thang = Integer.parseInt(bill.month);
@@ -140,7 +143,7 @@ public class HoaDonDAO {
 
                     // 5. LƯU CHI TIẾT: DỊCH VỤ KHÁC (wifi, rác, ...)
                     if (bill.dichVuKhac != null) {
-                        for (HoaDonUI.BillServiceItem item : bill.dichVuKhac) {
+                        for (BillServiceItem item : bill.dichVuKhac) {
                             if (item == null || item.maDichVu == null || item.maDichVu.trim().isEmpty()) {
                                 continue;
                             }
@@ -270,8 +273,8 @@ public class HoaDonDAO {
         return list;
     }
 
-    public ArrayList<HoaDonUI.MonthDetailRow> getChiTietHoaDonTheoThang(int month, int year) {
-        ArrayList<HoaDonUI.MonthDetailRow> rows = new ArrayList<>();
+    public ArrayList<MonthDetailRow> getChiTietHoaDonTheoThang(int month, int year) {
+        ArrayList<MonthDetailRow> rows = new ArrayList<>();
         String sql = "SELECT hd.maPhong, "
                 + "SUM(CASE WHEN ct.tenKhoan LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienPhong, "
                 + "SUM(CASE WHEN ct.tenKhoan = N'Tiền điện' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienDien, "
@@ -290,7 +293,7 @@ public class HoaDonDAO {
             ps.setInt(2, year);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    HoaDonUI.MonthDetailRow row = new HoaDonUI.MonthDetailRow();
+                    MonthDetailRow row = new MonthDetailRow();
                     row.maPhong = rs.getString("maPhong");
                     row.tienPhong = rs.getDouble("tienPhong");
                     row.tienDien = rs.getDouble("tienDien");
@@ -306,8 +309,8 @@ public class HoaDonDAO {
         return rows;
     }
 
-    public List<HoaDonUI.RoomMonthSummary> getRoomSummariesTheoThang(int month, int year) {
-        Map<String, HoaDonUI.RoomMonthSummary> byHoaDon = new LinkedHashMap<>();
+    public List<RoomMonthSummary> getRoomSummariesTheoThang(int month, int year) {
+        Map<String, RoomMonthSummary> byHoaDon = new LinkedHashMap<>();
 
         String sqlMain = "SELECT hd.maHoaDon, hd.maPhong, hd.trangThaiThanhToan, "
                 + "SUM(CASE WHEN ct.tenKhoan LIKE N'Tiền thuê phòng%' THEN ISNULL(ct.thanhTien,0) ELSE 0 END) AS tienPhong, "
@@ -332,7 +335,7 @@ public class HoaDonDAO {
             ps.setInt(2, year);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    HoaDonUI.RoomMonthSummary s = new HoaDonUI.RoomMonthSummary();
+                    RoomMonthSummary s = new RoomMonthSummary();
                     s.maHoaDon = rs.getString("maHoaDon");
                     s.maPhong = rs.getString("maPhong");
                     s.tienPhong = rs.getDouble("tienPhong");
@@ -355,9 +358,9 @@ public class HoaDonDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     String maHoaDon = rs.getString("maHoaDon");
-                    HoaDonUI.RoomMonthSummary s = byHoaDon.get(maHoaDon);
+                    RoomMonthSummary s = byHoaDon.get(maHoaDon);
                     if (s != null) {
-                        HoaDonUI.BillServiceItem si = new HoaDonUI.BillServiceItem();
+                        BillServiceItem si = new BillServiceItem();
                         si.maDichVu = rs.getString("maDichVu");
                         si.tenKhoan = rs.getString("tenKhoan");
                         si.soLuong = rs.getInt("soLuong");
@@ -736,7 +739,7 @@ public class HoaDonDAO {
 
     // ────────────────────────────────────────────────────────────────────────────
 
-    public boolean luuHoaDonKetThucHopDong(HoaDonUI.Bill bill, java.time.LocalDate tuNgay,
+    public boolean luuHoaDonKetThucHopDong(Bill bill, java.time.LocalDate tuNgay,
             java.time.LocalDate denNgay, String maHopDong) {
         Connection con = null;
         try {
@@ -791,7 +794,7 @@ public class HoaDonDAO {
                 }
 
                 if (bill.dichVuKhac != null) {
-                    for (HoaDonUI.BillServiceItem item : bill.dichVuKhac) {
+                    for (BillServiceItem item : bill.dichVuKhac) {
                         if (item == null || item.maDichVu == null || item.maDichVu.isEmpty())
                             continue;
                         ps.setString(1, taoMaTheoThoiGian("CT"));
