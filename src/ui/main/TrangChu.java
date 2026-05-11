@@ -260,6 +260,8 @@ public class TrangChu extends JFrame {
         }
 
         if (panelIndex == 0) {
+            currentLoaiPhongFilter = "Tất cả";
+            currentTangFilter = "Tất cả";
             refreshTrangChuTab();
             refreshNotifications();
         }
@@ -352,10 +354,6 @@ public class TrangChu extends JFrame {
             return;
         }
 
-        // Reset bộ lọc về mặc định khi quay lại trang chủ
-        currentLoaiPhongFilter = "Tất cả";
-        currentTangFilter = "Tất cả";
-
         if (pnlTrangChuContent != null) {
             pnlContent.remove(pnlTrangChuContent);
         }
@@ -365,6 +363,10 @@ public class TrangChu extends JFrame {
         cardLayout.show(pnlContent, "0");
         pnlContent.revalidate();
         pnlContent.repaint();
+
+        if (ThemeManager.getInstance().isDarkMode()) {
+            SwingUtilities.invokeLater(() -> ThemeManager.getInstance().applyTheme(pnlTrangChuContent));
+        }
     }
 
     private void refreshQuanLyPhongTab() {
@@ -890,20 +892,17 @@ public class TrangChu extends JFrame {
 
         cboLoaiPhongFilter = new JComboBox<>(loaiOptions);
         cboTangFilter = new JComboBox<>(tangOptions);
-        cboLoaiPhongFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        cboTangFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
 
-        cboTangFilter.setPreferredSize(new Dimension(150, 40));
-        cboTangFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        cboTangFilter.setBackground(Color.WHITE);
+        Dimension filterSize = new Dimension(150, 40);
+        Font filterFont = new Font("Be Vietnam Pro", Font.PLAIN, 14);
+        for (JComboBox<String> cbo : new JComboBox[]{ cboLoaiPhongFilter, cboTangFilter }) {
+            cbo.setPreferredSize(filterSize);
+            cbo.setFont(filterFont);
+            cbo.setBackground(Color.WHITE);
+        }
 
-        // Set current selections
         cboLoaiPhongFilter.setSelectedItem(currentLoaiPhongFilter);
         cboTangFilter.setSelectedItem(currentTangFilter);
-
-        cboLoaiPhongFilter.setPreferredSize(new Dimension(150, 40));
-        cboLoaiPhongFilter.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
-        cboLoaiPhongFilter.setBackground(Color.WHITE);
 
         cboLoaiPhongFilter.addActionListener(e -> {
             currentLoaiPhongFilter = String.valueOf(cboLoaiPhongFilter.getSelectedItem());
@@ -967,7 +966,8 @@ public class TrangChu extends JFrame {
         try {
             ImageIcon rawIcon = new ImageIcon(iconPath);
             Image scaledImg = rawIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
-            JLabel lblIcon = new JLabel(new ImageIcon(scaledImg));
+            Image tinted = ThemeManager.tintImage(scaledImg, AppColors.SLATE_600);
+            JLabel lblIcon = new JLabel(new ImageIcon(tinted != null ? tinted : scaledImg));
             titleRow.add(lblIcon);
         } catch (Exception ignored) {
         }
@@ -1632,33 +1632,4 @@ public class TrangChu extends JFrame {
         }, "overdue-check").start();
     }
 
-    // ================= MAIN =================
-    public static void main(String[] args) {
-        // Ensure UIManager can find custom UI classes from the app classpath (Java 9+
-        // module fix)
-        javax.swing.UIManager.put("ClassLoader", Thread.currentThread().getContextClassLoader());
-
-        // --- Scrollbar hiện đại toàn cục ---
-        javax.swing.UIManager.put("ScrollBarUI", "ui.util.ModernScrollBarUI");
-        javax.swing.UIManager.put("ScrollBar.width", 8);
-        javax.swing.UIManager.put("ScrollBar.track", new java.awt.Color(241, 245, 249));
-        javax.swing.UIManager.put("ScrollBar.thumb", new java.awt.Color(148, 163, 184));
-        javax.swing.UIManager.put("ScrollBar.thumbShadow", new java.awt.Color(0, 0, 0, 0));
-        javax.swing.UIManager.put("ScrollBar.thumbHighlight", new java.awt.Color(0, 0, 0, 0));
-        javax.swing.UIManager.put("ScrollBar.thumbDarkShadow", new java.awt.Color(0, 0, 0, 0));
-
-        // --- ComboBox hiện đại toàn cục ---
-        javax.swing.UIManager.put("ComboBoxUI", "ui.util.ModernComboBoxUI");
-        javax.swing.UIManager.put("ComboBox.background", java.awt.Color.WHITE);
-        javax.swing.UIManager.put("ComboBox.foreground", new java.awt.Color(15, 23, 42));
-        javax.swing.UIManager.put("ComboBox.selectionBackground", new java.awt.Color(239, 246, 255));
-        javax.swing.UIManager.put("ComboBox.selectionForeground", new java.awt.Color(37, 99, 235));
-        javax.swing.UIManager.put("ComboBox.disabledBackground", new java.awt.Color(248, 250, 252));
-
-        // --- Button focus ring tắt ---
-        javax.swing.UIManager.put("Button.focus", new java.awt.Color(0, 0, 0, 0));
-        javax.swing.UIManager.put("ComboBox.focus", new java.awt.Color(0, 0, 0, 0));
-
-        SwingUtilities.invokeLater(() -> new LoginUI().setVisible(true));
-    }
 }

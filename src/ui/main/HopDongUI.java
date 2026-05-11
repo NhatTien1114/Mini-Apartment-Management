@@ -19,7 +19,7 @@ import javax.swing.text.DocumentFilter;
 
 import dao.DichVuDAO;
 import dao.GiaDetailDAO;
-import dao.HopDongDAO;
+import service.HopDongService;
 import dao.HopDongKhachHangDAO;
 import dao.PhongDichVuDAO;
 import dao.QuanLyPhongDAO;
@@ -51,7 +51,7 @@ public class HopDongUI {
     private RoundedTextField txtSearch;
     private JComboBox<String> cboFilterHanHopDong;
 
-    HopDongDAO HopDongDao = new HopDongDAO();
+    HopDongService hopDongService = new HopDongService();
     HopDongKhachHangDAO HDKHdao = new HopDongKhachHangDAO();
     QuanLyPhongDAO PhongDAO = new QuanLyPhongDAO();
     GiaDetailDAO giaDetailDAO = new GiaDetailDAO();
@@ -87,7 +87,7 @@ public class HopDongUI {
             cboFilterHanHopDong.setSelectedIndex(0);
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         model.setRowCount(0);
-        ArrayList<HopDong> listHD = HopDongDao.getAllHopDong();
+        ArrayList<HopDong> listHD = hopDongService.getAllHopDong();
         for (HopDong row : listHD) {
             String tenNguoiDaiDien = "";
             entity.KhachHang nguoiDaiDien = HDKHdao
@@ -337,7 +337,7 @@ public class HopDongUI {
                             + ") không?\n\nCảnh báo: Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể khôi phục!",
                     "Xác nhận xóa hợp đồng", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (luaChon == JOptionPane.YES_OPTION) {
-                boolean ok = HopDongDao.xoaHopDongVaKhachHangLienQuan(maHopDong);
+                boolean ok = hopDongService.xoaHopDongVaKhachHangLienQuan(maHopDong);
                 showToast(ok ? "Đã xóa hợp đồng thành công" : "Xóa hợp đồng thất bại");
                 if (ok)
                     loadDataToTable();
@@ -815,7 +815,7 @@ public class HopDongUI {
                 txtCccd.requestFocus();
                 return;
             }
-            if (new dao.KhachHangDAO().kiemTraCCCDTonTai(cccdValue, maKhachHangRef[0])) {
+            if (hopDongService.kiemTraCCCDTonTai(cccdValue, maKhachHangRef[0])) {
                 ui.util.ValidationPopup.show(txtCccd, "CCCD/CMND này đã tồn tại trong hệ thống");
                 txtCccd.requestFocus();
                 return;
@@ -874,8 +874,7 @@ public class HopDongUI {
                 double tienCocVal = sanitizedCoc.isEmpty() ? 0 : Double.parseDouble(sanitizedCoc);
                 double tienThueVal = sanitizedThue.isEmpty() ? 0 : Double.parseDouble(sanitizedThue);
 
-                HopDongDAO dao = new HopDongDAO();
-                boolean success = dao.capNhatThongTinHopDong(
+                boolean success = hopDongService.capNhatThongTinHopDong(
                         maHopDong,
                         txtBatDau.getText().trim(),
                         txtKetThuc.getText().trim(),
@@ -891,7 +890,7 @@ public class HopDongUI {
                     showToast("Cập nhật hợp đồng thành công");
                     dialog.dispose();
                 } else {
-                    String err = dao.getLastError();
+                    String err = hopDongService.getLastError();
                     showToast((err == null || err.trim().isEmpty()) ? "Lỗi: Không thể cập nhật hợp đồng!"
                             : "Lỗi cập nhật: " + err);
                 }
@@ -921,8 +920,7 @@ public class HopDongUI {
                 dialog.setVisible(false);
                 boolean accepted = showContractPreviewDialog(draft);
                 if (accepted) {
-                    HopDongDAO dao = new HopDongDAO();
-                    boolean success = dao.luuHopDongMoi(draft);
+                    boolean success = hopDongService.luuHopDongMoi(draft);
                     if (success) {
                         loadDataToTable();
                         if (onContractCreated != null)
@@ -930,7 +928,7 @@ public class HopDongUI {
                         showToast("Lưu vào cơ sở dữ liệu thành công!");
                         dialog.dispose();
                     } else {
-                        String err = dao.getLastError();
+                        String err = hopDongService.getLastError();
                         showToast((err == null || err.trim().isEmpty()) ? "Lỗi: Không thể lưu vào cơ sở dữ liệu!"
                                 : "Lỗi lưu hợp đồng: " + err);
                     }
@@ -1754,8 +1752,7 @@ public class HopDongUI {
     }
 
     private void showThanhToanHopDongDialog(String maHopDong, String maPhong) {
-        dao.HopDongDAO hopDongDAO = new dao.HopDongDAO();
-        entity.HopDong hd = hopDongDAO.getHopDongByMaHopDong(maHopDong);
+        entity.HopDong hd = hopDongService.getHopDongByMaHopDong(maHopDong);
         if (hd == null) {
             showToast("Không tìm thấy hợp đồng.");
             return;
@@ -2194,7 +2191,7 @@ public class HopDongUI {
             bill.dichVuKhac = dichVuKhac;
 
             boolean savedBill = hoaDonDAO.luuHoaDonKetThucHopDong(bill, ngayBDHieuQua, moveOut, maHopDong);
-            boolean ended = hopDongDAO.ketThucHopDong(maHopDong, maPhong, moveOut);
+            boolean ended = hopDongService.ketThucHopDong(maHopDong, maPhong, moveOut);
             dialog.dispose();
             if (savedBill && ended) {
                 loadDataToTable();
