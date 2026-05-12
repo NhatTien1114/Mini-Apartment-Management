@@ -1524,6 +1524,7 @@ public class HoaDonUI {
     private static final int ROW_TOTAL = 3;
     private static final int ROW_EMPTY = 4;
     private static final int ROW_SECTION = 5;
+    private static final int ROW_PENALTY = 6;
 
     private JPanel buildInvoicePanel(MonthlyRoomDraft d) {
         Color borderC = new Color(160, 160, 160);
@@ -1551,10 +1552,17 @@ public class HoaDonUI {
         rows.add(new Object[] { "", "Số mới", String.valueOf(d.soNuocMoi), "", ROW_SUBITEM });
         rows.add(new Object[] { "", "Tổng số m³ tiêu thụ", String.valueOf(d.tieuThuNuoc()), "", ROW_SUBITEM });
         rows.add(new Object[] { "", "Thành tiền (×" + NF.format((long) d.donGiaNuoc) + " VND)", "", formatMoney(d.getTienNuoc()), ROW_SUBITEM_BOLD });
+        ServiceOption penalty = null;
         for (ServiceOption op : d.options) {
-            if (op.selected) {
+            if (!op.selected) continue;
+            if ("DVPHAT".equals(op.maDichVu)) {
+                penalty = op;
+            } else {
                 rows.add(new Object[] { String.valueOf(stt++), op.tenDichVu, "1", formatMoney(op.donGia), ROW_NORMAL });
             }
+        }
+        if (penalty != null) {
+            rows.add(new Object[] { "", "Phí phạt thanh toán trễ", "", formatMoney(penalty.donGia), ROW_PENALTY });
         }
         rows.add(new Object[] { "", "", "", "", ROW_EMPTY });
         rows.add(new Object[] { "", "Tổng cộng", "", formatMoney(d.tongTien()), ROW_TOTAL });
@@ -1630,15 +1638,19 @@ public class HoaDonUI {
                     // Màu nền
                     Color subBg = new Color(248, 248, 250);
                     Color sectionBg = new Color(232, 240, 254);
+                    Color penaltyBg = new Color(255, 237, 213); // cam nhạt
                     if (type == ROW_TOTAL) lbl.setBackground(totalBg);
                     else if (type == ROW_SECTION) lbl.setBackground(sectionBg);
+                    else if (type == ROW_PENALTY) lbl.setBackground(penaltyBg);
                     else if (type == ROW_SUBITEM || type == ROW_SUBITEM_BOLD) lbl.setBackground(subBg);
                     else lbl.setBackground(Color.WHITE);
-                    lbl.setForeground(Color.BLACK);
+
+                    lbl.setForeground(type == ROW_PENALTY ? new Color(180, 60, 0) : Color.BLACK);
 
                     // Font
                     boolean bold = (type == ROW_TOTAL)
                             || (type == ROW_SECTION)
+                            || (type == ROW_PENALTY)
                             || (type == ROW_NORMAL && col == 0)
                             || (type == ROW_SUBITEM_BOLD && (col == 1 || col == 3));
                     lbl.setFont(bold ? fBold : fNormal);

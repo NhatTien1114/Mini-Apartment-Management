@@ -600,6 +600,142 @@ public class HoaDonDAO {
         return result;
     }
 
+    // ── Overdue / Quá hạn ──────────────────────────────────────────────────────
+
+    public static class CauHinhPhat {
+        public int soNgayAnHan = 3;
+        public double mucPhatNgay = 0.0005;
+        public int ngayHanThanhToan = 5;
+    }
+
+    public CauHinhPhat getCauHinhPhat() {
+        CauHinhPhat cfg = new CauHinhPhat();
+        String sql = "SELECT TOP 1 soNgayAnHan, mucPhatNgay, ngayHanThanhToan FROM CauHinhPhat";
+        try (Connection con = connectDB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                cfg.soNgayAnHan = rs.getInt("soNgayAnHan");
+                cfg.mucPhatNgay = rs.getDouble("mucPhatNgay");
+                cfg.ngayHanThanhToan = rs.getInt("ngayHanThanhToan");
+            }
+        } catch (SQLException e) {
+            System.err.println("Dùng cấu hình phạt mặc định: " + e.getMessage());
+        }
+        return cfg;
+    }
+
+    public static class QuaHanInfo {
+        public String maHoaDon;
+        public String maPhong;
+        public int thang;
+        public int nam;
+        public double tongTien;
+        public long soNgayQuaHan;
+    }
+
+    public List<QuaHanInfo> getHoaDonChuaTTQuaHan(int ngayHanThanhToan) {
+        List<QuaHanInfo> result = new ArrayList<>();
+        String sql = "SELECT hd.maHoaDon, hd.maPhong, "
+                + "MONTH(hd.tuNgay) AS thang, YEAR(hd.tuNgay) AS nam, "
+                + "ISNULL(SUM(ct.thanhTien), 0) AS tongTien "
+                + "FROM HoaDon hd "
+                + "LEFT JOIN HoaDonDetail ct ON hd.maHoaDon = ct.maHoaDon "
+                + "WHERE hd.trangThaiThanhToan = 0 "
+                + "GROUP BY hd.maHoaDon, hd.maPhong, hd.tuNgay "
+                + "ORDER BY hd.tuNgay";
+        try (Connection con = connectDB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            LocalDate today = LocalDate.now();
+            while (rs.next()) {
+                int thang = rs.getInt("thang");
+                int nam = rs.getInt("nam");
+                // Hạn thanh toán = ngày ngayHanThanhToan của tháng tiếp theo
+                LocalDate hanTT = LocalDate.of(nam, thang, 1)
+                        .plusMonths(1)
+                        .withDayOfMonth(ngayHanThanhToan);
+                long soNgayQuaHan = java.time.temporal.ChronoUnit.DAYS.between(hanTT, today);
+                if (soNgayQuaHan <= 0) continue;
+
+                QuaHanInfo info = new QuaHanInfo();
+                info.maHoaDon = rs.getString("maHoaDon");
+                info.maPhong  = rs.getString("maPhong");
+                info.thang    = thang;
+                info.nam      = nam;
+                info.tongTien = rs.getDouble("tongTien");
+                info.soNgayQuaHan = soNgayQuaHan;
+                result.add(info);
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi lấy hóa đơn quá hạn: " + e.getMessage());
+        }
+        return result;
+    }
+
+    public boolean capNhatTrangThaiQuaHan(String maHoaDon, double tienPhat) {
+        Connection con = null;
+        try {
+            con = connectDB.getConnection();
+            con.setAutoCommit(false);
+
+            // 1. Đảm bảo dịch vụ 'DVPHAT' tồn tại trong bảng DichVu
+            String sqlEnsureDV = "IF NOT EXISTS (SELECT 1 FROM DichVu WHERE maDichVu = 'DVPHAT') "
+                    + "INSERT INTO DichVu(maDichVu, tenDichVu, donVi) VALUES ('DVPHAT', N'Phí phạt', N'lần')";
+            try (PreparedStatement ps = con.prepareStatement(sqlEnsureDV)) {
+                ps.execute();
+            }
+
+            // 2. Cập nhật trạng thái và tienPhat trên HoaDon
+            String sqlHD = "UPDATE HoaDon SET trangThaiThanhToan = 2, tienPhat = ? WHERE maHoaDon = ?";
+            try (PreparedStatement ps = con.prepareStatement(sqlHD)) {
+                ps.setDouble(1, tienPhat);
+                ps.setString(2, maHoaDon);
+                ps.executeUpdate();
+            }
+
+            // 3. Thêm hoặc cập nhật dòng phí phạt trong HoaDonDetail
+            String sqlCheck = "SELECT maChiTiet FROM HoaDonDetail WHERE maHoaDon = ? AND maDichVu = 'DVPHAT'";
+            try (PreparedStatement ps = con.prepareStatement(sqlCheck)) {
+                ps.setString(1, maHoaDon);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        // Đã có → cập nhật lại tiền phạt (thanhTien tự tính = soLuong * donGia)
+                        String sqlUpd = "UPDATE HoaDonDetail SET donGia = ? "
+                                + "WHERE maHoaDon = ? AND maDichVu = 'DVPHAT'";
+                        try (PreparedStatement pu = con.prepareStatement(sqlUpd)) {
+                            pu.setDouble(1, tienPhat);
+                            pu.setString(2, maHoaDon);
+                            pu.executeUpdate();
+                        }
+                    } else {
+                        // Chưa có → insert mới (thanhTien là computed = soLuong * donGia)
+                        String sqlIns = "INSERT INTO HoaDonDetail "
+                                + "(maChiTiet, maHoaDon, maDichVu, soLuong, tenKhoan, donGia) "
+                                + "VALUES (?, ?, 'DVPHAT', 1, N'Phí phạt', ?)";
+                        try (PreparedStatement pi = con.prepareStatement(sqlIns)) {
+                            pi.setString(1, taoMaTheoThoiGian("CT"));
+                            pi.setString(2, maHoaDon);
+                            pi.setDouble(3, tienPhat);
+                            pi.executeUpdate();
+                        }
+                    }
+                }
+            }
+
+            con.commit();
+            return true;
+        } catch (SQLException e) {
+            if (con != null) try { con.rollback(); } catch (SQLException ignored) {}
+            System.err.println("Lỗi cập nhật trạng thái quá hạn: " + e.getMessage());
+            return false;
+        } finally {
+            if (con != null) try { con.setAutoCommit(true); } catch (SQLException ignored) {}
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+
     public boolean luuHoaDonKetThucHopDong(HoaDonUI.Bill bill, java.time.LocalDate tuNgay,
             java.time.LocalDate denNgay, String maHopDong) {
         Connection con = null;
