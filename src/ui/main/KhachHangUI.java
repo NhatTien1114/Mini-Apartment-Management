@@ -5,6 +5,7 @@ import entity.KhachHang;
 import entity.Phong;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -52,6 +53,7 @@ import javax.swing.JTextField;
 import javax.swing.RowFilter;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.MatteBorder;
@@ -93,6 +95,10 @@ public class KhachHangUI {
     private TableRowSorter<DefaultTableModel> sorter;
     private RoundedTextField txtTimKiem;
     private JComboBox<String> cboFilterPhong;
+
+    private SwingWorker<?, ?> loadWorker;
+    private CardLayout tableCardLayout;
+    private JPanel tableCardPanel;
 
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout(20, 20));
@@ -429,7 +435,12 @@ public class KhachHangUI {
         sp.getViewport().setBackground(AppColors.WHITE);
         sp.setBackground(AppColors.WHITE);
 
-        card.add(sp, BorderLayout.CENTER);
+        tableCardLayout = new CardLayout();
+        tableCardPanel = new JPanel(tableCardLayout);
+        tableCardPanel.setBackground(AppColors.WHITE);
+        tableCardPanel.add(new ui.util.LoadingPanel(AppColors.WHITE), "loading");
+        tableCardPanel.add(sp, "table");
+        card.add(tableCardPanel, BorderLayout.CENTER);
         return card;
     }
 
@@ -473,29 +484,57 @@ public class KhachHangUI {
     }
 
     private void loadKhachHangData() {
-        tableModel.setRowCount(0);
-        try {
-            List<KhachHang> danhSach = khachHangService.layDanhSachKhachHang();
-            for (KhachHang kh : danhSach) {
-                boolean daRoiDi = khachHangService.kiemTraDaRoiDi(kh.getMaKhachHang());
-                String maPhong = daRoiDi
-                        ? khachHangService.layMaPhongCuoiCungTheoKhach(kh.getMaKhachHang())
-                        : khachHangService.layMaPhongHienTaiTheoKhach(kh.getMaKhachHang());
-                tableModel.addRow(new Object[] {
-                        kh.getMaKhachHang(),
-                        kh.getHoTen(),
-                        nullSafe(kh.getSoDienThoai()),
-                        nullSafe(kh.getSoCCCD()),
-                        kh.getNgaySinh() == null ? "" : DATE_FORMAT.format(kh.getNgaySinh()),
-                        nullSafe(kh.getDiaChi()),
-                        nullSafe(maPhong),
-                        daRoiDi ? "Đã rời đi" : "Đang ở"
-                });
+        if (tableCardLayout != null && tableCardPanel != null)
+            tableCardLayout.show(tableCardPanel, "loading");
+
+        if (loadWorker != null && !loadWorker.isDone())
+            loadWorker.cancel(false);
+
+        final List<Object[]> rows = new java.util.ArrayList<>();
+        final String[] errorMsg = {null};
+
+        loadWorker = new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() {
+                try {
+                    List<KhachHang> danhSach = khachHangService.layDanhSachKhachHang();
+                    for (KhachHang kh : danhSach) {
+                        if (isCancelled()) break;
+                        boolean daRoiDi = khachHangService.kiemTraDaRoiDi(kh.getMaKhachHang());
+                        String maPhong = daRoiDi
+                                ? khachHangService.layMaPhongCuoiCungTheoKhach(kh.getMaKhachHang())
+                                : khachHangService.layMaPhongHienTaiTheoKhach(kh.getMaKhachHang());
+                        rows.add(new Object[]{
+                                kh.getMaKhachHang(),
+                                kh.getHoTen(),
+                                nullSafe(kh.getSoDienThoai()),
+                                nullSafe(kh.getSoCCCD()),
+                                kh.getNgaySinh() == null ? "" : DATE_FORMAT.format(kh.getNgaySinh()),
+                                nullSafe(kh.getDiaChi()),
+                                nullSafe(maPhong),
+                                daRoiDi ? "Đã rời đi" : "Đang ở"
+                        });
+                    }
+                } catch (RuntimeException ex) {
+                    errorMsg[0] = ex.getMessage();
+                }
+                return null;
             }
-        } catch (RuntimeException ex) {
-            showError("Không tải được danh sách khách hàng: " + ex.getMessage());
-        }
-        rebuildPhongFilterCombo();
+
+            @Override
+            protected void done() {
+                if (isCancelled()) return;
+                if (errorMsg[0] != null) {
+                    showError("Không tải được danh sách khách hàng: " + errorMsg[0]);
+                }
+                tableModel.setRowCount(0);
+                for (Object[] row : rows) tableModel.addRow(row);
+                rebuildPhongFilterCombo();
+                if (tableCardLayout != null && tableCardPanel != null)
+                    tableCardLayout.show(tableCardPanel, "table");
+            }
+        };
+        loadWorker.execute();
     }
 
     private void rebuildPhongFilterCombo() {

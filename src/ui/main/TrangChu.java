@@ -194,7 +194,22 @@ public class TrangChu extends JFrame {
             }
 
             int currentBtnIndex = btnIndex;
-            JButton btn = new JButton(item.name);
+            JButton btn = new JButton(item.name) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    if (selectedMenuIndex == currentBtnIndex) {
+                        g2.setColor(AppColors.PRIMARY);
+                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                    } else if (getModel().isRollover()) {
+                        g2.setColor(new Color(255, 255, 255, 18));
+                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                    }
+                    g2.dispose();
+                    super.paintComponent(g);
+                }
+            };
             menuButtons[btnIndex] = btn;
 
             ImageIcon iconGoc = new ImageIcon(item.icon);
@@ -202,32 +217,17 @@ public class TrangChu extends JFrame {
             Image imgIconScale = imgIcon.getScaledInstance(20, 20, Image.SCALE_SMOOTH);
             btn.setIcon(new ImageIcon(imgIconScale));
 
+            btn.setOpaque(false);
+            btn.setContentAreaFilled(false);
             btn.setFocusPainted(false);
-            btn.setForeground(Color.WHITE);
-            btn.setBackground(AppColors.MENU_BG);
             btn.setBorderPainted(false);
-            btn.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 16));
+            btn.setForeground(btnIndex == 0 ? Color.WHITE : new Color(185, 195, 212));
+            btn.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
             btn.setHorizontalAlignment(SwingConstants.LEFT);
             btn.setIconTextGap(12);
             btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
             btn.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-            if (btnIndex == 0)
-                btn.setBackground(AppColors.MENU_HOVER);
-
-            btn.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    if (selectedMenuIndex != currentBtnIndex)
-                        btn.setBackground(AppColors.MENU_HOVER);
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    if (selectedMenuIndex != currentBtnIndex)
-                        btn.setBackground(AppColors.MENU_BG);
-                }
-            });
+            btn.setBorder(new EmptyBorder(0, 10, 0, 10));
 
             btn.addActionListener(e -> selectMenuTab(item.panelIndex));
 
@@ -242,7 +242,7 @@ public class TrangChu extends JFrame {
 
     // ================= MENU SELECTION HANDLER =================
     private void selectMenuTab(int panelIndex) {
-        menuButtons[selectedMenuIndex].setBackground(AppColors.MENU_BG);
+        int prevIndex = selectedMenuIndex;
         selectedMenuIndex = -1;
         int btnIdx = 0;
         for (int i = 0; i < menuItems.size(); i++) {
@@ -255,8 +255,13 @@ public class TrangChu extends JFrame {
             }
             btnIdx++;
         }
+        if (prevIndex >= 0 && prevIndex < menuButtons.length) {
+            menuButtons[prevIndex].setForeground(new Color(185, 195, 212));
+            menuButtons[prevIndex].repaint();
+        }
         if (selectedMenuIndex != -1) {
-            menuButtons[selectedMenuIndex].setBackground(AppColors.MENU_HOVER);
+            menuButtons[selectedMenuIndex].setForeground(Color.WHITE);
+            menuButtons[selectedMenuIndex].repaint();
         }
 
         if (panelIndex == 0) {

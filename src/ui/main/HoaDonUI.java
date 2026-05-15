@@ -892,11 +892,7 @@ public class HoaDonUI {
                 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
-                // Khóa checkbox "Dã TT" và cài đặt cho hóa đơn đã tồn tại (read-only)
-                if (row >= 0 && row < currentDrafts.size() && currentDrafts.get(row).isExisting) {
-                    return col == 7; // chỉ cho xem chi tiết
-                }
-                return col == 6 || col == 7 || col == 8;
+                return col == 6; // chỉ cho phép tick/untick cột "Đã TT"
             }
 
             @Override
@@ -906,11 +902,17 @@ public class HoaDonUI {
         };
         summaryModel.addTableModelListener(e -> {
             int row = e.getFirstRow(), col = e.getColumn();
-            if (row >= 0 && row < currentDrafts.size() && col == 6) {
-                if (isUpdatingTable)
-                    return;
-                boolean paid = Boolean.TRUE.equals(summaryModel.getValueAt(row, 6));
-                MonthlyRoomDraft d = currentDrafts.get(row);
+            if (row < 0 || row >= currentDrafts.size() || col != 6) return;
+            if (isUpdatingTable) return;
+
+            final boolean paid = Boolean.TRUE.equals(summaryModel.getValueAt(row, 6));
+            final MonthlyRoomDraft d = currentDrafts.get(row);
+
+            // Dùng invokeLater để thoát khỏi edit-cycle của JTable trước khi show dialog,
+            // tránh visual glitch với JCheckBox.
+            SwingUtilities.invokeLater(() -> {
+                if (tblSummary.isEditing()) tblSummary.getCellEditor().stopCellEditing();
+
                 String action = paid ? "xác nhận đã thanh toán" : "hủy thanh toán";
                 int confirm = JOptionPane.showConfirmDialog(
                         tblSummary,
@@ -930,7 +932,7 @@ public class HoaDonUI {
                             Integer.parseInt(currentMonth), Integer.parseInt(currentYear), paid);
                 }
                 updateSelectAllCheckboxState();
-            }
+            });
         });
         tblSummary.setModel(summaryModel);
         tblSummary.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);

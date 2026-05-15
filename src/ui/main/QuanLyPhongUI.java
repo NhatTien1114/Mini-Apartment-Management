@@ -72,6 +72,10 @@ public class QuanLyPhongUI {
 
     private Runnable onStatusChanged;
 
+    private SwingWorker<?, ?> rebuildWorker;
+    private CardLayout rebuildCardLayout;
+    private JPanel rebuildCardPanel;
+
     public void setOnStatusChanged(Runnable callback) {
         this.onStatusChanged = callback;
     }
@@ -133,7 +137,12 @@ public class QuanLyPhongUI {
         scrollPane.getVerticalScrollBar().setUnitIncrement(14);
         scrollPane.getViewport().setBackground(AppColors.WHITE);
 
-        contentCard.add(scrollPane, BorderLayout.CENTER);
+        rebuildCardLayout = new CardLayout();
+        rebuildCardPanel = new JPanel(rebuildCardLayout);
+        rebuildCardPanel.setBackground(AppColors.WHITE);
+        rebuildCardPanel.add(new ui.util.LoadingPanel(AppColors.WHITE), "loading");
+        rebuildCardPanel.add(scrollPane, "rooms");
+        contentCard.add(rebuildCardPanel, BorderLayout.CENTER);
         root.add(contentCard, BorderLayout.CENTER);
         rebuildFloors();
         return root;
@@ -1086,39 +1095,69 @@ public class QuanLyPhongUI {
     private void rebuildFloors() {
         if (floorsPanel == null)
             return;
-        floorsPanel.removeAll();
-        List<Tang> dsTang = tangDAO.layDanhSachTang();
-        dsTang.sort((t1, t2) -> {
-            try {
-                return Integer.compare(
-                        Integer.parseInt(t1.getMaTang().replaceAll("\\D+", "")),
-                        Integer.parseInt(t2.getMaTang().replaceAll("\\D+", "")));
-            } catch (NumberFormatException e) {
-                return t2.getMaTang().compareTo(t1.getMaTang());
+
+        if (rebuildCardLayout != null && rebuildCardPanel != null)
+            rebuildCardLayout.show(rebuildCardPanel, "loading");
+
+        if (rebuildWorker != null && !rebuildWorker.isDone())
+            rebuildWorker.cancel(false);
+
+        // Danh sách kết quả: mỗi entry = {String tenTang, List<Phong> dsLoc}
+        final List<Object[]> floorData = new ArrayList<>();
+
+        rebuildWorker = new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() {
+                List<Tang> dsTang = tangDAO.layDanhSachTang();
+                dsTang.sort((t1, t2) -> {
+                    try {
+                        return Integer.compare(
+                                Integer.parseInt(t1.getMaTang().replaceAll("\\D+", "")),
+                                Integer.parseInt(t2.getMaTang().replaceAll("\\D+", "")));
+                    } catch (NumberFormatException e) {
+                        return t2.getMaTang().compareTo(t1.getMaTang());
+                    }
+                });
+                java.util.Collections.reverse(dsTang);
+
+                for (Tang tang : dsTang) {
+                    if (isCancelled()) break;
+                    List<Phong> dsPhong = dao.layTheoTang(tang.getMaTang());
+                    List<Phong> dsLoc = dsPhong.stream()
+                            .filter(QuanLyPhongUI.this::matchesCurrentFilter)
+                            .collect(Collectors.toList());
+                    if (!dsLoc.isEmpty())
+                        floorData.add(new Object[]{tang.getTenTang(), dsLoc});
+                }
+                return null;
             }
-        });
-        // Đảo ngược: tầng cao hiển thị trước
-        java.util.Collections.reverse(dsTang);
 
-        boolean hasAnyRoom = false;
-        for (Tang tang : dsTang) {
-            List<Phong> dsPhong = dao.layTheoTang(tang.getMaTang());
-            List<Phong> dsLoc = dsPhong.stream().filter(this::matchesCurrentFilter).collect(Collectors.toList());
-            if (!dsLoc.isEmpty()) {
-                hasAnyRoom = true;
-                floorsPanel.add(createFloorSection(tang.getTenTang(), dsLoc));
-                floorsPanel.add(Box.createVerticalStrut(20));
+            @Override
+            @SuppressWarnings("unchecked")
+            protected void done() {
+                if (isCancelled()) return;
+                try { get(); } catch (Exception ignored) {}
+
+                floorsPanel.removeAll();
+                if (floorData.isEmpty()) {
+                    JLabel emptyLabel = new JLabel("Không có phòng phù hợp với bộ lọc hiện tại",
+                            SwingConstants.CENTER);
+                    emptyLabel.setFont(FONT_PLAIN);
+                    emptyLabel.setForeground(AppColors.SLATE_500);
+                    floorsPanel.add(emptyLabel);
+                } else {
+                    for (Object[] entry : floorData) {
+                        floorsPanel.add(createFloorSection((String) entry[0], (List<Phong>) entry[1]));
+                        floorsPanel.add(Box.createVerticalStrut(20));
+                    }
+                }
+                floorsPanel.revalidate();
+                floorsPanel.repaint();
+
+                if (rebuildCardLayout != null && rebuildCardPanel != null)
+                    rebuildCardLayout.show(rebuildCardPanel, "rooms");
             }
-        }
-
-        if (!hasAnyRoom) {
-            JLabel emptyLabel = new JLabel("Không có phòng phù hợp với bộ lọc hiện tại", SwingConstants.CENTER);
-            emptyLabel.setFont(FONT_PLAIN);
-            emptyLabel.setForeground(AppColors.SLATE_500);
-            floorsPanel.add(emptyLabel);
-        }
-
-        floorsPanel.revalidate();
-        floorsPanel.repaint();
+        };
+        rebuildWorker.execute();
     }
 }
