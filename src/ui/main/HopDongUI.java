@@ -59,6 +59,10 @@ public class HopDongUI {
     private PrimaryButton primaryButton = new PrimaryButton();
     private Runnable onContractCreated;
 
+    private SwingWorker<?, ?> loadWorker;
+    private CardLayout tableCardLayout;
+    private JPanel tableCardPanel;
+
     public void setOnContractCreated(Runnable callback) {
         this.onContractCreated = callback;
     }
@@ -80,31 +84,51 @@ public class HopDongUI {
         if (table != null && table.isEditing()) {
             table.getCellEditor().cancelCellEditing();
         }
-        // Reset bộ lọc về mặc định
-        if (txtSearch != null)
-            txtSearch.setText("");
-        if (cboFilterHanHopDong != null)
-            cboFilterHanHopDong.setSelectedIndex(0);
-        DefaultTableModel model = (DefaultTableModel) table.getModel();
-        model.setRowCount(0);
-        ArrayList<HopDong> listHD = hopDongService.getAllHopDong();
-        for (HopDong row : listHD) {
-            String tenNguoiDaiDien = "";
-            entity.KhachHang nguoiDaiDien = HDKHdao
-                    .getNguoiDaiDienByMaHopDong(row.getMaHopDong());
-            if (nguoiDaiDien != null)
-                tenNguoiDaiDien = nguoiDaiDien.getHoTen();
-            String trangThaiHienThi = (row.getNgayKetThuc() != null
-                    && java.time.LocalDate.now().isAfter(row.getNgayKetThuc()))
+        if (txtSearch != null) txtSearch.setText("");
+        if (cboFilterHanHopDong != null) cboFilterHanHopDong.setSelectedIndex(0);
+
+        if (tableCardLayout != null && tableCardPanel != null)
+            tableCardLayout.show(tableCardPanel, "loading");
+
+        if (loadWorker != null && !loadWorker.isDone())
+            loadWorker.cancel(false);
+
+        final ArrayList<Object[]> rows = new ArrayList<>();
+
+        loadWorker = new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() {
+                ArrayList<HopDong> listHD = hopDongService.getAllHopDong();
+                for (HopDong hd : listHD) {
+                    if (isCancelled()) break;
+                    String tenNguoiDaiDien = "";
+                    entity.KhachHang nguoiDaiDien = HDKHdao.getNguoiDaiDienByMaHopDong(hd.getMaHopDong());
+                    if (nguoiDaiDien != null) tenNguoiDaiDien = nguoiDaiDien.getHoTen();
+                    String trangThaiHienThi = (hd.getNgayKetThuc() != null
+                            && java.time.LocalDate.now().isAfter(hd.getNgayKetThuc()))
                             ? entity.HopDong.TrangThai.DA_KET_THUC.getTen()
-                            : (row.getTrangThai() != null ? row.getTrangThai().toString() : "");
-            model.addRow(new Object[] {
-                    row.getMaHopDong(), row.getPhong().getMaPhong(), tenNguoiDaiDien,
-                    row.getNgayBatDau(), row.getNgayKetThuc(),
-                    formatMoneyDisplay(row.getTienCoc()), formatMoneyDisplay(row.getTienThueThang()),
-                    trangThaiHienThi
-            });
-        }
+                            : (hd.getTrangThai() != null ? hd.getTrangThai().toString() : "");
+                    rows.add(new Object[]{
+                            hd.getMaHopDong(), hd.getPhong().getMaPhong(), tenNguoiDaiDien,
+                            hd.getNgayBatDau(), hd.getNgayKetThuc(),
+                            formatMoneyDisplay(hd.getTienCoc()), formatMoneyDisplay(hd.getTienThueThang()),
+                            trangThaiHienThi
+                    });
+                }
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                if (isCancelled()) return;
+                try { get(); } catch (Exception ignored) {}
+                model.setRowCount(0);
+                for (Object[] row : rows) model.addRow(row);
+                if (tableCardLayout != null && tableCardPanel != null)
+                    tableCardLayout.show(tableCardPanel, "table");
+            }
+        };
+        loadWorker.execute();
     }
 
     private String formatToDDMMYYYY(Object dateObj) {
@@ -486,7 +510,12 @@ public class HopDongUI {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(MAU_CARD);
-        cardMargin.add(scrollPane, BorderLayout.CENTER);
+        tableCardLayout = new CardLayout();
+        tableCardPanel = new JPanel(tableCardLayout);
+        tableCardPanel.setBackground(MAU_CARD);
+        tableCardPanel.add(new ui.util.LoadingPanel(MAU_CARD), "loading");
+        tableCardPanel.add(scrollPane, "table");
+        cardMargin.add(tableCardPanel, BorderLayout.CENTER);
         card.add(cardMargin, BorderLayout.CENTER);
         pnlMainContent.add(card, BorderLayout.CENTER);
         pnlRoot.add(pnlMainContent, BorderLayout.CENTER);
@@ -2168,10 +2197,6 @@ public class HopDongUI {
                 dichVuKhac.add(si);
             }
 
-            // Save meter readings (new reading becomes the "old" for next period)
-            entity.ChiSoDienNuoc cs = new entity.ChiSoDienNuoc(maHopDong, moveOut, dienMoi, nuocMoi);
-            chiSoDAO.luuHoacCapNhat(cs);
-
             // Build and save invoice
             Bill bill = new Bill();
             bill.phong = maPhong;
@@ -2194,6 +2219,7 @@ public class HopDongUI {
             boolean ended = hopDongService.ketThucHopDong(maHopDong, maPhong, moveOut);
             dialog.dispose();
             if (savedBill && ended) {
+                chiSoDAO.luuHoacCapNhat(new entity.ChiSoDienNuoc(maHopDong, moveOut, dienMoi, nuocMoi));
                 loadDataToTable();
                 if (onContractCreated != null)
                     onContractCreated.run();

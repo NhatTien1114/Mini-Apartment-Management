@@ -274,14 +274,17 @@ public class BangGiaUI {
                 boolean active = "Đang áp dụng".equals(status);
                 java.awt.Color badgeBg = active ? new java.awt.Color(220, 252, 231) : new java.awt.Color(241, 245, 249);
                 java.awt.Color badgeFg = active ? new java.awt.Color(22, 163, 74) : new java.awt.Color(100, 116, 139);
-                cell.setBackground(isSelected ? AppColors.PRIMARY_TINT_HOVER : (row == hoveredRow[0] ? AppColors.SLATE_50 : AppColors.WHITE));
-                cell.setBorder(new CompoundBorder(new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200), new EmptyBorder(0, 6, 0, 6)));
+                cell.setBackground(isSelected ? AppColors.PRIMARY_TINT_HOVER
+                        : (row == hoveredRow[0] ? AppColors.SLATE_50 : AppColors.WHITE));
+                cell.setBorder(new CompoundBorder(new MatteBorder(0, 0, 1, 0, AppColors.SLATE_200),
+                        new EmptyBorder(0, 6, 0, 6)));
 
                 JLabel badge = new JLabel(status) {
                     @Override
                     protected void paintComponent(java.awt.Graphics g) {
                         java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-                        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                                java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
                         g2.setColor(badgeBg);
                         g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
                         super.paintComponent(g);
@@ -590,7 +593,8 @@ public class BangGiaUI {
                     items.add(new BangGiaService.LuuChiTietItem(combo2.getValue(), donGia));
                 }
 
-                String err = bangGiaService.luuChiTiet(header.getMaGiaHeader(), header.getLoai(), items, tenNguoiCapNhat);
+                String err = bangGiaService.luuChiTiet(header.getMaGiaHeader(), header.getLoai(), items,
+                        tenNguoiCapNhat);
                 if (err != null) {
                     JOptionPane.showMessageDialog(dlg, err, "Lỗi", JOptionPane.ERROR_MESSAGE);
                     return;
@@ -609,7 +613,8 @@ public class BangGiaUI {
         } else {
             // Non-active: just show end date editing
             JTextField txtNgayKetThuc = new JTextField(formatDate(header.getNgayKetThuc()));
-            south.add(makeField("Ngày kết thúc (yyyy-MM-dd, để trống nếu không có)", txtNgayKetThuc), BorderLayout.CENTER);
+            south.add(makeField("Ngày kết thúc (yyyy-MM-dd, để trống nếu không có)", txtNgayKetThuc),
+                    BorderLayout.CENTER);
 
             JButton btnSave = primaryButtonHelper.makePrimaryButton("Lưu ngày kết thúc");
             btnSave.addActionListener(e -> {
@@ -644,7 +649,7 @@ public class BangGiaUI {
     private void showAddPriceDialog() {
         Window owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
         JDialog dlg = new JDialog(owner, "Thêm giá", Dialog.ModalityType.APPLICATION_MODAL);
-        dlg.setSize(760, 560);
+        dlg.setSize(760, 660);
         dlg.setLocationRelativeTo(owner);
 
         AddContext phongCtx = new AddContext(0);
@@ -691,6 +696,53 @@ public class BangGiaUI {
         detailSection.setBorder(new LineBorder(AppColors.SLATE_200, 1, true));
 
         styleTable(ctx.tableDetail, 36);
+
+        // Renderer: hiển thị giá tiền đã format (ví dụ "5.000.000 đ")
+        NumberFormat vnFmt = NumberFormat.getNumberInstance(new java.util.Locale("vi", "VN"));
+        ctx.tableDetail.getColumnModel().getColumn(1).setCellRenderer(new DefaultTableCellRenderer() {
+            {
+                setHorizontalAlignment(JLabel.RIGHT);
+            }
+
+            @Override
+            protected void setValue(Object value) {
+                if (value instanceof Number n) {
+                    long v = (long) n.doubleValue();
+                    super.setValue(v == 0 ? "" : vnFmt.format(v) + " đ");
+                } else {
+                    super.setValue(value);
+                }
+            }
+        });
+
+        // Editor: khi click vào cell thì hiển thị số thuần để nhập, format khi rời ô
+        JTextField tfMoney = new JTextField();
+        tfMoney.setHorizontalAlignment(JTextField.RIGHT);
+        tfMoney.setFont(FONT_PLAIN);
+        ctx.tableDetail.getColumnModel().getColumn(1).setCellEditor(new DefaultCellEditor(tfMoney) {
+            @Override
+            public Component getTableCellEditorComponent(JTable t, Object value,
+                    boolean isSelected, int row, int col) {
+                String raw = "";
+                if (value instanceof Number n) {
+                    long v = (long) n.doubleValue();
+                    raw = v == 0 ? "" : String.valueOf(v);
+                }
+                tfMoney.setText(raw);
+                tfMoney.selectAll();
+                return tfMoney;
+            }
+
+            @Override
+            public Object getCellEditorValue() {
+                String raw = tfMoney.getText().trim().replaceAll("[^0-9]", "");
+                return raw.isEmpty() ? 0d : Double.parseDouble(raw);
+            }
+        });
+
+        // Đặt độ rộng cột: tên chiếm phần lớn, giá cố định 180px
+        ctx.tableDetail.getColumnModel().getColumn(0).setPreferredWidth(320);
+        ctx.tableDetail.getColumnModel().getColumn(1).setPreferredWidth(180);
 
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
         actionRow.setBackground(AppColors.WHITE);
@@ -755,6 +807,12 @@ public class BangGiaUI {
                 super.setValue(value);
             }
         });
+
+        // Pre-populate tất cả items với giá 0 để người dùng chỉ cần điền giá
+        ctx.modelDetail.setRowCount(0);
+        for (ComboItem item : items) {
+            ctx.modelDetail.addRow(new Object[] { item, 0d });
+        }
     }
 
     private void saveNewPrice(AddContext ctx, JDialog parentDlg) {
@@ -818,8 +876,7 @@ public class BangGiaUI {
         String loaiText = ctx.loai == 0 ? "phòng" : "dịch vụ";
         ui.util.NotificationManager.getInstance().addNotification(
                 "✅ Cập nhật giá",
-                "Đã cập nhật bảng giá " + loaiText + " thành công."
-        );
+                "Đã cập nhật bảng giá " + loaiText + " thành công.");
         JOptionPane.showMessageDialog(parentDlg, "Đã lưu bảng giá", "Thành công", JOptionPane.INFORMATION_MESSAGE);
         parentDlg.dispose();
     }
@@ -918,7 +975,8 @@ public class BangGiaUI {
     }
 
     private String formatTien(double value) {
-        if (value == 0) return "0 đ";
+        if (value == 0)
+            return "0 đ";
         NumberFormat nf = NumberFormat.getNumberInstance(new java.util.Locale("vi", "VN"));
         return nf.format((long) value) + " đ";
     }
