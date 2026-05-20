@@ -5,8 +5,11 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Arc2D;
 import java.awt.geom.RoundRectangle2D;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -14,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class DoanhThuUI {
 
@@ -146,13 +150,68 @@ public class DoanhThuUI {
     private JPanel buildHeader() {
         JPanel pnl = new JPanel(new BorderLayout());
         pnl.setOpaque(false);
-        pnl.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        pnl.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
 
         JLabel lbl = new JLabel("Doanh thu");
         lbl.setFont(new Font(FONT, Font.BOLD, 22));
         lbl.setForeground(TEXT_PRIMARY);
         pnl.add(lbl, BorderLayout.WEST);
+        pnl.add(buildExportButton(), BorderLayout.EAST);
         return pnl;
+    }
+
+    private JButton buildExportButton() {
+        final Color BG_NORMAL  = new Color(22, 163, 74);
+        final Color BG_HOVER   = new Color(21, 128, 61);
+        final Color BG_PRESSED = new Color(20, 107, 52);
+
+        Icon downloadIcon = new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawLine(x + 8, y,     x + 8, y + 10);
+                g2.drawLine(x + 3, y + 7, x + 8, y + 12);
+                g2.drawLine(x + 13,y + 7, x + 8, y + 12);
+                g2.drawLine(x + 1, y + 15,x + 15,y + 15);
+                g2.dispose();
+            }
+            @Override public int getIconWidth()  { return 16; }
+            @Override public int getIconHeight() { return 17; }
+        };
+
+        JButton btn = new JButton("Xuất Excel", downloadIcon) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color bg = getModel().isPressed() ? BG_PRESSED
+                         : getModel().isRollover() ? BG_HOVER
+                         : BG_NORMAL;
+                g2.setColor(bg);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                // subtle top highlight
+                g2.setColor(new Color(255, 255, 255, 30));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight() / 2, 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font(FONT, Font.BOLD, 13));
+        btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setIconTextGap(8);
+        btn.setBorder(new EmptyBorder(8, 16, 8, 18));
+
+        btn.addActionListener(e -> exportToExcel(SwingUtilities.getWindowAncestor(btn)));
+        return btn;
     }
 
     // ── FILTER BAR ───────────────────────────────────────────────────────────
@@ -570,6 +629,161 @@ public class DoanhThuUI {
         if (value == 0)
             return "0đ";
         return NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(value) + "đ";
+    }
+
+    // ── EXPORT EXCEL ─────────────────────────────────────────────────────────
+    private void exportToExcel(Window owner) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Lưu báo cáo doanh thu");
+        String fileName = "BaoCaoDoanhThu_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".xls";
+        chooser.setSelectedFile(new File(fileName));
+        chooser.setFileFilter(new FileNameExtensionFilter("Excel Workbook (*.xls)", "xls"));
+
+        if (chooser.showSaveDialog(owner) != JFileChooser.APPROVE_OPTION) return;
+
+        File file = chooser.getSelectedFile();
+        if (!file.getName().toLowerCase().endsWith(".xls"))
+            file = new File(file.getAbsolutePath() + ".xls");
+
+        final File finalFile = file;
+
+        try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(
+                new FileOutputStream(finalFile), StandardCharsets.UTF_8))) {
+
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            DateTimeFormatter dtfFull = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            sb.append("<?mso-application progid=\"Excel.Sheet\"?>\n");
+            sb.append("<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\"\n");
+            sb.append(" xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">\n");
+
+            // ── Styles ──
+            sb.append("<Styles>\n");
+            sb.append("<Style ss:ID=\"s_title\"><Font ss:Bold=\"1\" ss:Size=\"16\" ss:Color=\"#0F172A\"/></Style>\n");
+            sb.append("<Style ss:ID=\"s_meta\"><Font ss:Color=\"#64748B\" ss:Size=\"11\"/></Style>\n");
+            sb.append("<Style ss:ID=\"s_section\"><Font ss:Bold=\"1\" ss:Size=\"12\" ss:Color=\"#1E3A8A\"/>"
+                    + "<Interior ss:Color=\"#EFF6FF\" ss:Pattern=\"Solid\"/></Style>\n");
+            sb.append("<Style ss:ID=\"s_hdr\"><Font ss:Bold=\"1\" ss:Color=\"#FFFFFF\"/>"
+                    + "<Interior ss:Color=\"#2563EB\" ss:Pattern=\"Solid\"/>"
+                    + "<Alignment ss:Horizontal=\"Center\" ss:Vertical=\"Center\"/></Style>\n");
+            sb.append("<Style ss:ID=\"s_bold\"><Font ss:Bold=\"1\"/></Style>\n");
+            sb.append("<Style ss:ID=\"s_num\"><NumberFormat ss:Format=\"#,##0\"/></Style>\n");
+            sb.append("<Style ss:ID=\"s_num_bold\"><Font ss:Bold=\"1\"/><NumberFormat ss:Format=\"#,##0\"/></Style>\n");
+            sb.append("<Style ss:ID=\"s_total\"><Font ss:Bold=\"1\" ss:Color=\"#2563EB\"/>"
+                    + "<NumberFormat ss:Format=\"#,##0\"/></Style>\n");
+            sb.append("<Style ss:ID=\"s_center\"><Alignment ss:Horizontal=\"Center\"/></Style>\n");
+            sb.append("</Styles>\n");
+
+            sb.append("<Worksheet ss:Name=\"Báo cáo doanh thu\">\n");
+            sb.append("<Table ss:DefaultColumnWidth=\"130\">\n");
+            sb.append("<Column ss:Width=\"200\"/>\n");
+            sb.append("<Column ss:Width=\"160\"/>\n");
+            sb.append("<Column ss:Width=\"160\"/>\n");
+            sb.append("<Column ss:Width=\"160\"/>\n");
+
+            // ── Tiêu đề ──
+            sb.append("<Row ss:Height=\"32\"><Cell ss:StyleID=\"s_title\">"
+                    + "<Data ss:Type=\"String\">BÁO CÁO DOANH THU</Data></Cell></Row>\n");
+            sb.append("<Row ss:Height=\"20\"><Cell ss:StyleID=\"s_meta\">"
+                    + "<Data ss:Type=\"String\">Kỳ báo cáo: ")
+                    .append(dateFrom.format(dtf)).append(" — ").append(dateTo.format(dtf))
+                    .append("</Data></Cell></Row>\n");
+            sb.append("<Row ss:Height=\"20\"><Cell ss:StyleID=\"s_meta\">"
+                    + "<Data ss:Type=\"String\">Chu kỳ: ")
+                    .append(escapeXml(selectedPeriod)).append("  |  Loại: ").append(escapeXml(selectedType))
+                    .append("</Data></Cell></Row>\n");
+            sb.append("<Row ss:Height=\"18\"><Cell ss:StyleID=\"s_meta\">"
+                    + "<Data ss:Type=\"String\">Xuất lúc: ")
+                    .append(LocalDateTime.now().format(dtfFull))
+                    .append("</Data></Cell></Row>\n");
+            sb.append("<Row/>\n");
+
+            // ── Tổng hợp ──
+            sb.append("<Row ss:Height=\"24\"><Cell ss:StyleID=\"s_section\">"
+                    + "<Data ss:Type=\"String\">I. TỔNG HỢP</Data></Cell></Row>\n");
+            sb.append("<Row ss:Height=\"22\">");
+            sb.append("<Cell ss:StyleID=\"s_hdr\"><Data ss:Type=\"String\">CHỈ TIÊU</Data></Cell>");
+            sb.append("<Cell ss:StyleID=\"s_hdr\"><Data ss:Type=\"String\">GIÁ TRỊ (VNĐ)</Data></Cell>");
+            sb.append("</Row>\n");
+
+            writeXmlRow(sb, "Tổng doanh thu", tongDoanhThu, "s_bold", "s_total");
+            writeXmlRow(sb, "Doanh thu phòng", doanhThuPhong, null, "s_num");
+            writeXmlRow(sb, "Doanh thu dịch vụ", doanhThuDichVu, null, "s_num");
+            sb.append("<Row><Cell><Data ss:Type=\"String\">Số hóa đơn</Data></Cell>")
+              .append("<Cell ss:StyleID=\"s_bold\"><Data ss:Type=\"Number\">").append(soHoaDon)
+              .append("</Data></Cell></Row>\n");
+            sb.append("<Row/>\n");
+
+            // ── Chi tiết theo kỳ ──
+            sb.append("<Row ss:Height=\"24\"><Cell ss:StyleID=\"s_section\">"
+                    + "<Data ss:Type=\"String\">II. CHI TIẾT THEO KỲ</Data></Cell></Row>\n");
+            sb.append("<Row ss:Height=\"22\">");
+            sb.append("<Cell ss:StyleID=\"s_hdr\"><Data ss:Type=\"String\">KỲ</Data></Cell>");
+            sb.append("<Cell ss:StyleID=\"s_hdr\"><Data ss:Type=\"String\">DOANH THU PHÒNG</Data></Cell>");
+            sb.append("<Cell ss:StyleID=\"s_hdr\"><Data ss:Type=\"String\">DOANH THU DỊCH VỤ</Data></Cell>");
+            sb.append("<Cell ss:StyleID=\"s_hdr\"><Data ss:Type=\"String\">TỔNG</Data></Cell>");
+            sb.append("</Row>\n");
+
+            long sumP = 0, sumD = 0;
+            for (Object[] row : chartData) {
+                long dtP = (long) row[1], dtD = (long) row[2];
+                sumP += dtP; sumD += dtD;
+                sb.append("<Row>");
+                sb.append("<Cell ss:StyleID=\"s_center\"><Data ss:Type=\"String\">")
+                  .append(escapeXml((String) row[0])).append("</Data></Cell>");
+                sb.append("<Cell ss:StyleID=\"s_num\"><Data ss:Type=\"Number\">").append(dtP).append("</Data></Cell>");
+                sb.append("<Cell ss:StyleID=\"s_num\"><Data ss:Type=\"Number\">").append(dtD).append("</Data></Cell>");
+                sb.append("<Cell ss:StyleID=\"s_num\"><Data ss:Type=\"Number\">").append(dtP + dtD).append("</Data></Cell>");
+                sb.append("</Row>\n");
+            }
+
+            if (!chartData.isEmpty()) {
+                sb.append("<Row ss:Height=\"22\">");
+                sb.append("<Cell ss:StyleID=\"s_bold\"><Data ss:Type=\"String\">Tổng cộng</Data></Cell>");
+                sb.append("<Cell ss:StyleID=\"s_num_bold\"><Data ss:Type=\"Number\">").append(sumP).append("</Data></Cell>");
+                sb.append("<Cell ss:StyleID=\"s_num_bold\"><Data ss:Type=\"Number\">").append(sumD).append("</Data></Cell>");
+                sb.append("<Cell ss:StyleID=\"s_total\"><Data ss:Type=\"Number\">").append(sumP + sumD).append("</Data></Cell>");
+                sb.append("</Row>\n");
+            }
+
+            sb.append("</Table>\n</Worksheet>\n</Workbook>");
+            pw.print(sb);
+
+            int choice = JOptionPane.showConfirmDialog(owner,
+                    "Xuất báo cáo thành công!\n" + finalFile.getAbsolutePath()
+                    + "\n\nMở file ngay?",
+                    "Thành công", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+            if (choice == JOptionPane.YES_OPTION) {
+                try { Desktop.getDesktop().open(finalFile); } catch (Exception ignored) {}
+            }
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(owner,
+                    "Lỗi khi xuất file:\n" + ex.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void writeXmlRow(StringBuilder sb, String label, long value, String lblStyle, String valStyle) {
+        sb.append("<Row>");
+        if (lblStyle != null)
+            sb.append("<Cell ss:StyleID=\"").append(lblStyle).append("\">");
+        else
+            sb.append("<Cell>");
+        sb.append("<Data ss:Type=\"String\">").append(escapeXml(label)).append("</Data></Cell>");
+        if (valStyle != null)
+            sb.append("<Cell ss:StyleID=\"").append(valStyle).append("\">");
+        else
+            sb.append("<Cell>");
+        sb.append("<Data ss:Type=\"Number\">").append(value).append("</Data></Cell>");
+        sb.append("</Row>\n");
+    }
+
+    private String escapeXml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     // =========================================================================

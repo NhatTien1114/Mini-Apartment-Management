@@ -29,6 +29,8 @@ public class TrangChu extends JFrame {
     private CardLayout cardLayout;
     private JPanel pnlContent;
     private JPanel pnlTrangChuContent;
+    private CardLayout trangChuCardLayout;
+    private JPanel trangChuWrapper;
     private JButton[] menuButtons;
     private int selectedMenuIndex = 0;
 
@@ -45,6 +47,7 @@ public class TrangChu extends JFrame {
     private String role;
     private JLabel lblTen;
     private JLabel lblRole;
+    private JLabel lblBreadcrumbPage;
     private final QuanLyPhongDAO phongDAO = new QuanLyPhongDAO();
 
     private final NotificationManager notifManager = NotificationManager.getInstance();
@@ -289,7 +292,20 @@ public class TrangChu extends JFrame {
             quanLyTaiKhoanUI.refresh();
         }
 
+        if (lblBreadcrumbPage != null) {
+            lblBreadcrumbPage.setText(getPageNameByIndex(panelIndex));
+        }
+
         cardLayout.show(pnlContent, String.valueOf(panelIndex));
+    }
+
+    private String getPageNameByIndex(int panelIndex) {
+        if (menuItems == null) return "";
+        return menuItems.stream()
+                .filter(item -> !item.isSectionHeader && item.panelIndex == panelIndex)
+                .map(item -> item.name)
+                .findFirst()
+                .orElse("");
     }
 
     // ================= PANEL CHÍNH =================
@@ -311,8 +327,14 @@ public class TrangChu extends JFrame {
         pnlContent = new JPanel(cardLayout);
         pnlContent.setBackground(AppColors.APP_BACKGROUND);
 
+        trangChuCardLayout = new CardLayout();
+        trangChuWrapper = new JPanel(trangChuCardLayout);
+        trangChuWrapper.setBackground(AppColors.APP_BACKGROUND);
+        trangChuWrapper.add(new ui.util.LoadingPanel(AppColors.APP_BACKGROUND), "loading");
         pnlTrangChuContent = createTrangChuContent();
-        pnlContent.add(pnlTrangChuContent, "0");
+        trangChuWrapper.add(pnlTrangChuContent, "content");
+        trangChuCardLayout.show(trangChuWrapper, "content");
+        pnlContent.add(trangChuWrapper, "0");
         hopDongUI = new HopDongUI();
         pnlContent.add(hopDongUI.getPanel(), "1");
         quanLyPhongUI = new QuanLyPhongUI();
@@ -355,23 +377,42 @@ public class TrangChu extends JFrame {
     }
 
     private void refreshTrangChuTab() {
-        if (pnlContent == null) {
-            return;
-        }
+        if (trangChuWrapper == null) return;
 
-        if (pnlTrangChuContent != null) {
-            pnlContent.remove(pnlTrangChuContent);
-        }
+        trangChuCardLayout.show(trangChuWrapper, "loading");
 
-        pnlTrangChuContent = createTrangChuContent();
-        pnlContent.add(pnlTrangChuContent, "0");
-        cardLayout.show(pnlContent, "0");
-        pnlContent.revalidate();
-        pnlContent.repaint();
+        new SwingWorker<List<Phong>, Void>() {
+            @Override
+            protected List<Phong> doInBackground() {
+                try {
+                    return phongDAO.layTatCa();
+                } catch (Exception e) {
+                    return java.util.Collections.emptyList();
+                }
+            }
 
-        if (ThemeManager.getInstance().isDarkMode()) {
-            SwingUtilities.invokeLater(() -> ThemeManager.getInstance().applyTheme(pnlTrangChuContent));
-        }
+            @Override
+            protected void done() {
+                try {
+                    allPhongs = get();
+                } catch (Exception e) {
+                    allPhongs = java.util.Collections.emptyList();
+                }
+
+                if (pnlTrangChuContent != null)
+                    trangChuWrapper.remove(pnlTrangChuContent);
+
+                pnlTrangChuContent = createTrangChuContent();
+                trangChuWrapper.add(pnlTrangChuContent, "content");
+                trangChuCardLayout.show(trangChuWrapper, "content");
+                trangChuWrapper.revalidate();
+                trangChuWrapper.repaint();
+
+                if (ThemeManager.getInstance().isDarkMode()) {
+                    SwingUtilities.invokeLater(() -> ThemeManager.getInstance().applyTheme(pnlTrangChuContent));
+                }
+            }
+        }.execute();
     }
 
     private void refreshQuanLyPhongTab() {
@@ -450,6 +491,27 @@ public class TrangChu extends JFrame {
         });
 
         pnlHeader.add(pnlUser, BorderLayout.WEST);
+
+        // ===== BREADCRUMB =====
+        JPanel pnlBreadcrumb = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0));
+        pnlBreadcrumb.setBackground(Color.WHITE);
+
+        JLabel lblBreadcrumbRoot = new JLabel("Mini Apartment");
+        lblBreadcrumbRoot.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 13));
+        lblBreadcrumbRoot.setForeground(AppColors.SLATE_400);
+
+        JLabel lblBreadcrumbSep = new JLabel("›");
+        lblBreadcrumbSep.setFont(new Font("Be Vietnam Pro", Font.PLAIN, 14));
+        lblBreadcrumbSep.setForeground(AppColors.SLATE_400);
+
+        lblBreadcrumbPage = new JLabel(getPageNameByIndex(0));
+        lblBreadcrumbPage.setFont(new Font("Be Vietnam Pro", Font.BOLD, 14));
+        lblBreadcrumbPage.setForeground(AppColors.PRIMARY);
+
+        pnlBreadcrumb.add(lblBreadcrumbRoot);
+        pnlBreadcrumb.add(lblBreadcrumbSep);
+        pnlBreadcrumb.add(lblBreadcrumbPage);
+        pnlHeader.add(pnlBreadcrumb, BorderLayout.CENTER);
 
         JPanel pnlRightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
         pnlRightButtons.setBackground(Color.WHITE);

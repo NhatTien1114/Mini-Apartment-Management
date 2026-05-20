@@ -47,6 +47,9 @@ public class PhuongTienUI {
     private TableRowSorter<DefaultTableModel> sorter;
     private RoundedTextField txtTimKiem;
     private JComboBox<String> cboFilterType;
+    private CardLayout tableCardLayout;
+    private JPanel tableCardPanel;
+    private SwingWorker<?, ?> loadWorker;
 
     public JPanel getPanel() {
         JPanel root = new JPanel(new BorderLayout(20, 20));
@@ -288,7 +291,13 @@ public class PhuongTienUI {
         JScrollPane sp = new JScrollPane(table);
         sp.setBorder(BorderFactory.createEmptyBorder());
         sp.getViewport().setBackground(AppColors.WHITE);
-        card.add(sp, BorderLayout.CENTER);
+
+        tableCardLayout = new CardLayout();
+        tableCardPanel = new JPanel(tableCardLayout);
+        tableCardPanel.setBackground(AppColors.WHITE);
+        tableCardPanel.add(new ui.util.LoadingPanel(AppColors.WHITE), "loading");
+        tableCardPanel.add(sp, "table");
+        card.add(tableCardPanel, BorderLayout.CENTER);
 
         return card;
     }
@@ -315,18 +324,41 @@ public class PhuongTienUI {
     }
 
     private void loadData() {
-        tableModel.setRowCount(0);
-        List<PhuongTien> list = phuongTienDAO.getAllPhuongTien();
-        for (PhuongTien pt : list) {
-            tableModel.addRow(new Object[] {
-                    pt.getBienSo(),
-                    pt.getLoaiXe(),
-                    pt.getMaKhachHang(),
-                    pt.getTenKhachHang() != null ? pt.getTenKhachHang() : "",
-                    pt.getMaPhong() != null ? pt.getMaPhong() : "",
-                    formatter.format(pt.getMucPhi())
-            });
-        }
+        if (tableCardLayout != null && tableCardPanel != null)
+            tableCardLayout.show(tableCardPanel, "loading");
+
+        if (loadWorker != null && !loadWorker.isDone())
+            loadWorker.cancel(false);
+
+        final List<PhuongTien> result = new java.util.ArrayList<>();
+
+        loadWorker = new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() {
+                result.addAll(phuongTienDAO.getAllPhuongTien());
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                if (isCancelled()) return;
+                try { get(); } catch (Exception ignored) {}
+                tableModel.setRowCount(0);
+                for (PhuongTien pt : result) {
+                    tableModel.addRow(new Object[] {
+                            pt.getBienSo(),
+                            pt.getLoaiXe(),
+                            pt.getMaKhachHang(),
+                            pt.getTenKhachHang() != null ? pt.getTenKhachHang() : "",
+                            pt.getMaPhong() != null ? pt.getMaPhong() : "",
+                            formatter.format(pt.getMucPhi())
+                    });
+                }
+                if (tableCardLayout != null && tableCardPanel != null)
+                    tableCardLayout.show(tableCardPanel, "table");
+            }
+        };
+        loadWorker.execute();
     }
 
     private void showRegistrationDialog(PhuongTien editPt) {

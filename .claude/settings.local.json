@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(javac -encoding UTF-8 -cp \"lib/*\" -sourcepath src -d out src/ui/main/TrangChu.java src/ui/main/PhuongTienUI.java src/ui/main/ChiSoDienNuocUI.java)",
+      "Bash(dir \"c:\\\\Users\\\\Admin\\\\Documents\\\\Năm3_HK2\\\\Phát triển ứng dụng\\\\Project\\\\Quản lý chung cư mini\\\\lib\" /b)",
+      "Bash(javac -encoding UTF-8 -cp \"lib/*\" -sourcepath src -d out src/ui/main/DoanhThuUI.java)"
+    ]
+  }
+}
