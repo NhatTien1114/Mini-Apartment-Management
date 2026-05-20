@@ -37,6 +37,8 @@ public class ChiSoDienNuocUI {
     private JComboBox<String> cboYear;
     private JLabel lblStatus;
     private JPanel root;
+    private CardLayout tableCardLayout;
+    private JPanel tableCardPanel;
 
     private final List<RoomMeterRow> currentRows = new ArrayList<>();
 
@@ -454,7 +456,12 @@ public class ChiSoDienNuocUI {
         bodyPanel.add(sp, BorderLayout.CENTER);
         bodyPanel.add(summaryBar, BorderLayout.SOUTH);
 
-        card.add(bodyPanel, BorderLayout.CENTER);
+        tableCardLayout = new CardLayout();
+        tableCardPanel = new JPanel(tableCardLayout);
+        tableCardPanel.setBackground(AppColors.WHITE);
+        tableCardPanel.add(new ui.util.LoadingPanel(AppColors.WHITE), "loading");
+        tableCardPanel.add(bodyPanel, "table");
+        card.add(tableCardPanel, BorderLayout.CENTER);
         return card;
     }
 
@@ -553,6 +560,9 @@ public class ChiSoDienNuocUI {
 
         if (activeWorker != null && !activeWorker.isDone())
             activeWorker.cancel(false);
+
+        if (tableCardLayout != null && tableCardPanel != null)
+            tableCardLayout.show(tableCardPanel, "loading");
 
         lblStatus.setText("Đang tải...");
 
@@ -692,6 +702,8 @@ public class ChiSoDienNuocUI {
                 lblStatus.setText("");
                 table.revalidate();
                 table.repaint();
+                if (tableCardLayout != null && tableCardPanel != null)
+                    tableCardLayout.show(tableCardPanel, "table");
             }
         };
         activeWorker.execute();
